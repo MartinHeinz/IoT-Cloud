@@ -97,3 +97,5 @@ ENV/
 
 # Confidential
 credentials.*
+
+node_modules/
