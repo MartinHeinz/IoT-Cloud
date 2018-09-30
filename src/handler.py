@@ -1,14 +1,13 @@
-import json
-import logging
-
-log = logging.getLogger()
-log.setLevel(logging.DEBUG)
+from src.ABE import main
+import sys
 
 
-def index(event, context):
-    log.debug("Received event %s", json.dumps(event))
+def hello(params):
+    value = params.get("arg", None)
 
-    return {
-        'statusCode': 200,
-        'body': json.dumps({"msg": "hello from Lambda, this is home path (/)"})
-    }
+    if value == "test_ABE":
+        return {value: main.test_abe()}
+    elif value == "python_version":
+        return {value: sys.version}
+
+    return {"Default": "Value"}
