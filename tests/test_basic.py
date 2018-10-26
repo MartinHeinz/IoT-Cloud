@@ -1,18 +1,17 @@
 # -*- coding: utf-8 -*-
-
-from .context import main
+from sqlalchemy.exc import SADeprecationWarning
+from .context import create_app
 
 import pytest
+import warnings
 
 
 @pytest.fixture
 def client():
     # TODO create and fill DB
-    main.app.config['TESTING'] = True
-    main.app.config['SQLALCHEMY_DATABASE_URI'] = 'postgres+psycopg2://postgres:postgres@localhost/flask_test'
-    client = main.app.test_client()
-
-    return client
+    warnings.filterwarnings("ignore", category=SADeprecationWarning)
+    app = create_app('testing')
+    return app.test_client()
 
 # TODO test MQTT
 
