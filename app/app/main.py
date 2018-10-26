@@ -1,12 +1,7 @@
-from flask import Flask
+from app.app_setup import create_app
+from app.config import *
 
-from app.api.endpoints.index import home
-
-app = Flask(__name__)
-
-from app.core import app_setup
-
-app.register_blueprint(home)
+app = create_app(os.environ.get('FLASK_ENV'))
 
 if __name__ == "__main__":
     # Only for debugging while developing

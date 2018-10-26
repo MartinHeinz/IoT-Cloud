@@ -1,14 +1,29 @@
 version: '3'
 services:
+  db:
+    volumes:
+      - data:/var/lib/postgresql/data
+    expose:
+      - 5432
+    ports:
+      - 5431:5432
+    environment:
+      POSTGRES_USER: "postgres"
+      POSTGRES_PASSWORD: "postgres"
+      POSTGRES_DB: flask_test
   web:
     volumes:
       - ./app:/app
     ports:
       - "80:80"
     environment:
+      - FLASK_ENV=docker
       - FLASK_APP=app/main.py
       - FLASK_DEBUG=1
       - 'RUN=flask run --host=0.0.0.0 --port=80 --no-reload'
     # command: flask run --host=0.0.0.0 --port=80
     # Infinite loop, to keep it alive, for debugging
     # command: bash -c "while true; do echo 'sleeping...' && sleep 10; done"
+
+volumes:
+  data: {}

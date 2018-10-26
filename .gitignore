@@ -99,3 +99,5 @@ ENV/
 credentials.*
 
 node_modules/
+
+config.env

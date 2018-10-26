@@ -1,4 +1,4 @@
-from app.core.app_setup import mqtt
+from app.app_setup import mqtt
 
 @mqtt.on_connect()
 def handle_connect(client, userdata, flags, rc):
