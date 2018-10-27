@@ -1,11 +1,17 @@
+import atexit
+
+from apscheduler.schedulers.background import BackgroundScheduler
 from flask import Flask
+from flask_sqlalchemy import SQLAlchemy
+
+import paho.mqtt.client as mqtt
+from app.mqtt.mqtt import on_connect, on_message
 
 from app.config import config
 
-from flask_sqlalchemy import SQLAlchemy
-
 
 db = SQLAlchemy()
+client = mqtt.Client()
 
 
 def create_app(config_name):
@@ -24,6 +30,17 @@ def create_app(config_name):
     from app.api.endpoints import home as home_blueprint
     app.register_blueprint(home_blueprint)
 
-    print("Flask app running...")
+    client.on_connect = on_connect
+    client.on_message = on_message
+
+    client.connect("192.168.0.102", 3883, 60)
+    print("Client connected...", flush=True)
+
+    scheduler = BackgroundScheduler()
+    scheduler.add_job(func=client.loop, trigger="interval", seconds=3)
+    scheduler.start()
+
+    # Shut down the scheduler when exiting the app
+    atexit.register(lambda: scheduler.shutdown())
 
     return app
