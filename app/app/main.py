@@ -1,4 +1,4 @@
-from app.app_setup import create_app
+from app.app_setup import *
 from app.config import *
 
 app = create_app(os.environ.get('FLASK_ENV'))
