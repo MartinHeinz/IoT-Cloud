@@ -1,7 +1,0 @@
-# https://stackoverflow.com/questions/35679995/how-to-use-a-postgresql-container-with-existing-data
-
-docker exec -it $(docker-compose ps -q db ) psql -Upostgres -c '\z'  # to show all tables in the database. In another terminal, talk to the container's Postgres
-docker exec -it $(docker-compose ps -q db ) psql -Upostgres -c 'create table user()'  # to write queries directly
-
-docker exec -it $(docker-compose ps -q db ) pg_dump -Upostgres > backup.sql  # to dump (backup) data to host
-docker exec -i $(docker-compose ps -q db ) psql -Upostgres < backup.sql  # to restore backed up data
