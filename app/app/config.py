@@ -15,8 +15,8 @@ class Config:
     APP_NAME = os.getenv('APP_NAME', 'IoT-Cloud')
     SQLALCHEMY_COMMIT_ON_TEARDOWN = True
 
-    MQTT_BROKER_URL = os.getenv('MQTT_BROKER_URL', '192.168.0.102')
-    MQTT_BROKER_PORT = int(os.getenv('MQTT_BROKER_PORT', 3883))
+    MQTT_BROKER_URL = os.getenv('MQTT_BROKER_URL', 'localhost')
+    MQTT_BROKER_PORT = int(os.getenv('MQTT_BROKER_PORT', 1883))
     MQTT_USERNAME = os.getenv('MQTT_USERNAME', '')
     MQTT_PASSWORD = os.getenv('MQTT_PASSWORD', '')
     MQTT_REFRESH_TIME = 1.0  # refresh time in seconds
@@ -31,13 +31,13 @@ class DevelopmentConfig(Config):
     DEBUG = True
     ASSETS_DEBUG = True
     ENV = 'development'
-    SQLALCHEMY_DATABASE_URI = os.getenv('DEV_DATABASE_URL', 'postgres+psycopg2://postgres:postgres@192.168.0.102/flask_test')
+    SQLALCHEMY_DATABASE_URI = os.getenv('DEV_DATABASE_URL', 'postgres+psycopg2://postgres:postgres@localhost/flask_test')
     print('THIS APP IS IN DEBUG MODE. YOU SHOULD NOT SEE THIS IN PRODUCTION.')
 
 
 class TestingConfig(Config):
     TESTING = True
-    SQLALCHEMY_DATABASE_URI = os.getenv('TEST_DATABASE_URL', 'postgres+psycopg2://postgres:postgres@192.168.0.102/flask_test')  # TODO create testing DB
+    SQLALCHEMY_DATABASE_URI = os.getenv('TEST_DATABASE_URL', 'postgres+psycopg2://postgres:postgres@localhost/testing')
     WTF_CSRF_ENABLED = False
 
 
