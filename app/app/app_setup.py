@@ -1,4 +1,5 @@
 import atexit
+import os
 
 from apscheduler.schedulers.background import BackgroundScheduler
 from flask import Flask
@@ -27,8 +28,8 @@ def create_app(config_name):
     db.init_app(app)
 
     # Create app blueprints
-    from app.api.endpoints import home as home_blueprint
-    app.register_blueprint(home_blueprint)
+    from app.web import web as web_blueprint
+    app.register_blueprint(web_blueprint)
 
     client.on_connect = on_connect
     client.on_message = on_message

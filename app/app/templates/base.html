@@ -1,0 +1,14 @@
+<html>
+    <head>
+      {% if title %}
+      <title>{{ title }} - IoT Cloud</title>
+      {% else %}
+      <title>Welcome!</title>
+      {% endif %}
+    </head>
+    <body>
+        <div>Home <a href="/">Home</a></div>
+        <hr>
+        {% block content %}{% endblock %}
+    </body>
+</html>

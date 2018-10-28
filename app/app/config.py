@@ -13,6 +13,7 @@ if os.path.exists(config_path):
 
 class Config:
     APP_NAME = os.getenv('APP_NAME', 'IoT-Cloud')
+    SECRET_KEY = os.environ.get('SECRET_KEY') or 'you-will-never-guess'
     SQLALCHEMY_COMMIT_ON_TEARDOWN = True
 
     MQTT_BROKER_URL = os.getenv('MQTT_BROKER_URL', 'localhost')
