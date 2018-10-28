@@ -28,9 +28,9 @@ def test_mqtt_client():
     assert on_connect(mock, None, None, 0) == "Connected."
 
 
-def test_index(client):
-    rv = client.get('/')
-    assert int(rv.data) == 0
+# def test_index(client):
+#     rv = client.get('/')
+#     assert int(rv.data) == 0
 
 
 def test_abe():
