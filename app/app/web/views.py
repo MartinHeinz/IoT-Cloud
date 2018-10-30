@@ -13,10 +13,13 @@ def index():
 
 
 @web.route('/publish', methods=['GET', 'POST'])
-def publish():  # TODO write tests
+def publish():
     form = PublishForm(request.form)
-    if request.method == 'POST' and form.validate():
-        client.publish(form.topic.data, form.message.data)
-        flash('Message Send.')  # TODO this doesnt display
-        return redirect(url_for('web.index'))
-    return render_template('publish.html', title='Publish to Topic', form=form)
+    error = None
+    if request.method == 'POST':
+        if form.validate():
+            client.publish(form.topic.data, form.message.data)
+            flash('Message Send.')
+            return redirect(url_for('web.index'))
+        error = "Incorrect Topic or Message."
+    return render_template('publish.html', title='Publish to Topic', form=form, error=error)
