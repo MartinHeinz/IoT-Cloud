@@ -1,0 +1,176 @@
+[
+    {
+        "id": "f1dd4598.5b0fa8",
+        "type": "tab",
+        "label": "Flow 1",
+        "disabled": false,
+        "info": ""
+    },
+    {
+        "id": "a0bc715a.1dbdf",
+        "type": "mqtt in",
+        "z": "f1dd4598.5b0fa8",
+        "name": "",
+        "topic": "flask_test",
+        "qos": "2",
+        "broker": "56d5f455.32a37c",
+        "x": 220,
+        "y": 260,
+        "wires": [
+            [
+                "1ac6d612.d7152a"
+            ]
+        ]
+    },
+    {
+        "id": "119d741c.d39a9c",
+        "type": "debug",
+        "z": "f1dd4598.5b0fa8",
+        "name": "Debug",
+        "active": true,
+        "tosidebar": true,
+        "console": false,
+        "tostatus": false,
+        "complete": "true",
+        "x": 950,
+        "y": 280,
+        "wires": []
+    },
+    {
+        "id": "39d671ff.8f0f6e",
+        "type": "mqtt out",
+        "z": "f1dd4598.5b0fa8",
+        "name": "flask_test_out",
+        "topic": "flask_test",
+        "qos": "",
+        "retain": "",
+        "broker": "56d5f455.32a37c",
+        "x": 440,
+        "y": 120,
+        "wires": []
+    },
+    {
+        "id": "a902c5fa.38e248",
+        "type": "inject",
+        "z": "f1dd4598.5b0fa8",
+        "name": "flask_test_out",
+        "topic": "flask_test",
+        "payload": "{\"data\":\"Hello\"}",
+        "payloadType": "json",
+        "repeat": "",
+        "crontab": "",
+        "once": true,
+        "onceDelay": 0.1,
+        "x": 240,
+        "y": 120,
+        "wires": [
+            [
+                "39d671ff.8f0f6e"
+            ]
+        ]
+    },
+    {
+        "id": "1ac6d612.d7152a",
+        "type": "exec",
+        "z": "f1dd4598.5b0fa8",
+        "command": "python3 /home/martin/Projects/diplomovka/IoT-Cloud/client/device.py",
+        "addpay": true,
+        "append": "",
+        "useSpawn": "false",
+        "timer": "5",
+        "oldrc": false,
+        "name": "process",
+        "x": 400,
+        "y": 260,
+        "wires": [
+            [
+                "51b1392c.c4b6c8"
+            ],
+            [],
+            []
+        ]
+    },
+    {
+        "id": "c0336410.2868f8",
+        "type": "switch",
+        "z": "f1dd4598.5b0fa8",
+        "name": "",
+        "property": "payload.setOn",
+        "propertyType": "msg",
+        "rules": [
+            {
+                "t": "eq",
+                "v": "True",
+                "vt": "str"
+            },
+            {
+                "t": "else"
+            }
+        ],
+        "checkall": "true",
+        "repair": true,
+        "outputs": 2,
+        "x": 750,
+        "y": 240,
+        "wires": [
+            [
+                "2e30229.907f9de"
+            ],
+            [
+                "119d741c.d39a9c"
+            ]
+        ]
+    },
+    {
+        "id": "2e30229.907f9de",
+        "type": "debug",
+        "z": "f1dd4598.5b0fa8",
+        "name": "SetOn",
+        "active": true,
+        "tosidebar": true,
+        "console": false,
+        "tostatus": false,
+        "complete": "payload",
+        "x": 950,
+        "y": 200,
+        "wires": []
+    },
+    {
+        "id": "51b1392c.c4b6c8",
+        "type": "json",
+        "z": "f1dd4598.5b0fa8",
+        "name": "",
+        "property": "payload",
+        "action": "",
+        "pretty": true,
+        "x": 590,
+        "y": 240,
+        "wires": [
+            [
+                "c0336410.2868f8"
+            ]
+        ]
+    },
+    {
+        "id": "56d5f455.32a37c",
+        "type": "mqtt-broker",
+        "z": "",
+        "name": "Local MQTT Broker",
+        "broker": "localhost",
+        "port": "3883",
+        "clientid": "",
+        "usetls": false,
+        "compatmode": true,
+        "keepalive": "60",
+        "cleansession": true,
+        "birthTopic": "",
+        "birthQos": "0",
+        "birthPayload": "",
+        "closeTopic": "",
+        "closeQos": "0",
+        "closePayload": "",
+        "willTopic": "",
+        "willQos": "0",
+        "willPayload": ""
+    }
+]
