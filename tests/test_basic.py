@@ -1,24 +1,13 @@
 # -*- coding: utf-8 -*-
 import base64
+import json
 from unittest.mock import Mock
 
 from paho.mqtt.client import MQTTMessage, Client
-from sqlalchemy.exc import SADeprecationWarning
-
 from client.crypto_utils import encrypt
-from .context import create_app, db
 
-import pytest
-import warnings
-
-
-@pytest.fixture
-def client():
-	warnings.filterwarnings("ignore", category=SADeprecationWarning)
-	app = create_app('testing')
-	with app.app_context():
-		db.create_all()
-	return app.test_client()
+from tests.test_utils.fixtures import client
+from tests.test_utils.utils import is_valid_uuid
 
 
 def test_mqtt_client():
@@ -65,6 +54,18 @@ def test_api_publish(client):
 	), follow_redirects=True)
 
 	assert response.status_code == 200
+
+
+def test_api_dt_create(client):
+	data = {"description": "non-empty"}
+	response = client.post('/api/device_type/create', query_string=data, follow_redirects=True)
+	assert response.status_code == 200
+	json_data = json.loads(response.data.decode("utf-8"))
+	assert is_valid_uuid(json_data["type_id"])
+
+	data = {"not-description": "non-empty"}
+	response = client.post('/api/device_type/create', query_string=data, follow_redirects=True)
+	assert response.status_code == 400
 
 
 def test_abe():

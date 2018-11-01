@@ -1,7 +1,6 @@
 from flask import render_template, request, flash, redirect, url_for
 
-from app.app_setup import db, client
-from app.models.user import User
+from app.app_setup import client
 
 from app.web import web
 from app.web.forms import PublishForm

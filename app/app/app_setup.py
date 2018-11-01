@@ -1,5 +1,4 @@
 import atexit
-import os
 
 from apscheduler.schedulers.background import BackgroundScheduler
 from flask import Flask
@@ -23,8 +22,13 @@ def create_app(config_name):
 
 	config[config_name].init_app(app)
 
-	# Set up extensions
 	db.init_app(app)
+	# Set up extensions
+	from app.models.models import Device, DeviceType, User
+	with app.app_context():
+		db.drop_all()
+		db.create_all()
+		db.session.commit()
 
 	# Create app blueprints
 

@@ -18,7 +18,7 @@ def main():
 		ciphertext,
 		tag
 	)
-	print(data)
+	print(data.decode("utf-8"))
 
 
 if __name__ == '__main__':
