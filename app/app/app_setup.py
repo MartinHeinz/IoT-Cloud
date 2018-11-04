@@ -20,6 +20,9 @@ def create_app(config_name):
 	app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 	# not using sqlalchemy event system, hence disabling it
 
+	from .cli import populate
+	app.cli.add_command(populate)
+
 	config[config_name].init_app(app)
 
 	db.init_app(app)
