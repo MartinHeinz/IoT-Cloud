@@ -1,0 +1,1 @@
+INSERT INTO public."user" VALUES (DEFAULT, 'martin'), (DEFAULT, 'jozo'), (DEFAULT, 'fero')

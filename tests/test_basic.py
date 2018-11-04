@@ -4,9 +4,12 @@ import json
 from unittest.mock import Mock
 
 from paho.mqtt.client import MQTTMessage, Client
+
+from app.api.endpoints import DEVICE_TYPE_ID_MISSING_ERROR_MSG, DEVICE_TYPE_ID_INCORRECT_ERROR_MSG
+from app.models.models import DeviceType
 from client.crypto_utils import encrypt
 
-from tests.test_utils.fixtures import client
+from tests.test_utils.fixtures import *
 from tests.test_utils.utils import is_valid_uuid
 
 
@@ -66,6 +69,33 @@ def test_api_dt_create(client):
 	data = {"not-description": "non-empty"}
 	response = client.post('/api/device_type/create', query_string=data, follow_redirects=True)
 	assert response.status_code == 400
+
+
+def test_api_dv_create(client, app):
+	data = {"not-type_id": "non-empty"}
+	response = client.post('/api/device/create', query_string=data, follow_redirects=True)
+	assert response.status_code == 400
+	json_data = json.loads(response.data.decode("utf-8"))
+	assert (json_data["error"]) == DEVICE_TYPE_ID_MISSING_ERROR_MSG
+
+	data = {"type_id": "non-valid - not present in DB"}
+	response = client.post('/api/device/create', query_string=data, follow_redirects=True)
+	assert response.status_code == 400
+	json_data = json.loads(response.data.decode("utf-8"))
+	assert (json_data["error"]) == DEVICE_TYPE_ID_INCORRECT_ERROR_MSG
+
+	app, ctx = app
+
+	with app.app_context():
+		dt = DeviceType()
+		db.session.add(dt)
+		db.session.commit()
+		data = {"type_id": str(dt.type_id)}
+
+	response = client.post('/api/device/create', query_string=data, follow_redirects=True)
+	assert response.status_code == 200
+	json_data = json.loads(response.data.decode("utf-8"))
+	assert "id" in json_data
 
 
 def test_abe():
