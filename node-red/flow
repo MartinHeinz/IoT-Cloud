@@ -15,7 +15,7 @@
         "qos": "2",
         "broker": "56d5f455.32a37c",
         "x": 220,
-        "y": 260,
+        "y": 340,
         "wires": [
             [
                 "1ac6d612.d7152a"
@@ -33,7 +33,7 @@
         "tostatus": false,
         "complete": "true",
         "x": 950,
-        "y": 280,
+        "y": 360,
         "wires": []
     },
     {
@@ -55,8 +55,8 @@
         "z": "f1dd4598.5b0fa8",
         "name": "flask_test_out",
         "topic": "flask_test",
-        "payload": "{\"data\":\"Hello\"}",
-        "payloadType": "json",
+        "payload": "Wi4HsSVQY0EQ/RuRC7winks= X3hxxWCG+926QW2ZGuIi0Q==",
+        "payloadType": "str",
         "repeat": "",
         "crontab": "",
         "once": true,
@@ -73,7 +73,7 @@
         "id": "1ac6d612.d7152a",
         "type": "exec",
         "z": "f1dd4598.5b0fa8",
-        "command": "python3 /home/martin/Projects/diplomovka/IoT-Cloud/client/device.py",
+        "command": "python3 /home/martin/Projects/diplomovka/IoT-Cloud/client/cli.py device parse-msg ",
         "addpay": true,
         "append": "",
         "useSpawn": "false",
@@ -81,7 +81,7 @@
         "oldrc": false,
         "name": "process",
         "x": 400,
-        "y": 260,
+        "y": 340,
         "wires": [
             [
                 "51b1392c.c4b6c8"
@@ -111,7 +111,7 @@
         "repair": true,
         "outputs": 2,
         "x": 750,
-        "y": 240,
+        "y": 320,
         "wires": [
             [
                 "2e30229.907f9de"
@@ -132,7 +132,7 @@
         "tostatus": false,
         "complete": "payload",
         "x": 950,
-        "y": 200,
+        "y": 280,
         "wires": []
     },
     {
@@ -144,12 +144,45 @@
         "action": "",
         "pretty": true,
         "x": 590,
-        "y": 240,
+        "y": 320,
         "wires": [
             [
                 "c0336410.2868f8"
             ]
         ]
+    },
+    {
+        "id": "3079fcb7.a3e184",
+        "type": "inject",
+        "z": "f1dd4598.5b0fa8",
+        "name": "save_data",
+        "topic": "node-red_save_data",
+        "payload": "Wi4QtSV+L1kK/02gCr0u0lGsab59+OIZ Iv4oHaaymXFda+OgZlWeVA==",
+        "payloadType": "str",
+        "repeat": "",
+        "crontab": "",
+        "once": true,
+        "onceDelay": 0.1,
+        "x": 230,
+        "y": 200,
+        "wires": [
+            [
+                "52e396c3.116f68"
+            ]
+        ]
+    },
+    {
+        "id": "52e396c3.116f68",
+        "type": "mqtt out",
+        "z": "f1dd4598.5b0fa8",
+        "name": "save_data_out",
+        "topic": "save_data",
+        "qos": "",
+        "retain": "",
+        "broker": "56d5f455.32a37c",
+        "x": 440,
+        "y": 200,
+        "wires": []
     },
     {
         "id": "56d5f455.32a37c",
