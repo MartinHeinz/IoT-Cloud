@@ -1,0 +1,10 @@
+{
+  "name": "node-red",
+  "version": "1.0.0",
+  "dependencies": {
+    
+  },
+  "scripts": {
+    "test": "mocha tests tests/**/*.js"
+  }
+}
