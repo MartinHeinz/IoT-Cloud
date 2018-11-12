@@ -2,7 +2,9 @@
   "name": "node-red",
   "version": "1.0.0",
   "dependencies": {
-    
+    "node-red": "^0.19.5",
+    "mocha": "^5.2.0",
+    "express": "^4.16.4"
   },
   "scripts": {
     "test": "mocha tests tests/**/*.js"

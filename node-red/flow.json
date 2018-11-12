@@ -190,9 +190,10 @@
         "z": "",
         "name": "Local MQTT Broker",
         "broker": "localhost",
-        "port": "3883",
+        "port": "8883",
+        "tls": "ec6f7e8b.9cb98",
         "clientid": "",
-        "usetls": false,
+        "usetls": true,
         "compatmode": true,
         "keepalive": "60",
         "cleansession": true,
@@ -205,5 +206,19 @@
         "willTopic": "",
         "willQos": "0",
         "willPayload": ""
+    },
+    {
+        "id": "ec6f7e8b.9cb98",
+        "type": "tls-config",
+        "z": "",
+        "name": "Local Dev Certs",
+        "cert": "",
+        "key": "",
+        "ca": "",
+        "certname": "server.crt",
+        "keyname": "",
+        "caname": "ca.crt",
+        "servername": "",
+        "verifyservercert": true
     }
 ]
