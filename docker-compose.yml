@@ -4,3 +4,5 @@ services:
     image: postgres:latest
   web:
     build: ./
+  mqtt:
+    image: eclipse-mosquitto:latest

@@ -98,6 +98,16 @@ ENV/
 # Confidential
 credentials.*
 
+# Javascript
 node_modules/
+.config.json
+.config.json.backup
+package-lock.json
 
 config.env
+
+# certs
+*.srl
+*.csr
+*.key
+*.pem

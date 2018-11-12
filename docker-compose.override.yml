@@ -12,20 +12,38 @@ services:
       POSTGRES_PASSWORD: "postgres"
       POSTGRES_DB: flask_test
   web:
+    working_dir: /app
     volumes:
       - ./app:/app
       - ./tests:/tests
       - ./client:/client
+    expose:
+      - 5000
     ports:
       - "80:80"
+      - "5000:5000"
     environment:
+      - DOCKER_TLS_VERIFY=True
+      - COMPOSE_TLS_VERSION=TLSv1_2
       - FLASK_ENV=docker
-      - FLASK_APP=app/main.py
       - FLASK_DEBUG=1
-      - 'RUN=flask run --host=0.0.0.0 --port=80 --no-reload'
-    # command: flask run --host=0.0.0.0 --port=80
-    # Infinite loop, to keep it alive, for debugging
-    # command: bash -c "while true; do echo 'sleeping...' && sleep 10; done"
+      - FLASK_APP=app.app_setup:create_app('development')
+    command: >
+      bash -c "./prestart.sh
+      && flask run --host=0.0.0.0 --port=80 --no-reload"
+  mqtt:
+    restart: always
+    ports:
+    - "8883:8883"
+    - "9001:9001"
+    environment:
+    - DOCKER_TLS_VERIFY=True
+    - COMPOSE_TLS_VERSION=TLSv1_2
+    volumes:
+    - ./mosquitto/config:/mosquitto/config
+    - ./mosquitto/data:/mosquitto/data
+    - ./mosquitto/log:/mosquitto/log
+    - ./mosquitto/certs:/mosquitto/certs
 
 volumes:
   data: {}

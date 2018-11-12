@@ -1,4 +1,4 @@
-FROM tiangolo/uwsgi-nginx-flask:python3.7
+FROM python:3.7-stretch
 
 RUN apt-get update
 RUN apt-get -y install \
@@ -27,3 +27,5 @@ RUN pip install -r requirements.txt
 WORKDIR /
 COPY ./app /app
 COPY ./tests /tests
+
+RUN chmod +x /app/prestart.sh

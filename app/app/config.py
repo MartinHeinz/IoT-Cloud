@@ -23,6 +23,12 @@ class Config:
     MQTT_REFRESH_TIME = 1.0  # refresh time in seconds
     SQLALCHEMY_TRACK_MODIFICATIONS = False
 
+    CA_CERTS_PATH = os.path.join(os.path.dirname(__file__), "..", "resources/certs/server/server.crt")
+    SSL_INSECURE = True  # Needed to avoid "ssl.CertificateError: hostname '<host ip>' doesn't match '<Name on cert>'"
+
+    CLIENT_CERTFILE_PATH = None
+    CLIENT_KEYFILE_PATH = None
+
     @staticmethod
     def init_app(app):
         pass
