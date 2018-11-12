@@ -37,3 +37,9 @@ Privacy friendly framework for IoT Cloud.
 - based on [StackOverflow answer](https://stackoverflow.com/questions/35679995/how-to-use-a-postgresql-container-with-existing-data "StackOverflow answer")
 
 - Preferably access using _pgadmin4_ should be used with username _postgres_ and exposed port from _docker-compose.override_ (by default: `5431`)
+
+## TLS
+It's necessary to provide certificates to use application. When using _Mosquitto_, please use steps at [Mosquitto website](https://mosquitto.org/man/mosquitto-tls-7.html "Mosquitto website")
+- Files created in previous steps should be placed in `certs` folder both for _Mosquitto_ and application, replacing `*.dummy` files
+- Application currently does not require client certificates, to change that, you need to set `require_certificate true` in `mosquitto.conf` and provide client `certfile` and `keyfile` to `client.tls_set` in `create_app.py` through `CLIENT_CERTFILE_PATH` and `CLIENT_KEYFILE_PATH` config attributes
+- in production `SSL_INSECURE` attribute in config should be set to _False_, so when generating certificates, make sure that broker name (hostname) matches name on certificate
