@@ -4,7 +4,7 @@ import requests
 
 from crypto_utils import encrypt
 
-URL_BASE = "http://0.0.0.0/api/"
+URL_BASE = "http://0.0.0.0:80/api/"
 URL_PUBLISH = URL_BASE + "publish"
 URL_CREATE_DEVICE_TYPE = URL_BASE + "device_type/create"
 URL_CREATE_DEVICE = URL_BASE + "device/create"
@@ -30,7 +30,7 @@ def send_message():
 	click.echo(data)
 
 	r = requests.post(URL_PUBLISH, params=data)
-	return r
+	click.echo(r.content)
 
 
 @user.command()

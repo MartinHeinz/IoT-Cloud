@@ -47,7 +47,7 @@ def test_publish(client):
 def test_api_publish(client):
 	iv, ciphertext, tag = encrypt(
 		b'f\x9c\xeb Lj\x13n\x84B\xf5S\xb5\xdfnl53d\x10\x12\x92\x82\xe1\xe3~\xc8*\x16\x9f\xd69',
-		b"{'data': 'secret'}",
+		b"{\"data\": \"secret\"}",
 		b"authenticated but not encrypted payload"
 	)
 	response = client.post('/api/publish', query_string=dict(
@@ -101,3 +101,4 @@ def test_api_dv_create(client, app):
 def test_abe():
 	from .context import ABE_main
 	assert ABE_main.test_abe() is True
+
