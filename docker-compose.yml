@@ -6,3 +6,6 @@ services:
     build: ./
   mqtt:
     image: eclipse-mosquitto:latest
+  nginx:
+    image: nginx:latest
+

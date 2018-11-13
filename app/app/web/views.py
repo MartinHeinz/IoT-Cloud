@@ -19,6 +19,6 @@ def publish():
         if form.validate():
             client.publish(form.topic.data, form.message.data)
             flash('Message Send.')
-            return redirect(url_for('web.index'))
+            return redirect(url_for('web.index', _scheme="https", _external=True))
         error = "Incorrect Topic or Message."
     return render_template('publish.html', title='Publish to Topic', form=form, error=error)

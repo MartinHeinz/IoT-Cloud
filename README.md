@@ -10,6 +10,10 @@ Privacy friendly framework for IoT Cloud.
 
 ## Running using Docker
 - from root directory run: `docker-compose up`
+- to clean up _\__pycache_\__ and _.pytest\_cache_ directories created by docker use following commands:
+    - `sudo find . -path '*/__pycache__*' ! -path "./venv*" -delete`
+    - `sudo find . -path '*/.pytest_cache*' ! -path "./venv*" -delete`
+    - _NOTE: run commands first without `-delete` flag to test, to make sure you don't damage your system_
 
 ## Running using Flask
 - export path to flask application factory method - `export FLASK_APP="app.app_setup:create_app('development')"`
@@ -43,3 +47,9 @@ It's necessary to provide certificates to use application. When using _Mosquitto
 - Files created in previous steps should be placed in `certs` folder both for _Mosquitto_ and application, replacing `*.dummy` files
 - Application currently does not require client certificates, to change that, you need to set `require_certificate true` in `mosquitto.conf` and provide client `certfile` and `keyfile` to `client.tls_set` in `create_app.py` through `CLIENT_CERTFILE_PATH` and `CLIENT_KEYFILE_PATH` config attributes
 - in production `SSL_INSECURE` attribute in config should be set to _False_, so when generating certificates, make sure that broker name (hostname) matches name on certificate
+
+## Setting up HTTPS
+- You need to provide certificate and key for Nginx server to be accessible - this should be done by replacing dummy files in _./webserver/ssl_ folder 
+- To generate self-signed certificate:
+    - change directory to _./webserver/ssl_
+    - run `sudo openssl req -x509 -nodes -days 365 -newkey rsa:2048 -keyout ./private/webserver.key -out ./certs/webserver.crt`
