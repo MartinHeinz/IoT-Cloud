@@ -15,8 +15,10 @@ services:
     working_dir: /app
     volumes:
       - ./app:/app
-      - ./tests:/tests
       - ./client:/client
+      - './tests:/tests'
+      - /tests/test_client/
+
     environment:
       - DOCKER_TLS_VERIFY=True
       - COMPOSE_TLS_VERSION=TLSv1_2

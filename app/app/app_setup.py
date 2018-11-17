@@ -1,17 +1,19 @@
 import atexit
 import ssl
+import paho.mqtt.client as mqtt
 
 from apscheduler.schedulers.background import BackgroundScheduler
 from flask import Flask
 from flask_sqlalchemy import SQLAlchemy
 
-import paho.mqtt.client as mqtt
-from app.mqtt.mqtt import on_connect, on_message, on_log, on_publish
-
 from app.config import config
 
 db = SQLAlchemy()
 client = mqtt.Client()
+
+
+def register_models():
+    from app.models.models import Device, DeviceType, User, DeviceData  # noqa
 
 
 def create_app(config_name):
@@ -28,7 +30,7 @@ def create_app(config_name):
 
     db.init_app(app)
     # Set up extensions
-    from app.models.models import Device, DeviceType, User
+    register_models()
     with app.app_context():
         db.drop_all()
         db.create_all()
@@ -41,10 +43,24 @@ def create_app(config_name):
     from app.web import web as web_blueprint
     app.register_blueprint(web_blueprint, url_prefix="/")
 
+    from app.mqtt import handle_on_connect, handle_on_log, handle_on_publish, handle_on_message
+
+    def on_connect(client, userdata, flags, rc):
+        handle_on_connect(client, userdata, flags, rc)
+
+    def on_log(client, userdata, level, buf):
+        handle_on_log(client, userdata, level, buf)
+
+    def on_publish(client, userdata, mid):
+        handle_on_publish(client, userdata, mid)
+
+    def on_message(client, userdata, msg):
+        handle_on_message(client, userdata, msg, app, db)
+
     client.on_connect = on_connect
-    client.on_message = on_message
     client.on_log = on_log
     client.on_publish = on_publish
+    client.on_message = on_message
 
     try:
         client.tls_set(ca_certs=app.config["CA_CERTS_PATH"],

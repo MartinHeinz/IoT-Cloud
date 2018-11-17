@@ -1,25 +1,38 @@
 # -*- coding: utf-8 -*-
 import base64
 import json
-from unittest.mock import Mock
-
-from paho.mqtt.client import MQTTMessage, Client
+from paho.mqtt.client import MQTTMessage
 
 from app.api.endpoints import DEVICE_TYPE_ID_MISSING_ERROR_MSG, DEVICE_TYPE_ID_INCORRECT_ERROR_MSG
-from app.models.models import DeviceType
+from app.models.models import DeviceType, Device, DeviceData
+from app.app_setup import client as mqtt_client
 from client.crypto_utils import encrypt
 
 from tests.test_utils.fixtures import *
 from tests.test_utils.utils import is_valid_uuid
 
 
-def test_mqtt_client():
-    mock = Mock(spec=Client)
-    mock.subscribe.return_value(None)
+def test_mqtt_client(app):
+    assert mqtt_client._ssl is True
 
-    from app.mqtt.mqtt import on_connect, on_message
-    assert on_message(None, None, MQTTMessage()) == "Received message."
-    assert on_connect(mock, None, None, 0) == "Connected."
+
+def test_mqtt_on_message(app):
+    msg = MQTTMessage(topic=b"not_save_data")
+    msg.payload = b"{'device_id': 111111, 'device_data': 'test_data'}"  # not present yet
+    from app.mqtt.mqtt import handle_on_message
+    app, ctx = app
+    with app.app_context():
+        device_data_count = db.session.query(DeviceData).count()
+
+        handle_on_message(None, None, msg, app, db)
+        assert device_data_count == db.session.query(DeviceData).count()  # 0 == 0
+        msg.topic = b"save_data"
+        assert device_data_count == db.session.query(DeviceData).count()  # 0 == 0
+        db.session.add(Device(id=111111))
+        db.session.commit()
+        msg.payload = b"{'device_id': 111111, 'device_data': 'test_data'}"
+        handle_on_message(None, None, msg, app, db)
+        assert device_data_count + 1 == db.session.query(DeviceData).count()  # 0 + 1 == 1
 
 
 def test_index(client):

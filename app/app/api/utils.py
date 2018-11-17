@@ -1,5 +1,5 @@
-import json
+from flask import jsonify
 
 
 def http_json_response(success=True, code=200, **data):
-	return json.dumps({'success': success, **data}), code, {'ContentType': 'application/json'}
+    return jsonify(success=success, **data), code

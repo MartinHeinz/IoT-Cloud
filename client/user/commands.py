@@ -30,7 +30,7 @@ def send_message():
     click.echo(data)
 
     r = requests.post(URL_PUBLISH, params=data, verify=False)
-    click.echo(r.content)
+    click.echo(r.content.decode('unicode-escape'))
 
 
 @user.command()
@@ -38,7 +38,7 @@ def send_message():
 def create_device_type(description):
     data = {"description": description}
     r = requests.post(URL_CREATE_DEVICE_TYPE, params=data, verify=False)
-    click.echo(r.content)
+    click.echo(r.content.decode('unicode-escape'))
 
 
 @user.command()
@@ -46,7 +46,7 @@ def create_device_type(description):
 def create_device(device_type_id):
     data = {"type_id": device_type_id}
     r = requests.post(URL_CREATE_DEVICE, params=data, verify=False)
-    click.echo(r.content)
+    click.echo(r.content.decode('unicode-escape'))
 
 
 if __name__ == '__main__':
