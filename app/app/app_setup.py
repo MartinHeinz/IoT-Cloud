@@ -43,6 +43,9 @@ def create_app(config_name):
     from app.web import web as web_blueprint
     app.register_blueprint(web_blueprint, url_prefix="/")
 
+    from app.errors import errors
+    app.register_error_handler(Exception, errors.handle_error)
+
     from app.mqtt import handle_on_connect, handle_on_log, handle_on_publish, handle_on_message
 
     def on_connect(client, userdata, flags, rc):

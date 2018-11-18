@@ -4,6 +4,7 @@ import json
 from paho.mqtt.client import MQTTMessage
 
 from app.api.endpoints import DEVICE_TYPE_ID_MISSING_ERROR_MSG, DEVICE_TYPE_ID_INCORRECT_ERROR_MSG
+from app.errors.errors import SOMETHING_WENT_WRONG_MSG
 from app.models.models import DeviceType, Device, DeviceData
 from app.app_setup import client as mqtt_client
 from client.crypto_utils import encrypt
@@ -38,6 +39,13 @@ def test_mqtt_on_message(app):
 def test_index(client):
     response = client.get('/')
     assert "Hi from app!" in str(response.data)
+
+
+def test_error_handler(client):
+    response = client.post('/nonvalidurl', follow_redirects=False)
+    assert response.status_code == 404
+    json_data = json.loads(response.data.decode("utf-8"))
+    assert (json_data["error"]) == SOMETHING_WENT_WRONG_MSG
 
 
 def test_publish(client):

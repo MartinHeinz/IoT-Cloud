@@ -16,6 +16,8 @@ class Config:
     SECRET_KEY = os.environ.get('SECRET_KEY') or 'you-will-never-guess'
     SQLALCHEMY_COMMIT_ON_TEARDOWN = True
 
+    TRAP_HTTP_EXCEPTIONS = True
+
     MQTT_BROKER_URL = os.getenv('MQTT_BROKER_URL', 'localhost')
     MQTT_BROKER_PORT = int(os.getenv('MQTT_BROKER_PORT', 1883))
     MQTT_USERNAME = os.getenv('MQTT_USERNAME', '')
