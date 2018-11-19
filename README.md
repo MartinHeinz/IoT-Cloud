@@ -53,3 +53,8 @@ It's necessary to provide certificates to use application. When using _Mosquitto
 - To generate self-signed certificate:
     - change directory to _./webserver/ssl_
     - run `sudo openssl req -x509 -nodes -days 365 -newkey rsa:2048 -keyout ./private/webserver.key -out ./certs/webserver.crt`
+    
+## Running Node-RED
+- To start _Node-RED_ with prepared `settings.js` file go to `./node-red` directory and run in using:
+    - `./node_modules/node-red/bin/node-red-pi -s ./settings.js` if you have _Node-RED_ installed in `node_modules`
+    - `node-red -s ./settings.js` if installed globally
