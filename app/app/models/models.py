@@ -11,6 +11,12 @@ user_device_table = db.Table('user_device',
                              extend_existing=True
                              )
 
+scene_device_table = db.Table('scene_device',
+                              db.Column("scene_id", db.Integer, db.ForeignKey('scene.id')),
+                              db.Column('device_id', db.Integer, db.ForeignKey('device.id')),
+                              extend_existing=True
+                              )
+
 
 class User(db.Model):
     __tablename__ = 'user'
@@ -47,6 +53,11 @@ class Device(db.Model):
         secondary=user_device_table,
         back_populates="devices")
     data = relationship("DeviceData", back_populates="device")
+    actions = relationship("Action", back_populates="device")
+    scenes = relationship(
+        "Scene",
+        secondary=scene_device_table,
+        back_populates="devices")
 
 
 class DeviceData(db.Model):
@@ -58,3 +69,26 @@ class DeviceData(db.Model):
     data = db.Column(db.LargeBinary)
     device_id = db.Column(db.Integer, db.ForeignKey('device.id'))
     device = relationship("Device", back_populates="data")
+
+
+class Action(db.Model):
+    __tablename__ = 'action'
+    __table_args__ = {'extend_existing': True}
+
+    id = db.Column(db.Integer, primary_key=True)
+    name = db.Column(db.String(200), unique=False, nullable=True)
+    device_id = db.Column(db.Integer, db.ForeignKey('device.id'))
+    device = relationship("Device", back_populates="actions")
+
+
+class Scene(db.Model):
+    __tablename__ = 'scene'
+    __table_args__ = {'extend_existing': True}
+
+    id = db.Column(db.Integer, primary_key=True)
+    name = db.Column(db.String(200), unique=False, nullable=True)
+    description = db.Column(db.String(200), unique=False, nullable=True)
+    devices = relationship(
+        "Device",
+        secondary=scene_device_table,
+        back_populates="scenes")

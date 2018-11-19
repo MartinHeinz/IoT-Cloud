@@ -13,7 +13,7 @@ client = mqtt.Client()
 
 
 def register_models():
-    from app.models.models import Device, DeviceType, User, DeviceData  # noqa
+    from app.models.models import Device, DeviceType, User, DeviceData, Action, Scene  # noqa
 
 
 def create_app(config_name):
