@@ -122,7 +122,7 @@ class Waters11(ABEnc):
 
         nodes = self.util.prune(ctxt['policy'], key['attr_list'])
         if not nodes:
-            print ("Policy not satisfied.")
+            print("Policy not satisfied.")
             return None
 
         prodG = 1

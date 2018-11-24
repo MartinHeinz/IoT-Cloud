@@ -5,11 +5,11 @@
 
 # Python code to execute, usually for sys.path manipulation such as
 # pygtk.require().
-#init-hook=
+init-hook='import sys; sys.path.append("./")'
 
 # Add files or directories to the blacklist. They should be base names, not
 # paths.
-ignore=CVS
+ignore=CVS, ABE
 
 # Pickle collected data for later comparisons.
 persistent=yes
@@ -138,7 +138,7 @@ callbacks=cb_,_cb
 [FORMAT]
 
 # Maximum number of characters on a single line.
-max-line-length=100
+max-line-length=160
 
 # Regexp for a line that is allowed to be longer than the limit.
 ignore-long-lines=^\s*(# )?<?https?://\S+>?$
@@ -263,11 +263,11 @@ ignore-mixin-members=yes
 # List of module names for which member attributes should not be checked
 # (useful for modules/projects where namespaces are manipulated during runtime
 # and thus existing member attributes cannot be deduced by static analysis
-ignored-modules=
+ignored-modules=flask_sqlalchemy
 
 # List of classes names for which member attributes should not be checked
 # (useful for classes with attributes dynamically set).
-ignored-classes=SQLObject, optparse.Values, thread._local, _thread._local
+ignored-classes=SQLObject, optparse.Values, thread._local, _thread._local, scoped_session
 
 # List of members which are set dynamically and missed by pylint inference
 # system, and so shouldn't trigger E1101 when accessed. Python regular

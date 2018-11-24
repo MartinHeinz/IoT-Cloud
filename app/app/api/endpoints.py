@@ -36,7 +36,7 @@ def create_device():
     dt = None
     try:
         dt = db.session.query(DeviceType).filter(DeviceType.type_id == device_type_id).first()
-    finally:
+    finally:  # TODO change to except and provide specific exception?
         if dt is None:
             return http_json_response(False, 400, **{"error": DEVICE_TYPE_ID_INCORRECT_ERROR_MSG})
     dv = Device(device_type_id=device_type_id, device_type=dt)

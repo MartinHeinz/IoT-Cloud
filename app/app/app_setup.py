@@ -13,7 +13,7 @@ client = mqtt.Client()
 
 
 def register_models():
-    from app.models.models import Device, DeviceType, User, DeviceData, Action, Scene  # noqa
+    from app.models.models import Device, DeviceType, User, DeviceData, Action, Scene  # noqa pylint: disable=unused-variable, cyclic-import
 
 
 def create_app(config_name):
@@ -48,17 +48,17 @@ def create_app(config_name):
 
     from app.mqtt import handle_on_connect, handle_on_log, handle_on_publish, handle_on_message
 
-    def on_connect(client, userdata, flags, rc):
-        handle_on_connect(client, userdata, flags, rc)
+    def on_connect(mqtt_client, userdata, flags, rc):
+        handle_on_connect(mqtt_client, userdata, flags, rc)
 
-    def on_log(client, userdata, level, buf):
-        handle_on_log(client, userdata, level, buf)
+    def on_log(mqtt_client, userdata, level, buf):
+        handle_on_log(mqtt_client, userdata, level, buf)
 
-    def on_publish(client, userdata, mid):
-        handle_on_publish(client, userdata, mid)
+    def on_publish(mqtt_client, userdata, mid):
+        handle_on_publish(mqtt_client, userdata, mid)
 
-    def on_message(client, userdata, msg):
-        handle_on_message(client, userdata, msg, app, db)
+    def on_message(mqtt_client, userdata, msg):
+        handle_on_message(mqtt_client, userdata, msg, app, db)
 
     client.on_connect = on_connect
     client.on_log = on_log
@@ -81,6 +81,6 @@ def create_app(config_name):
     scheduler.start()
 
     # Shut down the scheduler when exiting the app
-    atexit.register(lambda: scheduler.shutdown())
+    atexit.register(scheduler.shutdown)
 
     return app
