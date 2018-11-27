@@ -10,14 +10,11 @@ services:
     environment:
       POSTGRES_USER: "postgres"
       POSTGRES_PASSWORD: "postgres"
-      POSTGRES_DB: flask_test
+      POSTGRES_DB: postgres
   web:
     working_dir: /app
     volumes:
       - ./app:/app
-      - ./client:/client
-      - './tests:/tests'
-      - /tests/test_client/
 
     environment:
       - DOCKER_TLS_VERIFY=True
@@ -26,11 +23,10 @@ services:
       - FLASK_ENV=docker
       - FLASK_DEBUG=1
       - FLASK_APP=app.app_setup:create_app('development')
-    command: >
-      bash -c "./prestart.sh
-      && flask run --host=0.0.0.0 --port=443 --no-reload"
+    command: bash -c "while ping -c1 web_test &>/dev/null; do sleep 1; done && flask run --host=0.0.0.0 --port=443 --no-reload"
     depends_on:
       - db
+      - web_test
   mqtt:
     restart: always
     ports:
@@ -52,6 +48,19 @@ services:
     - ./webserver/ssl/:/etc/ssl/
     depends_on:
     - web
+  web_test:
+    # TODO add reports generation for pytest (mount some folder to which pytest will generate XML? reports)
+    working_dir: /app
+    volumes:
+    - ./app:/app
+    - ./client:/client
+    - './tests:/tests'
+    - /tests/test_client/
+    environment:
+    - DOCKER_TLS_VERIFY=True
+    - COMPOSE_TLS_VERSION=TLSv1_2
+    - PYTHONDONTWRITEBYTECODE=False
+    command: pytest ../tests --color=yes
 
 volumes:
   data: {}

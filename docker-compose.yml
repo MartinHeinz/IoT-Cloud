@@ -8,4 +8,7 @@ services:
     image: eclipse-mosquitto:latest
   nginx:
     image: nginx:latest
-
+  web_test:
+    build:
+      context: .
+      dockerfile: ./tests/Dockerfile

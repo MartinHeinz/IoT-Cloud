@@ -34,7 +34,7 @@ def create_device():
     if device_type_id is None:
         return http_json_response(False, 400, **{"error": DEVICE_TYPE_ID_MISSING_ERROR_MSG})
     dt = None
-    try:
+    try:  # TODO do check whether UUID is valid (test_api_dv_create)
         dt = db.session.query(DeviceType).filter(DeviceType.type_id == device_type_id).first()
     finally:  # TODO change to except and provide specific exception?
         if dt is None:

@@ -1,4 +1,5 @@
 FROM python:3.7-stretch
+LABEL image_type="test"
 
 RUN apt-get update
 RUN apt-get -y install \
@@ -25,6 +26,3 @@ COPY ./requirements.txt requirements.txt
 RUN pip install -r requirements.txt
 
 WORKDIR /
-COPY ./app /app
-
-RUN chmod +x /app/prestart.sh

@@ -58,3 +58,6 @@ It's necessary to provide certificates to use application. When using _Mosquitto
 - To start _Node-RED_ with prepared `settings.js` file go to `./node-red` directory and run in using:
     - `./node_modules/node-red/bin/node-red-pi -s ./settings.js` if you have _Node-RED_ installed in `node_modules`
     - `node-red -s ./settings.js` if installed globally
+    
+## Troubleshooting
+- If you have issues running tests inside container (there are some tests that need to be excluded when running inside container), try `docker container prune` and `docker-compose up` again
