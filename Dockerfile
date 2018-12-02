@@ -26,5 +26,3 @@ RUN pip install -r requirements.txt
 
 WORKDIR /
 COPY ./app /app
-
-RUN chmod +x /app/prestart.sh

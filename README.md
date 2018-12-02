@@ -9,7 +9,8 @@ Privacy friendly framework for IoT Cloud.
 - install `docker-compose`
 
 ## Running using Docker
-- from root directory run: `docker-compose up`
+- from root directory run: `CURRENT_UID=$(id -u):$(id -g) docker-compose up`
+    - _NOTE: `CURRENT_UID=$(id -u):$(id -g)` is necessary because test container needs to run under current user to write reports_ 
 - to clean up _\__pycache_\__ and _.pytest\_cache_ directories created by docker use following commands:
     - `sudo find . -path '*/__pycache__*' ! -path "./venv*" -delete`
     - `sudo find . -path '*/.pytest_cache*' ! -path "./venv*" -delete`

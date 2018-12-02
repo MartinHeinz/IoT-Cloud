@@ -2,7 +2,7 @@ import base64
 import click
 import requests
 
-from client.crypto_utils import encrypt
+from client.crypto_utils import encrypt  # TODO FIX ME
 
 URL_BASE = "https://localhost/api/"
 URL_PUBLISH = URL_BASE + "publish"

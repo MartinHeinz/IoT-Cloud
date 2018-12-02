@@ -1,2 +1,2 @@
 #! /usr/bin/env bash
-pytest ../tests --color=yes
+#pytest ../tests --color=yes
