@@ -10,6 +10,7 @@ services:
     environment:
       POSTGRES_USER: "postgres"
       POSTGRES_PASSWORD: "postgres"
+      TESTING_DB_NAME: "testing"
       POSTGRES_DB: postgres
   web:
     working_dir: /app
