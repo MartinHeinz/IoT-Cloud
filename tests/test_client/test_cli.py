@@ -1,5 +1,6 @@
 import os
 import re
+import subprocess
 
 from app.cli import populate
 from client.user.commands import send_message, create_device, create_device_type
@@ -26,6 +27,7 @@ def test_create_device(runner):
 
 
 def test_populate(runner):
-    result = runner.invoke(populate, ["--path", os.path.join(os.path.dirname(__file__), "..", "..", "app", "populate.sql")], input="postgres")
+    docker_container_ip = subprocess.check_output(["docker", "inspect", "-f", '{{range .NetworkSettings.Networks}}{{.IPAddress}}{{end}}', "iot_cloud_db"]).strip().decode("utf-8")
+    result = runner.invoke(populate, ["--path", os.path.join(os.path.dirname(__file__), "..", "..", "app", "populate.sql"), "--host", docker_container_ip], input="postgres")
     assert result.exit_code == 0
 

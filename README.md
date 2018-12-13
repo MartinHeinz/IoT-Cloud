@@ -62,3 +62,10 @@ It's necessary to provide certificates to use application. When using _Mosquitto
     
 ## Troubleshooting
 - If you have issues running tests inside container (there are some tests that need to be excluded when running inside container), try `docker container prune` and `docker-compose up` again
+- if you encounter this error message: `libpbc.so.1: cannot open shared object file: No such file or directory`, make sure you run `ldconfig` after installing _pbc_, if that doesn't help:
+    - check whether path to _pbc_ is in `LD_LIBRARY_PATH` (`echo $LD_LIBRARY_PATH `)
+    - if not, then run `sudo find / -name libpbc.so`
+    - add path outputted by previous command to `LD_LIBRARY_PATH` - e.g. `LD_LIBRARY_PATH=/usr/local/lib` and export it
+    - if that solves the issue, add `LD_LIBRARY_PATH` to `~/.bashrc` and `source` it
+- if you encounter error message when installing _Charm_ (running `./configure.sh`) stating that you don't have _python3-dev_ or _python3-config_:
+    - check whether you have any other version installed e.g _python3.6-config_, if yes, replace occurrence(s) of _python3-config_ in `./configure.sh` with the one you have installed and run it again
