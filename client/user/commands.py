@@ -1,13 +1,13 @@
 import base64
 import click
 import requests
-
-from client.crypto_utils import encrypt  # TODO FIX ME
+from crypto_utils import encrypt, hash  # TODO FIX ME
 
 URL_BASE = "https://localhost/api/"
 URL_PUBLISH = URL_BASE + "publish"
 URL_CREATE_DEVICE_TYPE = URL_BASE + "device_type/create"
 URL_CREATE_DEVICE = URL_BASE + "device/create"
+URL_GET_DEVICE = URL_BASE + "device/get"
 
 
 @click.group()
@@ -46,6 +46,16 @@ def create_device_type(description):
 def create_device(device_type_id):
     data = {"type_id": device_type_id}
     r = requests.post(URL_CREATE_DEVICE, params=data, verify=False)
+    click.echo(r.content.decode('unicode-escape'))
+
+
+@user.command()
+@click.argument('device_name')
+@click.argument('user_id')
+def get_devices(device_name, user_id):
+    device_name_bi = hash(device_name, user_id)
+    data = {"name_bi": device_name_bi}
+    r = requests.post(URL_GET_DEVICE, params=data, verify=False)
     click.echo(r.content.decode('unicode-escape'))
 
 

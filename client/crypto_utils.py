@@ -2,6 +2,7 @@ from cryptography.hazmat.backends import default_backend
 from cryptography.hazmat.primitives.ciphers import (
     Cipher, algorithms, modes
 )
+from passlib.hash import bcrypt
 
 
 def encrypt(key, plaintext, associated_data):
@@ -43,3 +44,9 @@ def decrypt(key, associated_data, iv, ciphertext, tag):
     # Decryption gets us the authenticated plaintext.
     # If the tag does not match an InvalidTag exception will be raised.
     return decryptor.update(ciphertext) + decryptor.finalize()
+
+
+def hash(value, salt):
+    if salt == "":
+        raise Exception("You need to specify salt (at least 1 character).")
+    return bcrypt.using(rounds=12, salt=salt.ljust(22, "x")).hash(value)

@@ -3,11 +3,11 @@ import base64
 import json
 from paho.mqtt.client import MQTTMessage
 
-from app.api.endpoints import DEVICE_TYPE_ID_MISSING_ERROR_MSG, DEVICE_TYPE_ID_INCORRECT_ERROR_MSG
+from app.api.endpoints import DEVICE_TYPE_ID_MISSING_ERROR_MSG, DEVICE_TYPE_ID_INCORRECT_ERROR_MSG, DEVICE_NAME_BI_MISSING_ERROR_MSG
 from app.errors.errors import SOMETHING_WENT_WRONG_MSG
 from app.models.models import DeviceType, Device, DeviceData
 from app.app_setup import client as mqtt_client
-from client.crypto_utils import encrypt
+from client.crypto_utils import encrypt, hash
 
 from tests.test_utils.fixtures import *
 from tests.test_utils.utils import is_valid_uuid
@@ -99,7 +99,7 @@ def test_api_dv_create(client, app):
     json_data = json.loads(response.data.decode("utf-8"))
     assert (json_data["error"]) == DEVICE_TYPE_ID_MISSING_ERROR_MSG
 
-    data = {"type_id": "non-valid - not present in DB"}
+    data = {"type_id": "non-valid - not present in DB"}  # TODO ERROR:  invalid input syntax for type uuid: "non-valid - not present in DB" at character 184
     response = client.post('/api/device/create', query_string=data, follow_redirects=True)
     assert response.status_code == 400
     json_data = json.loads(response.data.decode("utf-8"))
@@ -119,6 +119,46 @@ def test_api_dv_create(client, app):
     assert "id" in json_data
 
 
+def test_api_get_device_by_name(client, app):
+    data = {"not-name_bi": "non-empty"}
+    response = client.post('/api/device/get', query_string=data, follow_redirects=True)
+    assert response.status_code == 400
+    json_data = json.loads(response.data.decode("utf-8"))
+    assert (json_data["error"]) == DEVICE_NAME_BI_MISSING_ERROR_MSG
+
+    data = {"name_bi": "non-empty"}
+    response = client.post('/api/device/get', query_string=data, follow_redirects=True)
+    assert response.status_code == 200
+    json_data = json.loads(response.data.decode("utf-8"))
+    assert json_data["devices"] == []
+
+    app, ctx = app
+
+    bi_hash = "$2b$12$1xxxxxxxxxxxxxxxxxxxxuZLbwxnpY0o58unSvIPxddLxGystU.Mq"
+    with app.app_context():
+        dt = DeviceType(id=123)
+        db.session.add(dt)
+        dv = Device(id=1000,
+                    status=False,
+                    device_type=dt,
+                    name="my_raspberry",
+                    name_bi=bi_hash)
+        db.session.add(dv)
+        db.session.commit()
+        data = {"name_bi": bi_hash}
+
+    response = client.post('/api/device/get', query_string=data, follow_redirects=True)
+    assert response.status_code == 200
+    json_data = json.loads(response.data.decode("utf-8"))
+    assert json_data["devices"]["name_bi"] == bi_hash
+
+
 def test_abe():
     from .context import ABE_main
     assert ABE_main.test_abe() is True
+
+
+def test_hash_bcrypt():
+    assert hash("raspberry", "1234srfh") == "$2b$12$1234srfhxxxxxxxxxxxxxu9oRez2BjitmNvretimcFcTsuR/HtxQa"
+    with pytest.raises(Exception):
+        hash("raspberry", "")

@@ -3,7 +3,7 @@ TRUNCATE public."user", public.device_type, public.device, public.user_device CA
 INSERT INTO public."user" VALUES (DEFAULT, 'martin'), (DEFAULT, 'jozo'), (DEFAULT, 'fero');
 
 INSERT INTO public.device_type (id, type_id, description) VALUES (1, '12ef8ea3-ba06-4aa9-904e-d5a9f35b09c5', 'raspberry');
-INSERT INTO public.device (id, status, device_type_id) VALUES (1, false, 1);
+INSERT INTO public.device (id, status, device_type_id, name, name_bi) VALUES (1, false, 1, 'my_raspberry', '$2b$12$1xxxxxxxxxxxxxxxxxxxxuZLbwxnpY0o58unSvIPxddLxGystU.Mq');
 
 -- To dump insert statements from database:
 -- pg_dump -h <host> -U <user> --column-inserts --data-only <db>

@@ -1,7 +1,7 @@
 import base64
 import click
 
-from client.crypto_utils import decrypt  # TODO FIX ME
+from crypto_utils import decrypt  # TODO FIX ME
 
 
 @click.group()

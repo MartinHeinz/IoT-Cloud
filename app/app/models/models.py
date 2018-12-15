@@ -59,6 +59,12 @@ class Device(db.Model):
         secondary=scene_device_table,
         back_populates="devices")
 
+    name = db.Column(db.String(200), unique=False, nullable=True)
+    name_bi = db.Column(db.String(200), unique=False, nullable=True)  # Blind index for .name
+
+    def as_dict(self):
+        return {c.name: getattr(self, c.name) for c in self.__table__.columns}
+
 
 class DeviceData(db.Model):
     __tablename__ = 'device_data'

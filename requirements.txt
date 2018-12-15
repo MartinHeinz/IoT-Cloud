@@ -3,6 +3,7 @@ asn1crypto==0.24.0
 astroid==2.0.4
 atomicwrites==1.2.1
 attrs==18.2.0
+bcrypt==3.1.5
 certifi==2018.10.15
 cffi==1.11.5
 chardet==3.0.4
@@ -25,6 +26,7 @@ MarkupSafe==1.0
 mccabe==0.6.1
 more-itertools==4.3.0
 paho-mqtt==1.4.0
+passlib==1.7.1
 pbr==5.1.0
 pg8000==1.12.3
 pluggy==0.7.1

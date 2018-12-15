@@ -62,6 +62,7 @@ It's necessary to provide certificates to use application. When using _Mosquitto
     
 ## Troubleshooting
 - If you have issues running tests inside container (there are some tests that need to be excluded when running inside container), try `docker container prune` and `docker-compose up` again
+- If `testing` DB inside docker container is not being created by `create_db.sh`, you need to first remove persistent volume (`docker volume rm iotcloud_data`) and prune containers (`docker container prune`)
 - if you encounter this error message: `libpbc.so.1: cannot open shared object file: No such file or directory`, make sure you run `ldconfig` after installing _pbc_, if that doesn't help:
     - check whether path to _pbc_ is in `LD_LIBRARY_PATH` (`echo $LD_LIBRARY_PATH `)
     - if not, then run `sudo find / -name libpbc.so`
