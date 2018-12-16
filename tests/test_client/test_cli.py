@@ -1,15 +1,12 @@
 import re
-import subprocess
 import tempfile
 
 from app.cli import populate
 from client.user.commands import send_message, create_device, create_device_type, get_devices
 from crypto_utils import hash
-from tests.test_utils.fixtures import runner  # noqa
 
 
 def test_populate(runner):
-    docker_container_ip = subprocess.check_output(["docker", "inspect", "-f", '{{range .NetworkSettings.Networks}}{{.IPAddress}}{{end}}', "iot_cloud_db"]).strip().decode("utf-8")
     with tempfile.NamedTemporaryFile(mode="w+", suffix=".sql") as tf:
         tf.write('''CREATE TABLE public.action (
                         id integer NOT NULL,
@@ -18,7 +15,7 @@ def test_populate(runner):
                       );''')
         tf.write("DROP TABLE public.action;")
         tf.flush()
-        result = runner.invoke(populate, ["--path", tf.name, "--db", "testing", "--host", docker_container_ip], input="postgres")
+        result = runner.invoke(populate, ["--path", tf.name, "--db", "testing", "--host", "localhost"], input="postgres")
     assert result.exit_code == 0
 
 
@@ -41,12 +38,12 @@ def test_create_device(runner):
     assert "\"id\": " in result.output
 
 
-def test_get_device(runner):
+def test_get_device(runner, client):
     device_name = "my_raspberry"
     user_id = "1"
     device_name_bi = hash(device_name, user_id)
 
     result = runner.invoke(get_devices, [device_name, user_id])
-    assert device_name_bi in result.output
+    assert device_name_bi in result.output  # TODO sometimes fails with "AssertionError: assert '$2b$12$1xxxxxxxxxxxxxxxxxxxxuZLbwxnpY0o58unSvIPxddLxGystU.Mq' in ''"
 
 

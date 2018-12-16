@@ -1,5 +1,6 @@
 import atexit
 import ssl
+import os
 import paho.mqtt.client as mqtt
 
 from apscheduler.schedulers.background import BackgroundScheduler
@@ -31,9 +32,15 @@ def create_app(config_name):
     db.init_app(app)
     # Set up extensions
     register_models()
+
+    dir_path = os.path.dirname(os.path.realpath(__file__))
+    print("WORKING DIR: " + dir_path, flush=True)
+
     with app.app_context():
         db.drop_all()
         db.create_all()
+        with open(app.config["POPULATE_PATH"], 'r') as sql:
+            db.engine.execute(sql.read())
         db.session.commit()
 
     # Create app blueprints

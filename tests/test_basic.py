@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 import base64
 import json
+import pytest
 from paho.mqtt.client import MQTTMessage
 
 from app.api.endpoints import DEVICE_TYPE_ID_MISSING_ERROR_MSG, DEVICE_TYPE_ID_INCORRECT_ERROR_MSG, DEVICE_NAME_BI_MISSING_ERROR_MSG
@@ -9,7 +10,7 @@ from app.models.models import DeviceType, Device, DeviceData
 from app.app_setup import client as mqtt_client
 from client.crypto_utils import encrypt, hash
 
-from tests.test_utils.fixtures import *
+from .conftest import db
 from tests.test_utils.utils import is_valid_uuid
 
 

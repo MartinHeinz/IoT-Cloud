@@ -1,0 +1,20 @@
+version: '3'
+services:
+  db:
+    build: ./
+    container_name: iot_cloud_db
+    volumes:
+      - data:/var/lib/postgresql/data
+    expose:
+      - 5430
+    ports:
+      - 5430:5430
+    environment:
+      POSTGRES_USER: "postgres"
+      POSTGRES_PASSWORD: "postgres"
+      TESTING_DB_NAME: "testing"
+      POSTGRES_DB: postgres
+      PGPORT: 5430
+
+volumes:
+  data: {}

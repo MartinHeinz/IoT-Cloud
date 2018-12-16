@@ -31,6 +31,8 @@ class Config:
     CLIENT_CERTFILE_PATH = None
     CLIENT_KEYFILE_PATH = None
 
+    POPULATE_PATH = os.path.join(os.path.dirname(__file__), "..", "populate.sql")
+
     @staticmethod
     def init_app(app):
         pass
@@ -50,6 +52,11 @@ class TestingConfig(Config):
     WTF_CSRF_ENABLED = False
 
 
+class HostTestingConfig(TestingConfig):
+    SQLALCHEMY_DATABASE_URI = os.getenv('TEST_DATABASE_HOST_URL', 'postgres+psycopg2://postgres:postgres@localhost/testing')
+    MQTT_BROKER_URL = os.getenv('MQTT_BROKER_HOST_URL', 'localhost')
+
+
 class DockerConfig(Config):
     DEBUG = True
     ASSETS_DEBUG = True
@@ -60,6 +67,7 @@ class DockerConfig(Config):
 config = {
     'development': DevelopmentConfig,
     'testing': TestingConfig,
+    'host_testing': HostTestingConfig,
     'docker': DockerConfig,
     'default': DevelopmentConfig,
 }

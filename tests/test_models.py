@@ -1,6 +1,6 @@
 from app.models.models import DeviceType
 
-from tests.test_utils.fixtures import *
+from .conftest import db
 from tests.test_utils.utils import is_valid_uuid
 
 

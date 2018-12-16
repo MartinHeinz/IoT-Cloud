@@ -1,9 +1,7 @@
 version: '3'
 services:
-  db:
-    build:
-      context: .
-      dockerfile: ./postgres/Dockerfile
+  db_test:
+    image: postgres:latest
   web:
     build: ./
   mqtt:

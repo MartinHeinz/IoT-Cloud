@@ -20,11 +20,19 @@ Privacy friendly framework for IoT Cloud.
 - export path to flask application factory method - `export FLASK_APP="app.app_setup:create_app('development')"`
 - run from `./IoT-Cloud/app` directory with command `flask run`
 
+### Running tests
+- When running tests make sure you set environment variable `TESTING_ENV` to `host_testing`(defaults to `testing`), so the application uses `config.env` variables needed for running tests on docker host. If not set, tests will run as if they were inside docker container ( = with different URLs).
+
 ## Testing communication between broker and app
 - install `sudo apt install mosquitto-clients`
 - publish to topics to which application is subscribed to by using `mosquitto_pub -h <host> -p <port> -t <topic_name> -m "message"`
 
-## Accessing database
+## Database
+It is recommended to use dockerized Postgres database, which is included here (in _./postgres_). You can bring it by running `docker-compose up` in that directory. It listens on port `5430` instead of `5432` to make sure it does not interfere with any host services, therefore you need to make sure that URLs in `config.env` correct this port.
+
+_NOTE: there is also another Postgres database inside main applications docker-compose, however that is used only for running tests._
+
+### Accessing database
 - you can access database using _pgadmin4_
 - login to `psql` using `sudo -u postgres psql`
 - find `postgresql.conf` and `pg_hba.conf` using `show config_file;` and `show hba_file;` respectively

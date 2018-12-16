@@ -1,9 +1,9 @@
 version: '3'
 services:
-  db:
-    container_name: iot_cloud_db
+  db_test:
+    container_name: iot_cloud_db_test
     volumes:
-      - data:/var/lib/postgresql/data
+      - data_test:/var/lib/postgresql/data_test
     expose:
       - 5432
     ports:
@@ -11,9 +11,9 @@ services:
     environment:
       POSTGRES_USER: "postgres"
       POSTGRES_PASSWORD: "postgres"
-      TESTING_DB_NAME: "testing"
-      POSTGRES_DB: postgres
+      POSTGRES_DB: testing
   web:
+    container_name: iot_cloud_web
     working_dir: /app
     volumes:
       - ./app:/app
@@ -27,9 +27,9 @@ services:
       - FLASK_APP=app.app_setup:create_app('development')
     command: bash -c "while ping -c1 web_test &>/dev/null; do sleep 1; done && flask run --host=0.0.0.0 --port=443 --no-reload"
     depends_on:
-      - db
       - web_test
   mqtt:
+    container_name: iot_cloud_mqtt
     restart: always
     ports:
     - "8883:8883"
@@ -43,6 +43,7 @@ services:
     - ./mosquitto/log:/mosquitto/log
     - ./mosquitto/certs:/mosquitto/certs
   nginx:
+    container_name: iot_cloud_nginx
     ports:
     - "443:443"
     volumes:
@@ -51,6 +52,7 @@ services:
     depends_on:
     - web
   web_test:
+    container_name: iot_cloud_web_test
     working_dir: /app
     volumes:
     - ./app:/app
@@ -62,7 +64,9 @@ services:
     - DOCKER_TLS_VERIFY=True
     - COMPOSE_TLS_VERSION=TLSv1_2
     - PYTHONDONTWRITEBYTECODE=False
-    command: pytest ../tests --color=yes --junitxml=/tests/reports/test_report.xml --cov=/app --cov-report term --cov-report xml:/tests/reports/cov_report.xml
+    command: pytest ../tests --junitxml=/tests/reports/test_report.xml --cov=/app --cov-report term --cov-report xml:/tests/reports/cov_report.xml
+    depends_on:
+      - db_test
 
 volumes:
-  data: {}
+  data_test: {}
