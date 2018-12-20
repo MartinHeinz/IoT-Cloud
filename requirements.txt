@@ -1,4 +1,5 @@
 APScheduler==3.5.3
+argon2-cffi==18.3.0
 asn1crypto==0.24.0
 astroid==2.0.4
 atomicwrites==1.2.1
@@ -34,6 +35,7 @@ psycopg2==2.7.3.2
 py==1.6.0
 pycparser==2.19
 pylint==2.1.1
+pyope==0.2.2
 pyparsing==2.2.1
 pytest==3.8.0
 pytest-cov==2.6.0

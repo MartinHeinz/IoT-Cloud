@@ -4,7 +4,8 @@ import json
 import pytest
 from paho.mqtt.client import MQTTMessage
 
-from app.api.endpoints import DEVICE_TYPE_ID_MISSING_ERROR_MSG, DEVICE_TYPE_ID_INCORRECT_ERROR_MSG, DEVICE_NAME_BI_MISSING_ERROR_MSG
+from app.api.endpoints import DEVICE_TYPE_ID_MISSING_ERROR_MSG, DEVICE_TYPE_ID_INCORRECT_ERROR_MSG, DEVICE_NAME_BI_MISSING_ERROR_MSG, \
+    DATA_RANGE_MISSING_ERROR_MSG, DATA_OUT_OF_OUTPUT_RANGE_ERROR_MSG
 from app.errors.errors import SOMETHING_WENT_WRONG_MSG
 from app.models.models import DeviceType, Device, DeviceData
 from app.app_setup import client as mqtt_client
@@ -151,7 +152,78 @@ def test_api_get_device_by_name(client, app):
     response = client.post('/api/device/get', query_string=data, follow_redirects=True)
     assert response.status_code == 200
     json_data = json.loads(response.data.decode("utf-8"))
-    assert json_data["devices"]["name_bi"] == bi_hash
+    devices = list(filter(lambda d: d["id"] == 23, json_data["devices"]))
+    assert len(devices) == 1
+
+
+def test_api_get_device_data_by_range_missing_bounds(client, app):
+    data = {"not-upper-or-lower": "non-empty"}
+    response = client.post('/api/data/get_time_range', query_string=data, follow_redirects=True)
+    assert response.status_code == 400
+    json_data = json.loads(response.data.decode("utf-8"))
+    assert (json_data["error"]) == DATA_RANGE_MISSING_ERROR_MSG
+
+
+def test_api_get_device_data_by_range_non_numeric_bound(client, app):
+    data = {"lower": "non-numeric"}
+    response = client.post('/api/data/get_time_range', query_string=data, follow_redirects=True)
+    assert response.status_code == 400
+    json_data = json.loads(response.data.decode("utf-8"))
+    assert (json_data["error"]) == DATA_RANGE_MISSING_ERROR_MSG
+
+
+def test_api_get_device_data_by_range_with_only_lower_bound(client, app):
+    data = {"lower": "163081415"}  # 2500
+    response = client.post('/api/data/get_time_range', query_string=data, follow_redirects=True)
+    assert response.status_code == 200
+    json_data = json.loads(response.data.decode("utf-8"))
+    assert len(json_data["device_data"]) == 2
+
+
+def test_api_get_device_data_by_range_with_only_upper_bound(client, app):
+    data = {"upper": "228366930"}  # 3500
+    response = client.post('/api/data/get_time_range', query_string=data, follow_redirects=True)
+    assert response.status_code == 200
+    json_data = json.loads(response.data.decode("utf-8"))
+    assert len(json_data["device_data"]) == 3
+
+
+def test_api_get_device_data_by_range_with_both_bounds(client, app):
+    data = {
+        "lower": "110284915",  # 1700
+        "upper": "262690267"  # 4000
+            }
+    response = client.post('/api/data/get_time_range', query_string=data, follow_redirects=True)
+    assert response.status_code == 200
+    json_data = json.loads(response.data.decode("utf-8"))
+    assert len(json_data["device_data"]) == 2
+
+    data = {
+        "lower": "329390554",  # 5000
+        "upper": "787663574"  # 12000
+    }
+    response = client.post('/api/data/get_time_range', query_string=data, follow_redirects=True)
+    assert response.status_code == 200
+    json_data = json.loads(response.data.decode("utf-8"))
+    assert len(json_data["device_data"]) == 0
+
+
+def test_api_get_device_data_by_range_out_of_range(client, app):
+    data = {"upper": "2147483648"}  # (2^31-1) + 1
+    response = client.post('/api/data/get_time_range', query_string=data, follow_redirects=True)
+    assert response.status_code == 400
+    json_data = json.loads(response.data.decode("utf-8"))
+    assert json_data["error"] == DATA_OUT_OF_OUTPUT_RANGE_ERROR_MSG
+    data = {"lower": "-1"}  # -1
+    response = client.post('/api/data/get_time_range', query_string=data, follow_redirects=True)
+    assert response.status_code == 400
+    json_data = json.loads(response.data.decode("utf-8"))
+    assert json_data["error"] == DATA_OUT_OF_OUTPUT_RANGE_ERROR_MSG
+    data = {"lower": "1", "upper": "2147483648"}  # lower OK, upper not OK
+    response = client.post('/api/data/get_time_range', query_string=data, follow_redirects=True)
+    assert response.status_code == 400
+    json_data = json.loads(response.data.decode("utf-8"))
+    assert json_data["error"] == DATA_OUT_OF_OUTPUT_RANGE_ERROR_MSG
 
 
 def test_abe():

@@ -2,8 +2,9 @@ import re
 import tempfile
 
 from app.cli import populate
-from client.user.commands import send_message, create_device, create_device_type, get_devices
+from client.user.commands import send_message, create_device, create_device_type, get_devices, get_device_data_by_time_range
 from crypto_utils import hash
+from tests.test_utils.utils import json_string_with_bytes_to_dict
 
 
 def test_populate(runner):
@@ -47,3 +48,20 @@ def test_get_device(runner, client):
     assert device_name_bi in result.output  # TODO sometimes fails with "AssertionError: assert '$2b$12$1xxxxxxxxxxxxxxxxxxxxuZLbwxnpY0o58unSvIPxddLxGystU.Mq' in ''"
 
 
+def test_get_device_data_by_time_range(runner, client):
+
+    result = runner.invoke(get_device_data_by_time_range)
+    json_output = json_string_with_bytes_to_dict(result.output)
+    assert len(json_output["device_data"]) == 4
+
+    result = runner.invoke(get_device_data_by_time_range, ["--lower", 129952183])
+    json_output = json_string_with_bytes_to_dict(result.output)
+    assert len(json_output["device_data"]) == 2
+
+    result = runner.invoke(get_device_data_by_time_range, ["--lower", 129952183, "--upper", 262690267])
+    json_output = json_string_with_bytes_to_dict(result.output)
+    assert len(json_output["device_data"]) == 1
+
+    result = runner.invoke(get_device_data_by_time_range, ["--upper", 163081415])
+    json_output = json_string_with_bytes_to_dict(result.output)
+    assert len(json_output["device_data"]) == 2

@@ -72,9 +72,13 @@ class DeviceData(db.Model):
 
     id = db.Column(db.Integer, primary_key=True)
     added = db.Column(db.DateTime(timezone=True), server_default=func.now())
+    num_data = db.Column(db.Integer)
     data = db.Column(db.LargeBinary)
     device_id = db.Column(db.Integer, db.ForeignKey('device.id'))
     device = relationship("Device", back_populates="data")
+
+    def as_dict(self):
+        return {c.name: getattr(self, c.name) for c in self.__table__.columns}
 
 
 class Action(db.Model):

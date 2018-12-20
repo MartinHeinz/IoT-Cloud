@@ -8,6 +8,7 @@ URL_PUBLISH = URL_BASE + "publish"
 URL_CREATE_DEVICE_TYPE = URL_BASE + "device_type/create"
 URL_CREATE_DEVICE = URL_BASE + "device/create"
 URL_GET_DEVICE = URL_BASE + "device/get"
+URL_GET_DEVICE_DATA_BY_RANGE = URL_BASE + "data/get_time_range"
 
 
 @click.group()
@@ -56,6 +57,22 @@ def get_devices(device_name, user_id):
     device_name_bi = hash(device_name, user_id)
     data = {"name_bi": device_name_bi}
     r = requests.post(URL_GET_DEVICE, params=data, verify=False)
+    click.echo(r.content.decode('unicode-escape'))
+
+
+@user.command()
+@click.option('--lower', required=False)
+@click.option('--upper', required=False)
+def get_device_data_by_time_range(lower=None, upper=None):
+    if lower is not None and upper is not None:
+        data = {"lower": int(lower), "upper": int(upper)}
+    elif lower is not None and upper is None:
+        data = {"lower": int(lower)}
+    elif lower is None and upper is not None:
+        data = {"upper": int(upper)}
+    else:
+        data = {"lower": 0, "upper": 2147483647}
+    r = requests.post(URL_GET_DEVICE_DATA_BY_RANGE, params=data, verify=False)
     click.echo(r.content.decode('unicode-escape'))
 
 
