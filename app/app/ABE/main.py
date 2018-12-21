@@ -15,14 +15,14 @@ def test_abe():
     cpabe = AC17CPABE(pairing_group, 2)
 
     # run the set up
-    (pk, msk) = cpabe.setup()
+    (pk, msk) = cpabe.setup()  # Public Key and Master SECRET Key
 
     # generate a key
     attr_list = ['ONE', 'TWO', 'THREE']
     key = cpabe.keygen(pk, msk, attr_list)
 
     # choose a random message
-    msg = pairing_group.random(GT)
+    msg = pairing_group.random(GT)  # This won't be needed
    
     # generate a ciphertext
     policy_str = '((ONE and THREE) and (TWO OR FOUR))'

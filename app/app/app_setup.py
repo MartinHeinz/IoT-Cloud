@@ -47,6 +47,9 @@ def create_app(config_name):
     from app.api import api as api_blueprint
     app.register_blueprint(api_blueprint, url_prefix="/api")
 
+    from app.attribute_authority import attr_authority as aa_blueprint
+    app.register_blueprint(aa_blueprint, url_prefix="/attr_auth")
+
     from app.web import web as web_blueprint
     app.register_blueprint(web_blueprint, url_prefix="/")
 
