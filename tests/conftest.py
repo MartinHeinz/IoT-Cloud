@@ -20,10 +20,18 @@ def client():
 
 
 @pytest.fixture(scope="module")
-def app():
+def app_and_ctx():
     warnings.filterwarnings("ignore", category=SADeprecationWarning)
     app = create_app(os.getenv('TESTING_ENV', "testing"))
     ctx = app.app_context()
     ctx.push()
     yield app, ctx
+    db.drop_all()
+
+
+@pytest.fixture(scope="module")
+def application():
+    warnings.filterwarnings("ignore", category=SADeprecationWarning)
+    app = create_app(os.getenv('TESTING_ENV', "testing"))
+    yield app
     db.drop_all()

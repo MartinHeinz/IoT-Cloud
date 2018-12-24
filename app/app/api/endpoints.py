@@ -3,9 +3,10 @@ from flask import request
 from sqlalchemy import and_
 
 from app.api import api
-from app.api.utils import http_json_response, is_number
+from app.api.utils import is_number
 from app.app_setup import client, db
 from app.models.models import DeviceType, Device, DeviceData
+from app.utils import http_json_response
 
 DEVICE_TYPE_ID_MISSING_ERROR_MSG = 'Missing device type id.'
 DEVICE_TYPE_ID_INCORRECT_ERROR_MSG = 'Incorrect device type id.'

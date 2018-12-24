@@ -15,15 +15,15 @@ from .conftest import db
 from tests.test_utils.utils import is_valid_uuid
 
 
-def test_mqtt_client(app):
+def test_mqtt_client(app_and_ctx):
     assert mqtt_client._ssl is True
 
 
-def test_mqtt_on_message(app):
+def test_mqtt_on_message(app_and_ctx):
     msg = MQTTMessage(topic=b"not_save_data")
     msg.payload = b"{'device_id': 111111, 'device_data': 'test_data'}"  # not present yet
     from app.mqtt.mqtt import handle_on_message
-    app, ctx = app
+    app, ctx = app_and_ctx
     with app.app_context():
         device_data_count = db.session.query(DeviceData).count()
 
@@ -94,7 +94,7 @@ def test_api_dt_create(client):
     assert response.status_code == 400
 
 
-def test_api_dv_create(client, app):
+def test_api_dv_create(client, app_and_ctx):
     data = {"not-type_id": "non-empty"}
     response = client.post('/api/device/create', query_string=data, follow_redirects=True)
     assert response.status_code == 400
@@ -107,7 +107,7 @@ def test_api_dv_create(client, app):
     json_data = json.loads(response.data.decode("utf-8"))
     assert (json_data["error"]) == DEVICE_TYPE_ID_INCORRECT_ERROR_MSG
 
-    app, ctx = app
+    app, ctx = app_and_ctx
 
     with app.app_context():
         dt = DeviceType()
@@ -121,7 +121,7 @@ def test_api_dv_create(client, app):
     assert "id" in json_data
 
 
-def test_api_get_device_by_name(client, app):
+def test_api_get_device_by_name(client, app_and_ctx):
     data = {"not-name_bi": "non-empty"}
     response = client.post('/api/device/get', query_string=data, follow_redirects=True)
     assert response.status_code == 400
@@ -134,7 +134,7 @@ def test_api_get_device_by_name(client, app):
     json_data = json.loads(response.data.decode("utf-8"))
     assert json_data["devices"] == []
 
-    app, ctx = app
+    app, ctx = app_and_ctx
 
     bi_hash = "$2b$12$1xxxxxxxxxxxxxxxxxxxxuZLbwxnpY0o58unSvIPxddLxGystU.Mq"
     with app.app_context():
@@ -156,7 +156,7 @@ def test_api_get_device_by_name(client, app):
     assert len(devices) == 1
 
 
-def test_api_get_device_data_by_range_missing_bounds(client, app):
+def test_api_get_device_data_by_range_missing_bounds(client, app_and_ctx):
     data = {"not-upper-or-lower": "non-empty"}
     response = client.post('/api/data/get_time_range', query_string=data, follow_redirects=True)
     assert response.status_code == 400
@@ -164,7 +164,7 @@ def test_api_get_device_data_by_range_missing_bounds(client, app):
     assert (json_data["error"]) == DATA_RANGE_MISSING_ERROR_MSG
 
 
-def test_api_get_device_data_by_range_non_numeric_bound(client, app):
+def test_api_get_device_data_by_range_non_numeric_bound(client, app_and_ctx):
     data = {"lower": "non-numeric"}
     response = client.post('/api/data/get_time_range', query_string=data, follow_redirects=True)
     assert response.status_code == 400
@@ -172,7 +172,7 @@ def test_api_get_device_data_by_range_non_numeric_bound(client, app):
     assert (json_data["error"]) == DATA_RANGE_MISSING_ERROR_MSG
 
 
-def test_api_get_device_data_by_range_with_only_lower_bound(client, app):
+def test_api_get_device_data_by_range_with_only_lower_bound(client, app_and_ctx):
     data = {"lower": "163081415"}  # 2500
     response = client.post('/api/data/get_time_range', query_string=data, follow_redirects=True)
     assert response.status_code == 200
@@ -180,7 +180,7 @@ def test_api_get_device_data_by_range_with_only_lower_bound(client, app):
     assert len(json_data["device_data"]) == 2
 
 
-def test_api_get_device_data_by_range_with_only_upper_bound(client, app):
+def test_api_get_device_data_by_range_with_only_upper_bound(client, app_and_ctx):
     data = {"upper": "228366930"}  # 3500
     response = client.post('/api/data/get_time_range', query_string=data, follow_redirects=True)
     assert response.status_code == 200
@@ -188,7 +188,7 @@ def test_api_get_device_data_by_range_with_only_upper_bound(client, app):
     assert len(json_data["device_data"]) == 3
 
 
-def test_api_get_device_data_by_range_with_both_bounds(client, app):
+def test_api_get_device_data_by_range_with_both_bounds(client, app_and_ctx):
     data = {
         "lower": "110284915",  # 1700
         "upper": "262690267"  # 4000
@@ -208,7 +208,7 @@ def test_api_get_device_data_by_range_with_both_bounds(client, app):
     assert len(json_data["device_data"]) == 0
 
 
-def test_api_get_device_data_by_range_out_of_range(client, app):
+def test_api_get_device_data_by_range_out_of_range(client, app_and_ctx):
     data = {"upper": "2147483648"}  # (2^31-1) + 1
     response = client.post('/api/data/get_time_range', query_string=data, follow_redirects=True)
     assert response.status_code == 400

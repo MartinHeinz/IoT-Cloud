@@ -33,6 +33,9 @@ class Config:
 
     POPULATE_PATH = os.path.join(os.path.dirname(__file__), "..", "populate.sql")
 
+    GITHUB_CLIENT_ID = os.getenv('GITHUB_CLIENT_ID', 'missing-id')
+    GITHUB_CLIENT_SECRET = os.getenv('GITHUB_CLIENT_SECRET', 'very-secret')
+
     @staticmethod
     def init_app(app):
         pass

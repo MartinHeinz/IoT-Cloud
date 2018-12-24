@@ -63,7 +63,7 @@ def get_devices(device_name, user_id):
 @user.command()
 @click.option('--lower', required=False)
 @click.option('--upper', required=False)
-def get_device_data_by_time_range(lower=None, upper=None):
+def get_device_data_by_time_range(lower=None, upper=None):  # TODO add decryption based on stored keys
     if lower is not None and upper is not None:
         data = {"lower": int(lower), "upper": int(upper)}
     elif lower is not None and upper is None:
