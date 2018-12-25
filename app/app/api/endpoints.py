@@ -5,6 +5,7 @@ from sqlalchemy import and_
 from app.api import api
 from app.api.utils import is_number
 from app.app_setup import client, db
+from app.auth.utils import require_api_token
 from app.models.models import DeviceType, Device, DeviceData
 from app.utils import http_json_response
 
@@ -25,6 +26,7 @@ def publish_message():
 
 
 @api.route('/device_type/create', methods=['POST'])
+@require_api_token
 def create_device_type():
     description = request.args.get("description", None)
     if description is None:
@@ -36,6 +38,7 @@ def create_device_type():
 
 
 @api.route('/device/create', methods=['POST'])
+@require_api_token
 def create_device():
     device_type_id = request.args.get("type_id", None)
     if device_type_id is None:
@@ -53,6 +56,7 @@ def create_device():
 
 
 @api.route('/device/get', methods=['POST'])
+@require_api_token
 def get_device_by_name():  # TODO limit to only users devices, when auth is implemented
     device_name_bi = request.args.get("name_bi", None)
     print(device_name_bi, flush=True)
@@ -66,6 +70,7 @@ def get_device_by_name():  # TODO limit to only users devices, when auth is impl
 
 
 @api.route('/data/get_time_range', methods=['POST'])
+@require_api_token
 def get_data_by_time_range():  # TODO limit to only users devices, when auth is implemented
     lower_bound = request.args.get("lower", "")
     upper_bound = request.args.get("upper", "")

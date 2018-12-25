@@ -26,15 +26,15 @@ def test_send_message(runner):
 
 
 def test_create_device_type(runner):
-    result = runner.invoke(create_device_type, ["description"])
+    result = runner.invoke(create_device_type, ["description", '--token', "5c36ab84439c45a3719644c0d9bd7b31929afd9f"])
     assert "\"success\": true," in result.output
     assert "\"type_id\": " in result.output
 
 
 def test_create_device(runner):
-    result = runner.invoke(create_device_type, ["description-again"])
+    result = runner.invoke(create_device_type, ["description-again", '--token', "5c36ab84439c45a3719644c0d9bd7b31929afd9f"])
     type_id = re.search('type_id": "(.+)"', result.output, re.IGNORECASE).group(1)
-    result = runner.invoke(create_device, [type_id])
+    result = runner.invoke(create_device, [type_id, '--token', "5c36ab84439c45a3719644c0d9bd7b31929afd9f"])
     assert "\"success\": true" in result.output
     assert "\"id\": " in result.output
 
@@ -44,24 +44,24 @@ def test_get_device(runner, client):
     user_id = "1"
     device_name_bi = hash(device_name, user_id)
 
-    result = runner.invoke(get_devices, [device_name, user_id])
+    result = runner.invoke(get_devices, [device_name, user_id, '--token', "5c36ab84439c45a3719644c0d9bd7b31929afd9f"])
     assert device_name_bi in result.output  # TODO sometimes fails with "AssertionError: assert '$2b$12$1xxxxxxxxxxxxxxxxxxxxuZLbwxnpY0o58unSvIPxddLxGystU.Mq' in ''"
 
 
 def test_get_device_data_by_time_range(runner, client):
 
-    result = runner.invoke(get_device_data_by_time_range)
+    result = runner.invoke(get_device_data_by_time_range, ['--token', "5c36ab84439c45a3719644c0d9bd7b31929afd9f"])
     json_output = json_string_with_bytes_to_dict(result.output)
     assert len(json_output["device_data"]) == 4
 
-    result = runner.invoke(get_device_data_by_time_range, ["--lower", 129952183])
+    result = runner.invoke(get_device_data_by_time_range, ["--lower", 129952183, '--token', "5c36ab84439c45a3719644c0d9bd7b31929afd9f"])
     json_output = json_string_with_bytes_to_dict(result.output)
     assert len(json_output["device_data"]) == 2
 
-    result = runner.invoke(get_device_data_by_time_range, ["--lower", 129952183, "--upper", 262690267])
+    result = runner.invoke(get_device_data_by_time_range, ["--lower", 129952183, "--upper", 262690267, '--token', "5c36ab84439c45a3719644c0d9bd7b31929afd9f"])
     json_output = json_string_with_bytes_to_dict(result.output)
     assert len(json_output["device_data"]) == 1
 
-    result = runner.invoke(get_device_data_by_time_range, ["--upper", 163081415])
+    result = runner.invoke(get_device_data_by_time_range, ["--upper", 163081415, '--token', "5c36ab84439c45a3719644c0d9bd7b31929afd9f"])
     json_output = json_string_with_bytes_to_dict(result.output)
     assert len(json_output["device_data"]) == 2

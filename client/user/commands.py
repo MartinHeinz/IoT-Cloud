@@ -36,16 +36,18 @@ def send_message():
 
 @user.command()
 @click.argument('description')
-def create_device_type(description):
-    data = {"description": description}
+@click.option('--token', envvar='ACCESS_TOKEN')
+def create_device_type(description, token):
+    data = {"description": description, "access_token": token}
     r = requests.post(URL_CREATE_DEVICE_TYPE, params=data, verify=False)
     click.echo(r.content.decode('unicode-escape'))
 
 
 @user.command()
 @click.argument('device_type_id')
-def create_device(device_type_id):
-    data = {"type_id": device_type_id}
+@click.option('--token', envvar='ACCESS_TOKEN')
+def create_device(device_type_id, token):
+    data = {"type_id": device_type_id, "access_token": token}
     r = requests.post(URL_CREATE_DEVICE, params=data, verify=False)
     click.echo(r.content.decode('unicode-escape'))
 
@@ -53,9 +55,10 @@ def create_device(device_type_id):
 @user.command()
 @click.argument('device_name')
 @click.argument('user_id')
-def get_devices(device_name, user_id):
+@click.option('--token', envvar='ACCESS_TOKEN')
+def get_devices(device_name, user_id, token):
     device_name_bi = hash(device_name, user_id)
-    data = {"name_bi": device_name_bi}
+    data = {"name_bi": device_name_bi, "access_token": token}
     r = requests.post(URL_GET_DEVICE, params=data, verify=False)
     click.echo(r.content.decode('unicode-escape'))
 
@@ -63,15 +66,16 @@ def get_devices(device_name, user_id):
 @user.command()
 @click.option('--lower', required=False)
 @click.option('--upper', required=False)
-def get_device_data_by_time_range(lower=None, upper=None):  # TODO add decryption based on stored keys
+@click.option('--token', envvar='ACCESS_TOKEN')
+def get_device_data_by_time_range(lower=None, upper=None, token=""):  # TODO add decryption based on stored keys
     if lower is not None and upper is not None:
-        data = {"lower": int(lower), "upper": int(upper)}
+        data = {"lower": int(lower), "upper": int(upper), "access_token": token}
     elif lower is not None and upper is None:
-        data = {"lower": int(lower)}
+        data = {"lower": int(lower), "access_token": token}
     elif lower is None and upper is not None:
-        data = {"upper": int(upper)}
+        data = {"upper": int(upper), "access_token": token}
     else:
-        data = {"lower": 0, "upper": 2147483647}
+        data = {"lower": 0, "upper": 2147483647, "access_token": token}
     r = requests.post(URL_GET_DEVICE_DATA_BY_RANGE, params=data, verify=False)
     click.echo(r.content.decode('unicode-escape'))
 

@@ -83,7 +83,7 @@ def test_api_publish(client):
 
 
 def test_api_dt_create(client):
-    data = {"description": "non-empty"}
+    data = {"description": "non-empty", "access_token": "5c36ab84439c45a3719644c0d9bd7b31929afd9f"}
     response = client.post('/api/device_type/create', query_string=data, follow_redirects=True)
     assert response.status_code == 200
     json_data = json.loads(response.data.decode("utf-8"))
@@ -95,13 +95,13 @@ def test_api_dt_create(client):
 
 
 def test_api_dv_create(client, app_and_ctx):
-    data = {"not-type_id": "non-empty"}
+    data = {"not-type_id": "non-empty", "access_token": "5c36ab84439c45a3719644c0d9bd7b31929afd9f"}
     response = client.post('/api/device/create', query_string=data, follow_redirects=True)
     assert response.status_code == 400
     json_data = json.loads(response.data.decode("utf-8"))
     assert (json_data["error"]) == DEVICE_TYPE_ID_MISSING_ERROR_MSG
 
-    data = {"type_id": "non-valid - not present in DB"}  # TODO ERROR:  invalid input syntax for type uuid: "non-valid - not present in DB" at character 184
+    data = {"type_id": "non-valid - not present in DB", "access_token": "5c36ab84439c45a3719644c0d9bd7b31929afd9f"}  # TODO ERROR:  invalid input syntax for type uuid: "non-valid - not present in DB" at character 184
     response = client.post('/api/device/create', query_string=data, follow_redirects=True)
     assert response.status_code == 400
     json_data = json.loads(response.data.decode("utf-8"))
@@ -113,7 +113,7 @@ def test_api_dv_create(client, app_and_ctx):
         dt = DeviceType()
         db.session.add(dt)
         db.session.commit()
-        data = {"type_id": str(dt.type_id)}
+        data = {"type_id": str(dt.type_id), "access_token": "5c36ab84439c45a3719644c0d9bd7b31929afd9f"}
 
     response = client.post('/api/device/create', query_string=data, follow_redirects=True)
     assert response.status_code == 200
@@ -122,13 +122,13 @@ def test_api_dv_create(client, app_and_ctx):
 
 
 def test_api_get_device_by_name(client, app_and_ctx):
-    data = {"not-name_bi": "non-empty"}
+    data = {"not-name_bi": "non-empty", "access_token": "5c36ab84439c45a3719644c0d9bd7b31929afd9f"}
     response = client.post('/api/device/get', query_string=data, follow_redirects=True)
     assert response.status_code == 400
     json_data = json.loads(response.data.decode("utf-8"))
     assert (json_data["error"]) == DEVICE_NAME_BI_MISSING_ERROR_MSG
 
-    data = {"name_bi": "non-empty"}
+    data = {"name_bi": "non-empty", "access_token": "5c36ab84439c45a3719644c0d9bd7b31929afd9f"}
     response = client.post('/api/device/get', query_string=data, follow_redirects=True)
     assert response.status_code == 200
     json_data = json.loads(response.data.decode("utf-8"))
@@ -147,7 +147,7 @@ def test_api_get_device_by_name(client, app_and_ctx):
                     name_bi=bi_hash)
         db.session.add(dv)
         db.session.commit()
-        data = {"name_bi": bi_hash}
+        data = {"name_bi": bi_hash, "access_token": "5c36ab84439c45a3719644c0d9bd7b31929afd9f"}
 
     response = client.post('/api/device/get', query_string=data, follow_redirects=True)
     assert response.status_code == 200
@@ -157,7 +157,7 @@ def test_api_get_device_by_name(client, app_and_ctx):
 
 
 def test_api_get_device_data_by_range_missing_bounds(client, app_and_ctx):
-    data = {"not-upper-or-lower": "non-empty"}
+    data = {"not-upper-or-lower": "non-empty", "access_token": "5c36ab84439c45a3719644c0d9bd7b31929afd9f"}
     response = client.post('/api/data/get_time_range', query_string=data, follow_redirects=True)
     assert response.status_code == 400
     json_data = json.loads(response.data.decode("utf-8"))
@@ -165,7 +165,7 @@ def test_api_get_device_data_by_range_missing_bounds(client, app_and_ctx):
 
 
 def test_api_get_device_data_by_range_non_numeric_bound(client, app_and_ctx):
-    data = {"lower": "non-numeric"}
+    data = {"lower": "non-numeric", "access_token": "5c36ab84439c45a3719644c0d9bd7b31929afd9f"}
     response = client.post('/api/data/get_time_range', query_string=data, follow_redirects=True)
     assert response.status_code == 400
     json_data = json.loads(response.data.decode("utf-8"))
@@ -173,7 +173,7 @@ def test_api_get_device_data_by_range_non_numeric_bound(client, app_and_ctx):
 
 
 def test_api_get_device_data_by_range_with_only_lower_bound(client, app_and_ctx):
-    data = {"lower": "163081415"}  # 2500
+    data = {"lower": "163081415", "access_token": "5c36ab84439c45a3719644c0d9bd7b31929afd9f"}  # 2500
     response = client.post('/api/data/get_time_range', query_string=data, follow_redirects=True)
     assert response.status_code == 200
     json_data = json.loads(response.data.decode("utf-8"))
@@ -181,7 +181,7 @@ def test_api_get_device_data_by_range_with_only_lower_bound(client, app_and_ctx)
 
 
 def test_api_get_device_data_by_range_with_only_upper_bound(client, app_and_ctx):
-    data = {"upper": "228366930"}  # 3500
+    data = {"upper": "228366930", "access_token": "5c36ab84439c45a3719644c0d9bd7b31929afd9f"}  # 3500
     response = client.post('/api/data/get_time_range', query_string=data, follow_redirects=True)
     assert response.status_code == 200
     json_data = json.loads(response.data.decode("utf-8"))
@@ -191,7 +191,8 @@ def test_api_get_device_data_by_range_with_only_upper_bound(client, app_and_ctx)
 def test_api_get_device_data_by_range_with_both_bounds(client, app_and_ctx):
     data = {
         "lower": "110284915",  # 1700
-        "upper": "262690267"  # 4000
+        "upper": "262690267",  # 4000
+        "access_token": "5c36ab84439c45a3719644c0d9bd7b31929afd9f"
             }
     response = client.post('/api/data/get_time_range', query_string=data, follow_redirects=True)
     assert response.status_code == 200
@@ -200,7 +201,8 @@ def test_api_get_device_data_by_range_with_both_bounds(client, app_and_ctx):
 
     data = {
         "lower": "329390554",  # 5000
-        "upper": "787663574"  # 12000
+        "upper": "787663574",  # 12000
+        "access_token": "5c36ab84439c45a3719644c0d9bd7b31929afd9f"
     }
     response = client.post('/api/data/get_time_range', query_string=data, follow_redirects=True)
     assert response.status_code == 200
@@ -209,17 +211,17 @@ def test_api_get_device_data_by_range_with_both_bounds(client, app_and_ctx):
 
 
 def test_api_get_device_data_by_range_out_of_range(client, app_and_ctx):
-    data = {"upper": "2147483648"}  # (2^31-1) + 1
+    data = {"upper": "2147483648", "access_token": "5c36ab84439c45a3719644c0d9bd7b31929afd9f"}  # (2^31-1) + 1
     response = client.post('/api/data/get_time_range', query_string=data, follow_redirects=True)
     assert response.status_code == 400
     json_data = json.loads(response.data.decode("utf-8"))
     assert json_data["error"] == DATA_OUT_OF_OUTPUT_RANGE_ERROR_MSG
-    data = {"lower": "-1"}  # -1
+    data = {"lower": "-1", "access_token": "5c36ab84439c45a3719644c0d9bd7b31929afd9f"}  # -1
     response = client.post('/api/data/get_time_range', query_string=data, follow_redirects=True)
     assert response.status_code == 400
     json_data = json.loads(response.data.decode("utf-8"))
     assert json_data["error"] == DATA_OUT_OF_OUTPUT_RANGE_ERROR_MSG
-    data = {"lower": "1", "upper": "2147483648"}  # lower OK, upper not OK
+    data = {"lower": "1", "upper": "2147483648", "access_token": "5c36ab84439c45a3719644c0d9bd7b31929afd9f"}  # lower OK, upper not OK
     response = client.post('/api/data/get_time_range', query_string=data, follow_redirects=True)
     assert response.status_code == 400
     json_data = json.loads(response.data.decode("utf-8"))
