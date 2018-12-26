@@ -1,6 +1,8 @@
 # -*- coding: utf-8 -*-
 import base64
 import json
+from uuid import UUID
+
 import pytest
 from paho.mqtt.client import MQTTMessage
 
@@ -82,7 +84,7 @@ def test_api_publish(client):
     assert response.status_code == 200
 
 
-def test_api_dt_create(client):
+def test_api_dt_create(client, app_and_ctx):
     data = {"description": "non-empty", "access_token": "5c36ab84439c45a3719644c0d9bd7b31929afd9f"}
     response = client.post('/api/device_type/create', query_string=data, follow_redirects=True)
     assert response.status_code == 200
@@ -92,6 +94,12 @@ def test_api_dt_create(client):
     data = {"not-description": "non-empty"}
     response = client.post('/api/device_type/create', query_string=data, follow_redirects=True)
     assert response.status_code == 400
+
+    app, ctx = app_and_ctx
+
+    with app.app_context():
+        inserted_dt = db.session.query(DeviceType).filter(DeviceType.type_id == UUID(json_data["type_id"])).first()
+        assert inserted_dt.owner.access_token == "5c36ab84439c45a3719644c0d9bd7b31929afd9f"
 
 
 def test_api_dv_create(client, app_and_ctx):
@@ -119,6 +127,10 @@ def test_api_dv_create(client, app_and_ctx):
     assert response.status_code == 200
     json_data = json.loads(response.data.decode("utf-8"))
     assert "id" in json_data
+
+    with app.app_context():
+        inserted_dv = db.session.query(Device).filter(Device.id == json_data["id"]).first()
+        assert inserted_dv.owner.access_token == data["access_token"]
 
 
 def test_api_get_device_by_name(client, app_and_ctx):
@@ -154,6 +166,18 @@ def test_api_get_device_by_name(client, app_and_ctx):
     json_data = json.loads(response.data.decode("utf-8"))
     devices = list(filter(lambda d: d["id"] == 23, json_data["devices"]))
     assert len(devices) == 1
+
+
+def test_api_get_device_by_name_foreign_device_hash(client, app_and_ctx):
+    data = {
+        "name_bi": "$2b$12$2xxxxxxxxxxxxxxxxxxxxu9vIxS.wvIOPeYz88BA5e/t3FlezwvUm",
+        "access_token": "5c36ab84439c45a3719644c0d9bd7b31929afd9f"
+    }
+
+    response = client.post('/api/device/get', query_string=data, follow_redirects=True)
+    assert response.status_code == 200
+    json_data = json.loads(response.data.decode("utf-8"))
+    assert len(json_data["devices"]) == 0
 
 
 def test_api_get_device_data_by_range_missing_bounds(client, app_and_ctx):

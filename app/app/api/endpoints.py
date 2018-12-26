@@ -3,7 +3,7 @@ from flask import request
 from sqlalchemy import and_
 
 from app.api import api
-from app.api.utils import is_number
+from app.api.utils import is_number, get_user_by_access_token
 from app.app_setup import client, db
 from app.auth.utils import require_api_token
 from app.models.models import DeviceType, Device, DeviceData
@@ -29,9 +29,10 @@ def publish_message():
 @require_api_token
 def create_device_type():
     description = request.args.get("description", None)
+    user = get_user_by_access_token(request.args.get("access_token", ""))
     if description is None:
         return http_json_response(False, 400, **{"error": DEVICE_TYPE_DESC_MISSING_ERROR_MSG})
-    dt = DeviceType(description=description)
+    dt = DeviceType(description=description, owner=user)
     db.session.add(dt)
     db.session.commit()
     return http_json_response(**{"type_id": str(dt.type_id)})
@@ -41,6 +42,7 @@ def create_device_type():
 @require_api_token
 def create_device():
     device_type_id = request.args.get("type_id", None)
+    user = get_user_by_access_token(request.args.get("access_token", ""))
     if device_type_id is None:
         return http_json_response(False, 400, **{"error": DEVICE_TYPE_ID_MISSING_ERROR_MSG})
     dt = None
@@ -49,7 +51,7 @@ def create_device():
     finally:  # TODO change to except and provide specific exception?
         if dt is None:
             return http_json_response(False, 400, **{"error": DEVICE_TYPE_ID_INCORRECT_ERROR_MSG})
-    dv = Device(device_type_id=device_type_id, device_type=dt)
+    dv = Device(device_type_id=device_type_id, device_type=dt, owner=user)
     db.session.add(dv)
     db.session.commit()
     return http_json_response(**{'id': dv.id})
@@ -57,12 +59,12 @@ def create_device():
 
 @api.route('/device/get', methods=['POST'])
 @require_api_token
-def get_device_by_name():  # TODO limit to only users devices, when auth is implemented
+def get_device_by_name():
     device_name_bi = request.args.get("name_bi", None)
-    print(device_name_bi, flush=True)
+    user = get_user_by_access_token(request.args.get("access_token", ""))
     if device_name_bi is None:
         return http_json_response(False, 400, **{"error": DEVICE_NAME_BI_MISSING_ERROR_MSG})
-    devices = db.session.query(Device).filter(Device.name_bi == device_name_bi)
+    devices = db.session.query(Device).filter(and_(Device.name_bi == device_name_bi, Device.owner == user))
     result = []
     for device in devices:
         result.append(device.as_dict())
@@ -74,6 +76,7 @@ def get_device_by_name():  # TODO limit to only users devices, when auth is impl
 def get_data_by_time_range():  # TODO limit to only users devices, when auth is implemented
     lower_bound = request.args.get("lower", "")
     upper_bound = request.args.get("upper", "")
+    user = get_user_by_access_token(request.args.get("access_token", ""))
 
     if not is_number(lower_bound) and not is_number(upper_bound):
         return http_json_response(False, 400, **{"error": DATA_RANGE_MISSING_ERROR_MSG})
@@ -86,18 +89,18 @@ def get_data_by_time_range():  # TODO limit to only users devices, when auth is 
     data = []
     if type(lower_bound) is int and type(upper_bound) is int:
         if 0 <= lower_bound < upper_bound <= 2147483647:
-            data = db.session.query(DeviceData).filter(and_(DeviceData.num_data > lower_bound, DeviceData.num_data < upper_bound)).all()
+            data = db.session.query(DeviceData).filter(and_(DeviceData.num_data > lower_bound, DeviceData.num_data < upper_bound, DeviceData.device_id.in_(d.id for d in user.owned_devices))).all()
         else:
             return http_json_response(False, 400, **{"error": DATA_OUT_OF_OUTPUT_RANGE_ERROR_MSG})
     elif type(upper_bound) is not int and type(lower_bound) is int:
         if 0 <= lower_bound <= 2147483647:
-            data = db.session.query(DeviceData).filter(DeviceData.num_data > lower_bound).all()
+            data = db.session.query(DeviceData).filter(and_(DeviceData.num_data > lower_bound, DeviceData.device_id.in_(d.id for d in user.owned_devices))).all()
         else:
             return http_json_response(False, 400, **{"error": DATA_OUT_OF_OUTPUT_RANGE_ERROR_MSG})
 
     elif type(lower_bound) is not int and type(upper_bound) is int:
         if 0 <= upper_bound <= 2147483647:
-            data = db.session.query(DeviceData).filter(DeviceData.num_data < upper_bound).all()
+            data = db.session.query(DeviceData).filter(and_(DeviceData.num_data < upper_bound, DeviceData.device_id.in_(d.id for d in user.owned_devices))).all()
         else:
             return http_json_response(False, 400, **{"error": DATA_OUT_OF_OUTPUT_RANGE_ERROR_MSG})
 
