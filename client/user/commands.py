@@ -1,7 +1,11 @@
 import base64
+import json
+from datetime import datetime
+
 import click
 import requests
-from crypto_utils import encrypt, hash  # TODO FIX ME
+from crypto_utils import encrypt, hash, correctness_hash, check_correctness_hash  # TODO FIX ME
+from utils import json_string_with_bytes_to_dict
 
 URL_BASE = "https://localhost/api/"
 URL_PUBLISH = URL_BASE + "publish"
@@ -38,16 +42,23 @@ def send_message():
 @click.argument('description')
 @click.option('--token', envvar='ACCESS_TOKEN')
 def create_device_type(description, token):
-    data = {"description": description, "access_token": token}
+    data = {"description": description, "access_token": token, "correctness_hash": correctness_hash(description)}
     r = requests.post(URL_CREATE_DEVICE_TYPE, params=data, verify=False)
     click.echo(r.content.decode('unicode-escape'))
 
 
 @user.command()
 @click.argument('device_type_id')
+@click.argument('device_name')
+@click.argument('user_id')
 @click.option('--token', envvar='ACCESS_TOKEN')
-def create_device(device_type_id, token):
-    data = {"type_id": device_type_id, "access_token": token}
+def create_device(device_type_id, user_id, device_name, token):
+    data = {
+        "type_id": device_type_id,
+        "access_token": token,
+        "name": device_name,
+        "correctness_hash": correctness_hash(device_name),
+        "name_bi": hash(device_name, user_id)}
     r = requests.post(URL_CREATE_DEVICE, params=data, verify=False)
     click.echo(r.content.decode('unicode-escape'))
 
@@ -60,7 +71,9 @@ def get_devices(device_name, user_id, token):
     device_name_bi = hash(device_name, user_id)
     data = {"name_bi": device_name_bi, "access_token": token}
     r = requests.post(URL_GET_DEVICE, params=data, verify=False)
-    click.echo(r.content.decode('unicode-escape'))
+    content = json.loads(r.content.decode('unicode-escape'))
+    check_correctness_hash(content["devices"], "name")
+    click.echo(content["devices"])
 
 
 @user.command()
@@ -77,7 +90,12 @@ def get_device_data_by_time_range(lower=None, upper=None, token=""):  # TODO add
     else:
         data = {"lower": 0, "upper": 2147483647, "access_token": token}
     r = requests.post(URL_GET_DEVICE_DATA_BY_RANGE, params=data, verify=False)
-    click.echo(r.content.decode('unicode-escape'))
+    content = r.content.decode('unicode-escape')
+    json_content = json_string_with_bytes_to_dict(content)
+    for item in json_content["device_data"]:
+        item["added"] = str(datetime.strptime(item["added"], "%a, %d %b %Y %H:%M:%S %Z").date())
+    check_correctness_hash(json_content["device_data"], 'added', 'data', 'num_data')
+    click.echo(content)
 
 
 if __name__ == '__main__':

@@ -7,14 +7,16 @@ from app.api.utils import is_number, get_user_by_access_token
 from app.app_setup import client, db
 from app.auth.utils import require_api_token
 from app.models.models import DeviceType, Device, DeviceData
-from app.utils import http_json_response
+from app.utils import http_json_response, check_missing_request_argument
 
 DEVICE_TYPE_ID_MISSING_ERROR_MSG = 'Missing device type id.'
 DEVICE_TYPE_ID_INCORRECT_ERROR_MSG = 'Incorrect device type id.'
 DEVICE_TYPE_DESC_MISSING_ERROR_MSG = 'Missing device type description.'
 DEVICE_NAME_BI_MISSING_ERROR_MSG = 'Missing device Blind Index.'
+DEVICE_NAME_MISSING_ERROR_MSG = 'Missing device Name.'
 DATA_RANGE_MISSING_ERROR_MSG = 'Missing upper and lower range for query.'
 DATA_OUT_OF_OUTPUT_RANGE_ERROR_MSG = 'Value out of OPE output range.'
+CORRECTNESS_HASH_MISSING_ERROR_MSG = 'Correctness Hash needs to be provided.'
 
 
 @api.route('/publish', methods=['POST'])
@@ -29,10 +31,14 @@ def publish_message():
 @require_api_token
 def create_device_type():
     description = request.args.get("description", None)
+    correctness_hash = request.args.get("correctness_hash", None)
     user = get_user_by_access_token(request.args.get("access_token", ""))
-    if description is None:
-        return http_json_response(False, 400, **{"error": DEVICE_TYPE_DESC_MISSING_ERROR_MSG})
-    dt = DeviceType(description=description, owner=user)
+    arg_check = check_missing_request_argument(
+        (description, DEVICE_TYPE_DESC_MISSING_ERROR_MSG),
+        (correctness_hash, CORRECTNESS_HASH_MISSING_ERROR_MSG))
+    if arg_check is not True:
+        return arg_check
+    dt = DeviceType(description=description, owner=user, correctness_hash=correctness_hash)
     db.session.add(dt)
     db.session.commit()
     return http_json_response(**{"type_id": str(dt.type_id)})
@@ -42,16 +48,29 @@ def create_device_type():
 @require_api_token
 def create_device():
     device_type_id = request.args.get("type_id", None)
+    correctness_hash = request.args.get("correctness_hash", None)
+    name = request.args.get("name", None)
+    name_bi = request.args.get("name_bi", None)
     user = get_user_by_access_token(request.args.get("access_token", ""))
-    if device_type_id is None:
-        return http_json_response(False, 400, **{"error": DEVICE_TYPE_ID_MISSING_ERROR_MSG})
+    arg_check = check_missing_request_argument(
+        (device_type_id, DEVICE_TYPE_ID_MISSING_ERROR_MSG),
+        (correctness_hash, CORRECTNESS_HASH_MISSING_ERROR_MSG),
+        (name, DEVICE_NAME_MISSING_ERROR_MSG),
+        (name_bi, DEVICE_NAME_BI_MISSING_ERROR_MSG))
+    if arg_check is not True:
+        return arg_check
     dt = None
     try:  # TODO do check whether UUID is valid (test_api_dv_create)
         dt = db.session.query(DeviceType).filter(DeviceType.type_id == device_type_id).first()
     finally:  # TODO change to except and provide specific exception?
         if dt is None:
             return http_json_response(False, 400, **{"error": DEVICE_TYPE_ID_INCORRECT_ERROR_MSG})
-    dv = Device(device_type_id=device_type_id, device_type=dt, owner=user)
+    dv = Device(device_type_id=device_type_id,
+                device_type=dt,
+                owner=user,
+                correctness_hash=correctness_hash,
+                name=name,
+                name_bi=name_bi)
     db.session.add(dv)
     db.session.commit()
     return http_json_response(**{'id': dv.id})
@@ -73,7 +92,7 @@ def get_device_by_name():
 
 @api.route('/data/get_time_range', methods=['POST'])
 @require_api_token
-def get_data_by_time_range():  # TODO limit to only users devices, when auth is implemented
+def get_data_by_time_range():
     lower_bound = request.args.get("lower", "")
     upper_bound = request.args.get("upper", "")
     user = get_user_by_access_token(request.args.get("access_token", ""))

@@ -7,11 +7,12 @@ import pytest
 from paho.mqtt.client import MQTTMessage
 
 from app.api.endpoints import DEVICE_TYPE_ID_MISSING_ERROR_MSG, DEVICE_TYPE_ID_INCORRECT_ERROR_MSG, DEVICE_NAME_BI_MISSING_ERROR_MSG, \
-    DATA_RANGE_MISSING_ERROR_MSG, DATA_OUT_OF_OUTPUT_RANGE_ERROR_MSG
+    DATA_RANGE_MISSING_ERROR_MSG, DATA_OUT_OF_OUTPUT_RANGE_ERROR_MSG, DEVICE_NAME_MISSING_ERROR_MSG, CORRECTNESS_HASH_MISSING_ERROR_MSG
 from app.errors.errors import SOMETHING_WENT_WRONG_MSG
 from app.models.models import DeviceType, Device, DeviceData
 from app.app_setup import client as mqtt_client
-from client.crypto_utils import encrypt, hash
+from client.crypto_utils import encrypt, hash, correctness_hash
+from passlib.hash import bcrypt
 
 from .conftest import db
 from tests.test_utils.utils import is_valid_uuid
@@ -33,9 +34,10 @@ def test_mqtt_on_message(app_and_ctx):
         assert device_data_count == db.session.query(DeviceData).count()  # 0 == 0
         msg.topic = b"save_data"
         assert device_data_count == db.session.query(DeviceData).count()  # 0 == 0
-        db.session.add(Device(id=111111))
+        db.session.add(Device(id=111111, name="testingDevice", correctness_hash=correctness_hash("testingDevice")))
         db.session.commit()
-        msg.payload = b"{'device_id': 111111, 'device_data': 'test_data'}"
+        msg.payload = b"{'device_id': 111111, 'device_data': 'test_data', 'added': '2017-12-11 17:12:34', 'num_data': 840125, 'correctness_hash': '$2b$12$5s/6DQkc3Tkq.9dXQ9fK/usP1usuyQh1rpsh5dBCQee8UXdVI7.6e'}"
+        # TODO Create Object for Payload (to parse it)
         handle_on_message(None, None, msg, app, db)
         assert device_data_count + 1 == db.session.query(DeviceData).count()  # 0 + 1 == 1
 
@@ -85,13 +87,28 @@ def test_api_publish(client):
 
 
 def test_api_dt_create(client, app_and_ctx):
-    data = {"description": "non-empty", "access_token": "5c36ab84439c45a3719644c0d9bd7b31929afd9f"}
+    data = {  # TODO create function to create dict with only access_token, so I don't need to specify it everytime
+        "description": "non-empty",
+        "access_token": "5c36ab84439c45a3719644c0d9bd7b31929afd9f",
+        "correctness_hash": '$2b$12$.Jk4ruyYVQuMcMxpDODfQuV/1NJiLHWDcF15CE9g2OKmCmuSMzU8q'
+    }
     response = client.post('/api/device_type/create', query_string=data, follow_redirects=True)
     assert response.status_code == 200
     json_data = json.loads(response.data.decode("utf-8"))
     assert is_valid_uuid(json_data["type_id"])
 
-    data = {"not-description": "non-empty"}
+    data = {
+        "not-description": "non-empty",
+        "access_token": "5c36ab84439c45a3719644c0d9bd7b31929afd9f",
+        "correctness_hash": '$2b$12$EhN.T.Ll2sas/rE34/lkOeyMKzoGZM6SlJoS5xhRUGkkm8T3GAg5O'
+    }
+    response = client.post('/api/device_type/create', query_string=data, follow_redirects=True)
+    assert response.status_code == 400
+
+    data = {
+        "description": "non-empty",
+        "access_token": "5c36ab84439c45a3719644c0d9bd7b31929afd9f"
+    }
     response = client.post('/api/device_type/create', query_string=data, follow_redirects=True)
     assert response.status_code == 400
 
@@ -100,16 +117,56 @@ def test_api_dt_create(client, app_and_ctx):
     with app.app_context():
         inserted_dt = db.session.query(DeviceType).filter(DeviceType.type_id == UUID(json_data["type_id"])).first()
         assert inserted_dt.owner.access_token == "5c36ab84439c45a3719644c0d9bd7b31929afd9f"
+        assert inserted_dt.correctness_hash == '$2b$12$.Jk4ruyYVQuMcMxpDODfQuV/1NJiLHWDcF15CE9g2OKmCmuSMzU8q'
 
 
 def test_api_dv_create(client, app_and_ctx):
-    data = {"not-type_id": "non-empty", "access_token": "5c36ab84439c45a3719644c0d9bd7b31929afd9f"}
+    data = {
+        "not-type_id": "non-empty",
+        "access_token": "5c36ab84439c45a3719644c0d9bd7b31929afd9f"
+    }
     response = client.post('/api/device/create', query_string=data, follow_redirects=True)
     assert response.status_code == 400
     json_data = json.loads(response.data.decode("utf-8"))
     assert (json_data["error"]) == DEVICE_TYPE_ID_MISSING_ERROR_MSG
 
-    data = {"type_id": "non-valid - not present in DB", "access_token": "5c36ab84439c45a3719644c0d9bd7b31929afd9f"}  # TODO ERROR:  invalid input syntax for type uuid: "non-valid - not present in DB" at character 184
+    data = {
+        "type_id": "doesnt matter",
+        "access_token": "5c36ab84439c45a3719644c0d9bd7b31929afd9f"
+    }  # TODO ERROR:  invalid input syntax for type uuid: "non-valid - not present in DB" at character 184
+    response = client.post('/api/device/create', query_string=data, follow_redirects=True)
+    assert response.status_code == 400
+    json_data = json.loads(response.data.decode("utf-8"))
+    assert (json_data["error"]) == CORRECTNESS_HASH_MISSING_ERROR_MSG
+
+    data = {
+        "type_id": "anything",
+        "access_token": "5c36ab84439c45a3719644c0d9bd7b31929afd9f",
+        "correctness_hash": '$2b$12$EhN.T.Ll2sas/rE34/lkOeyMKzoGZM6SlJoS5xhRUGkkm8T3GAg5O'
+    }
+    response = client.post('/api/device/create', query_string=data, follow_redirects=True)
+    assert response.status_code == 400
+    json_data = json.loads(response.data.decode("utf-8"))
+    assert (json_data["error"]) == DEVICE_NAME_MISSING_ERROR_MSG
+
+    data = {
+        "type_id": "anything",
+        "access_token": "5c36ab84439c45a3719644c0d9bd7b31929afd9f",
+        "correctness_hash": '$2b$12$WCDgDQQwfA2UtS7qk5eiO.W23sRkaHjKSBWrkhB8Q9VGPUnMUKtye',
+        "name": "test"
+    }
+    response = client.post('/api/device/create', query_string=data, follow_redirects=True)
+    assert response.status_code == 400
+    json_data = json.loads(response.data.decode("utf-8"))
+    assert (json_data["error"]) == DEVICE_NAME_BI_MISSING_ERROR_MSG
+
+    data = {
+        "type_id": "non-valid",
+        "access_token": "5c36ab84439c45a3719644c0d9bd7b31929afd9f",
+        "correctness_hash": '$2b$12$WCDgDQQwfA2UtS7qk5eiO.W23sRkaHjKSBWrkhB8Q9VGPUnMUKtye',
+        "name": "test",
+        "name_bi": "$2b$12$1xxxxxxxxxxxxxxxxxxxxuDUX01AKuyu/3/PdSxQT4qMDVTUawIUq"
+    }
     response = client.post('/api/device/create', query_string=data, follow_redirects=True)
     assert response.status_code == 400
     json_data = json.loads(response.data.decode("utf-8"))
@@ -118,10 +175,16 @@ def test_api_dv_create(client, app_and_ctx):
     app, ctx = app_and_ctx
 
     with app.app_context():
-        dt = DeviceType()
+        dt = DeviceType(description="nothing.....", correctness_hash=correctness_hash("nothing....."))
         db.session.add(dt)
         db.session.commit()
-        data = {"type_id": str(dt.type_id), "access_token": "5c36ab84439c45a3719644c0d9bd7b31929afd9f"}
+        data = {
+            "type_id": str(dt.type_id),
+            "access_token": "5c36ab84439c45a3719644c0d9bd7b31929afd9f",
+            "correctness_hash": '$2b$12$WCDgDQQwfA2UtS7qk5eiO.W23sRkaHjKSBWrkhB8Q9VGPUnMUKtye',
+            "name": "test",
+            "name_bi": "$2b$12$1xxxxxxxxxxxxxxxxxxxxuDUX01AKuyu/3/PdSxQT4qMDVTUawIUq"
+        }
 
     response = client.post('/api/device/create', query_string=data, follow_redirects=True)
     assert response.status_code == 200
@@ -131,6 +194,7 @@ def test_api_dv_create(client, app_and_ctx):
     with app.app_context():
         inserted_dv = db.session.query(Device).filter(Device.id == json_data["id"]).first()
         assert inserted_dv.owner.access_token == data["access_token"]
+        assert inserted_dv.name_bi == data["name_bi"]
 
 
 def test_api_get_device_by_name(client, app_and_ctx):
@@ -150,13 +214,14 @@ def test_api_get_device_by_name(client, app_and_ctx):
 
     bi_hash = "$2b$12$1xxxxxxxxxxxxxxxxxxxxuZLbwxnpY0o58unSvIPxddLxGystU.Mq"
     with app.app_context():
-        dt = DeviceType(id=123)
+        dt = DeviceType(id=123, description="nothing...", correctness_hash=correctness_hash("nothing..."))
         db.session.add(dt)
         dv = Device(id=1000,
                     status=False,
                     device_type=dt,
                     name="my_raspberry",
-                    name_bi=bi_hash)
+                    name_bi=bi_hash,
+                    correctness_hash=correctness_hash("my_raspberry"))
         db.session.add(dv)
         db.session.commit()
         data = {"name_bi": bi_hash, "access_token": "5c36ab84439c45a3719644c0d9bd7b31929afd9f"}
@@ -261,3 +326,9 @@ def test_hash_bcrypt():
     assert hash("raspberry", "1234srfh") == "$2b$12$1234srfhxxxxxxxxxxxxxu9oRez2BjitmNvretimcFcTsuR/HtxQa"
     with pytest.raises(Exception):
         hash("raspberry", "")
+
+
+def test_correctness_hash():
+    assert bcrypt.verify("ergh" + "esrge", correctness_hash("ergh", "esrge"))
+    assert bcrypt.verify("ergh" + "esrge" + "1", correctness_hash("ergh", "esrge", fake=True))
+    assert not bcrypt.verify("ergh" + "esrge" + "wes", correctness_hash("ergh", "esrge"))

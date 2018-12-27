@@ -1,3 +1,4 @@
+import click
 from cryptography.hazmat.backends import default_backend
 from cryptography.hazmat.primitives.ciphers import (
     Cipher, algorithms, modes
@@ -50,3 +51,16 @@ def hash(value, salt):
     if salt == "":
         raise Exception("You need to specify salt (at least 1 character).")
     return bcrypt.using(rounds=12, salt=salt.ljust(22, "x")).hash(value)
+
+
+def correctness_hash(*strings, fake=False):
+    if not fake:
+        return bcrypt.using(rounds=12).hash(''.join(map(str, strings)))
+    return bcrypt.using(rounds=12).hash(''.join(map(str, strings)) + "1")
+
+
+def check_correctness_hash(query_result, *keys):
+    for item in query_result:
+        secret = "".join(str(item[key]) for key in keys)
+        if not bcrypt.verify(secret, item["correctness_hash"]):
+            click.echo(f"{item} failed correctness hash test!")

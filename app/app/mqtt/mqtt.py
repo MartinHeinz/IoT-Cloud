@@ -1,8 +1,9 @@
-# The callback for when the client receives a CONNACK response from the server.
 from app.models.models import Device, DeviceData
 from app.utils import bytes_to_json
+from datetime import datetime
 
 
+# The callback for when the client receives a CONNACK response from the server.
 def handle_on_connect(client, userdata, flags, rc):
     print("Connected with result code " + str(rc), flush=True)
 
@@ -20,7 +21,13 @@ def handle_on_message(client, userdata, msg, app, db):
             device = db.session.query(Device).filter(Device.id == msg.payload["device_id"]).first()
             print("Querying device with id: " + str(msg.payload["device_id"]), flush=True)
             if device is not None:
-                db.session.add(DeviceData(data=str.encode(msg.payload["device_data"]), device=device))
+                db.session.add(DeviceData(
+                    data=str.encode(msg.payload["device_data"]),
+                    device=device,
+                    correctness_hash=msg.payload["correctness_hash"],
+                    num_data=msg.payload["num_data"],
+                    added=datetime.strptime(msg.payload["added"], "%Y-%m-%d %H:%M:%S")
+                ))
                 db.session.commit()
                 print("Inserting device data for device: " + str(msg.payload["device_id"]) + " data: " + msg.payload["device_data"], flush=True)
             else:

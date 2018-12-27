@@ -33,11 +33,10 @@ class User(db.Model):
         "Device",
         secondary=user_device_table,
         back_populates="users")
-
     owned_devices = relationship("Device", back_populates="owner")
 
 
-class DeviceType(db.Model):  # TODO associate type with user so someone can modify/delete it
+class DeviceType(db.Model):
     __tablename__ = 'device_type'
     __table_args__ = {'extend_existing': True}
 
@@ -47,6 +46,8 @@ class DeviceType(db.Model):  # TODO associate type with user so someone can modi
     devices = relationship("Device", cascade="all, delete-orphan", back_populates="device_type")
     user_id = db.Column(db.Integer, db.ForeignKey('user.id'))
     owner = relationship("User", back_populates="device_types")
+
+    correctness_hash = db.Column(db.String(200), nullable=False)  # correctness_hash("description")
 
 
 class Device(db.Model):
@@ -73,6 +74,8 @@ class Device(db.Model):
     name = db.Column(db.String(200), unique=False, nullable=True)
     name_bi = db.Column(db.String(200), unique=False, nullable=True)  # Blind index for .name
 
+    correctness_hash = db.Column(db.String(200), nullable=False)  # correctness_hash("name")
+
     def as_dict(self):
         return {c.name: getattr(self, c.name) for c in self.__table__.columns}
 
@@ -88,6 +91,8 @@ class DeviceData(db.Model):
     device_id = db.Column(db.Integer, db.ForeignKey('device.id'))
     device = relationship("Device", back_populates="data")
 
+    correctness_hash = db.Column(db.String(200), nullable=False)  # correctness_hash(str(date(2018, 12, 11)), b'\\001'.decode("utf-8"), str(214357163))
+
     def as_dict(self):
         return {c.name: getattr(self, c.name) for c in self.__table__.columns}
 
@@ -101,6 +106,8 @@ class Action(db.Model):
     device_id = db.Column(db.Integer, db.ForeignKey('device.id'))
     device = relationship("Device", back_populates="actions")
 
+    correctness_hash = db.Column(db.String(200), nullable=False)  # correctness_hash("name")
+
 
 class Scene(db.Model):
     __tablename__ = 'scene'
@@ -113,3 +120,5 @@ class Scene(db.Model):
         "Device",
         secondary=scene_device_table,
         back_populates="scenes")
+
+    correctness_hash = db.Column(db.String(200), nullable=False)  # correctness_hash("name", "description")
