@@ -11,11 +11,12 @@ from app.api.endpoints import DEVICE_TYPE_ID_MISSING_ERROR_MSG, DEVICE_TYPE_ID_I
 from app.errors.errors import SOMETHING_WENT_WRONG_MSG
 from app.models.models import DeviceType, Device, DeviceData
 from app.app_setup import client as mqtt_client
+from app.mqtt.utils import Payload
+from app.utils import is_valid_uuid
 from client.crypto_utils import encrypt, hash, correctness_hash
 from passlib.hash import bcrypt
 
 from .conftest import db
-from tests.test_utils.utils import is_valid_uuid
 
 
 def test_mqtt_client(app_and_ctx):
@@ -24,7 +25,8 @@ def test_mqtt_client(app_and_ctx):
 
 def test_mqtt_on_message(app_and_ctx):
     msg = MQTTMessage(topic=b"not_save_data")
-    msg.payload = b"{'device_id': 111111, 'device_data': 'test_data'}"  # not present yet
+    msg.payload = bytes(Payload(device_id=111111,
+                                device_data='test_data'))  # not present yet
     from app.mqtt.mqtt import handle_on_message
     app, ctx = app_and_ctx
     with app.app_context():
@@ -36,8 +38,11 @@ def test_mqtt_on_message(app_and_ctx):
         assert device_data_count == db.session.query(DeviceData).count()  # 0 == 0
         db.session.add(Device(id=111111, name="testingDevice", correctness_hash=correctness_hash("testingDevice")))
         db.session.commit()
-        msg.payload = b"{'device_id': 111111, 'device_data': 'test_data', 'added': '2017-12-11 17:12:34', 'num_data': 840125, 'correctness_hash': '$2b$12$5s/6DQkc3Tkq.9dXQ9fK/usP1usuyQh1rpsh5dBCQee8UXdVI7.6e'}"
-        # TODO Create Object for Payload (to parse it)
+        msg.payload = bytes(Payload(device_id=111111,
+                                    device_data='test_data',
+                                    added='2017-12-11 17:12:34',
+                                    num_data=840125,
+                                    correctness_hash='$2b$12$5s/6DQkc3Tkq.9dXQ9fK/usP1usuyQh1rpsh5dBCQee8UXdVI7.6e'))
         handle_on_message(None, None, msg, app, db)
         assert device_data_count + 1 == db.session.query(DeviceData).count()  # 0 + 1 == 1
 
@@ -86,10 +91,10 @@ def test_api_publish(client):
     assert response.status_code == 200
 
 
-def test_api_dt_create(client, app_and_ctx):
-    data = {  # TODO create function to create dict with only access_token, so I don't need to specify it everytime
+def test_api_dt_create(client, app_and_ctx, access_token):
+    data = {
         "description": "non-empty",
-        "access_token": "5c36ab84439c45a3719644c0d9bd7b31929afd9f",
+        "access_token": access_token,
         "correctness_hash": '$2b$12$.Jk4ruyYVQuMcMxpDODfQuV/1NJiLHWDcF15CE9g2OKmCmuSMzU8q'
     }
     response = client.post('/api/device_type/create', query_string=data, follow_redirects=True)
@@ -99,7 +104,7 @@ def test_api_dt_create(client, app_and_ctx):
 
     data = {
         "not-description": "non-empty",
-        "access_token": "5c36ab84439c45a3719644c0d9bd7b31929afd9f",
+        "access_token": access_token,
         "correctness_hash": '$2b$12$EhN.T.Ll2sas/rE34/lkOeyMKzoGZM6SlJoS5xhRUGkkm8T3GAg5O'
     }
     response = client.post('/api/device_type/create', query_string=data, follow_redirects=True)
@@ -107,7 +112,7 @@ def test_api_dt_create(client, app_and_ctx):
 
     data = {
         "description": "non-empty",
-        "access_token": "5c36ab84439c45a3719644c0d9bd7b31929afd9f"
+        "access_token": access_token
     }
     response = client.post('/api/device_type/create', query_string=data, follow_redirects=True)
     assert response.status_code == 400
@@ -120,10 +125,10 @@ def test_api_dt_create(client, app_and_ctx):
         assert inserted_dt.correctness_hash == '$2b$12$.Jk4ruyYVQuMcMxpDODfQuV/1NJiLHWDcF15CE9g2OKmCmuSMzU8q'
 
 
-def test_api_dv_create(client, app_and_ctx):
+def test_api_dv_create(client, app_and_ctx, access_token):
     data = {
         "not-type_id": "non-empty",
-        "access_token": "5c36ab84439c45a3719644c0d9bd7b31929afd9f"
+        "access_token": access_token
     }
     response = client.post('/api/device/create', query_string=data, follow_redirects=True)
     assert response.status_code == 400
@@ -132,8 +137,8 @@ def test_api_dv_create(client, app_and_ctx):
 
     data = {
         "type_id": "doesnt matter",
-        "access_token": "5c36ab84439c45a3719644c0d9bd7b31929afd9f"
-    }  # TODO ERROR:  invalid input syntax for type uuid: "non-valid - not present in DB" at character 184
+        "access_token": access_token
+    }
     response = client.post('/api/device/create', query_string=data, follow_redirects=True)
     assert response.status_code == 400
     json_data = json.loads(response.data.decode("utf-8"))
@@ -141,7 +146,7 @@ def test_api_dv_create(client, app_and_ctx):
 
     data = {
         "type_id": "anything",
-        "access_token": "5c36ab84439c45a3719644c0d9bd7b31929afd9f",
+        "access_token": access_token,
         "correctness_hash": '$2b$12$EhN.T.Ll2sas/rE34/lkOeyMKzoGZM6SlJoS5xhRUGkkm8T3GAg5O'
     }
     response = client.post('/api/device/create', query_string=data, follow_redirects=True)
@@ -151,7 +156,7 @@ def test_api_dv_create(client, app_and_ctx):
 
     data = {
         "type_id": "anything",
-        "access_token": "5c36ab84439c45a3719644c0d9bd7b31929afd9f",
+        "access_token": access_token,
         "correctness_hash": '$2b$12$WCDgDQQwfA2UtS7qk5eiO.W23sRkaHjKSBWrkhB8Q9VGPUnMUKtye',
         "name": "test"
     }
@@ -162,7 +167,7 @@ def test_api_dv_create(client, app_and_ctx):
 
     data = {
         "type_id": "non-valid",
-        "access_token": "5c36ab84439c45a3719644c0d9bd7b31929afd9f",
+        "access_token": access_token,
         "correctness_hash": '$2b$12$WCDgDQQwfA2UtS7qk5eiO.W23sRkaHjKSBWrkhB8Q9VGPUnMUKtye',
         "name": "test",
         "name_bi": "$2b$12$1xxxxxxxxxxxxxxxxxxxxuDUX01AKuyu/3/PdSxQT4qMDVTUawIUq"
@@ -180,7 +185,7 @@ def test_api_dv_create(client, app_and_ctx):
         db.session.commit()
         data = {
             "type_id": str(dt.type_id),
-            "access_token": "5c36ab84439c45a3719644c0d9bd7b31929afd9f",
+            "access_token": access_token,
             "correctness_hash": '$2b$12$WCDgDQQwfA2UtS7qk5eiO.W23sRkaHjKSBWrkhB8Q9VGPUnMUKtye',
             "name": "test",
             "name_bi": "$2b$12$1xxxxxxxxxxxxxxxxxxxxuDUX01AKuyu/3/PdSxQT4qMDVTUawIUq"
@@ -197,14 +202,14 @@ def test_api_dv_create(client, app_and_ctx):
         assert inserted_dv.name_bi == data["name_bi"]
 
 
-def test_api_get_device_by_name(client, app_and_ctx):
-    data = {"not-name_bi": "non-empty", "access_token": "5c36ab84439c45a3719644c0d9bd7b31929afd9f"}
+def test_api_get_device_by_name(client, app_and_ctx, access_token):
+    data = {"not-name_bi": "non-empty", "access_token": access_token}
     response = client.post('/api/device/get', query_string=data, follow_redirects=True)
     assert response.status_code == 400
     json_data = json.loads(response.data.decode("utf-8"))
     assert (json_data["error"]) == DEVICE_NAME_BI_MISSING_ERROR_MSG
 
-    data = {"name_bi": "non-empty", "access_token": "5c36ab84439c45a3719644c0d9bd7b31929afd9f"}
+    data = {"name_bi": "non-empty", "access_token": access_token}
     response = client.post('/api/device/get', query_string=data, follow_redirects=True)
     assert response.status_code == 200
     json_data = json.loads(response.data.decode("utf-8"))
@@ -224,7 +229,7 @@ def test_api_get_device_by_name(client, app_and_ctx):
                     correctness_hash=correctness_hash("my_raspberry"))
         db.session.add(dv)
         db.session.commit()
-        data = {"name_bi": bi_hash, "access_token": "5c36ab84439c45a3719644c0d9bd7b31929afd9f"}
+        data = {"name_bi": bi_hash, "access_token": access_token}
 
     response = client.post('/api/device/get', query_string=data, follow_redirects=True)
     assert response.status_code == 200
@@ -233,10 +238,10 @@ def test_api_get_device_by_name(client, app_and_ctx):
     assert len(devices) == 1
 
 
-def test_api_get_device_by_name_foreign_device_hash(client, app_and_ctx):
+def test_api_get_device_by_name_foreign_device_hash(client, app_and_ctx, access_token):
     data = {
         "name_bi": "$2b$12$2xxxxxxxxxxxxxxxxxxxxu9vIxS.wvIOPeYz88BA5e/t3FlezwvUm",
-        "access_token": "5c36ab84439c45a3719644c0d9bd7b31929afd9f"
+        "access_token": access_token
     }
 
     response = client.post('/api/device/get', query_string=data, follow_redirects=True)
@@ -245,43 +250,43 @@ def test_api_get_device_by_name_foreign_device_hash(client, app_and_ctx):
     assert len(json_data["devices"]) == 0
 
 
-def test_api_get_device_data_by_range_missing_bounds(client, app_and_ctx):
-    data = {"not-upper-or-lower": "non-empty", "access_token": "5c36ab84439c45a3719644c0d9bd7b31929afd9f"}
+def test_api_get_device_data_by_range_missing_bounds(client, app_and_ctx, access_token):
+    data = {"not-upper-or-lower": "non-empty", "access_token": access_token}
     response = client.post('/api/data/get_time_range', query_string=data, follow_redirects=True)
     assert response.status_code == 400
     json_data = json.loads(response.data.decode("utf-8"))
     assert (json_data["error"]) == DATA_RANGE_MISSING_ERROR_MSG
 
 
-def test_api_get_device_data_by_range_non_numeric_bound(client, app_and_ctx):
-    data = {"lower": "non-numeric", "access_token": "5c36ab84439c45a3719644c0d9bd7b31929afd9f"}
+def test_api_get_device_data_by_range_non_numeric_bound(client, app_and_ctx, access_token):
+    data = {"lower": "non-numeric", "access_token": access_token}
     response = client.post('/api/data/get_time_range', query_string=data, follow_redirects=True)
     assert response.status_code == 400
     json_data = json.loads(response.data.decode("utf-8"))
     assert (json_data["error"]) == DATA_RANGE_MISSING_ERROR_MSG
 
 
-def test_api_get_device_data_by_range_with_only_lower_bound(client, app_and_ctx):
-    data = {"lower": "163081415", "access_token": "5c36ab84439c45a3719644c0d9bd7b31929afd9f"}  # 2500
+def test_api_get_device_data_by_range_with_only_lower_bound(client, app_and_ctx, access_token):
+    data = {"lower": "163081415", "access_token": access_token}  # 2500
     response = client.post('/api/data/get_time_range', query_string=data, follow_redirects=True)
     assert response.status_code == 200
     json_data = json.loads(response.data.decode("utf-8"))
     assert len(json_data["device_data"]) == 2
 
 
-def test_api_get_device_data_by_range_with_only_upper_bound(client, app_and_ctx):
-    data = {"upper": "228366930", "access_token": "5c36ab84439c45a3719644c0d9bd7b31929afd9f"}  # 3500
+def test_api_get_device_data_by_range_with_only_upper_bound(client, app_and_ctx, access_token):
+    data = {"upper": "228366930", "access_token": access_token}  # 3500
     response = client.post('/api/data/get_time_range', query_string=data, follow_redirects=True)
     assert response.status_code == 200
     json_data = json.loads(response.data.decode("utf-8"))
     assert len(json_data["device_data"]) == 3
 
 
-def test_api_get_device_data_by_range_with_both_bounds(client, app_and_ctx):
+def test_api_get_device_data_by_range_with_both_bounds(client, app_and_ctx, access_token):
     data = {
         "lower": "110284915",  # 1700
         "upper": "262690267",  # 4000
-        "access_token": "5c36ab84439c45a3719644c0d9bd7b31929afd9f"
+        "access_token": access_token
             }
     response = client.post('/api/data/get_time_range', query_string=data, follow_redirects=True)
     assert response.status_code == 200
@@ -291,7 +296,7 @@ def test_api_get_device_data_by_range_with_both_bounds(client, app_and_ctx):
     data = {
         "lower": "329390554",  # 5000
         "upper": "787663574",  # 12000
-        "access_token": "5c36ab84439c45a3719644c0d9bd7b31929afd9f"
+        "access_token": access_token
     }
     response = client.post('/api/data/get_time_range', query_string=data, follow_redirects=True)
     assert response.status_code == 200
@@ -299,18 +304,18 @@ def test_api_get_device_data_by_range_with_both_bounds(client, app_and_ctx):
     assert len(json_data["device_data"]) == 0
 
 
-def test_api_get_device_data_by_range_out_of_range(client, app_and_ctx):
-    data = {"upper": "2147483648", "access_token": "5c36ab84439c45a3719644c0d9bd7b31929afd9f"}  # (2^31-1) + 1
+def test_api_get_device_data_by_range_out_of_range(client, app_and_ctx, access_token):
+    data = {"upper": "2147483648", "access_token": access_token}  # (2^31-1) + 1
     response = client.post('/api/data/get_time_range', query_string=data, follow_redirects=True)
     assert response.status_code == 400
     json_data = json.loads(response.data.decode("utf-8"))
     assert json_data["error"] == DATA_OUT_OF_OUTPUT_RANGE_ERROR_MSG
-    data = {"lower": "-1", "access_token": "5c36ab84439c45a3719644c0d9bd7b31929afd9f"}  # -1
+    data = {"lower": "-1", "access_token": access_token}  # -1
     response = client.post('/api/data/get_time_range', query_string=data, follow_redirects=True)
     assert response.status_code == 400
     json_data = json.loads(response.data.decode("utf-8"))
     assert json_data["error"] == DATA_OUT_OF_OUTPUT_RANGE_ERROR_MSG
-    data = {"lower": "1", "upper": "2147483648", "access_token": "5c36ab84439c45a3719644c0d9bd7b31929afd9f"}  # lower OK, upper not OK
+    data = {"lower": "1", "upper": "2147483648", "access_token": access_token}  # lower OK, upper not OK
     response = client.post('/api/data/get_time_range', query_string=data, follow_redirects=True)
     assert response.status_code == 400
     json_data = json.loads(response.data.decode("utf-8"))

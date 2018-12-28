@@ -4,7 +4,7 @@ from datetime import datetime
 
 import click
 import requests
-from crypto_utils import encrypt, hash, correctness_hash, check_correctness_hash  # TODO FIX ME
+from crypto_utils import encrypt, hash, correctness_hash, check_correctness_hash
 from utils import json_string_with_bytes_to_dict
 
 URL_BASE = "https://localhost/api/"

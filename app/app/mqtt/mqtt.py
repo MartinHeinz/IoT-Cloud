@@ -1,6 +1,7 @@
 from app.models.models import Device, DeviceData
 from app.utils import bytes_to_json
 from datetime import datetime
+from flask import current_app
 
 
 # The callback for when the client receives a CONNACK response from the server.
@@ -35,7 +36,8 @@ def handle_on_message(client, userdata, msg, app, db):
 
 
 def handle_on_log(client, userdata, level, buf):
-    print("[ON LOG]: level: {} data: {}".format(level, buf), flush=True)
+    if not current_app.testing:
+        print("[ON LOG]: level: {} data: {}".format(level, buf), flush=True)
 
 
 def handle_on_publish(client, userdata, mid):

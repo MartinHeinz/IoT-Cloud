@@ -27,48 +27,48 @@ def test_send_message(runner):
     assert "\"success\": true" in result.output
 
 
-def test_create_device_type(runner):
-    result = runner.invoke(create_device_type, ["description", '--token', "5c36ab84439c45a3719644c0d9bd7b31929afd9f"])
+def test_create_device_type(runner, access_token):
+    result = runner.invoke(create_device_type, ["description", '--token', access_token])
     assert "\"success\": true," in result.output
     assert "\"type_id\": " in result.output
 
 
-def test_create_device(runner):
-    result = runner.invoke(create_device_type, ["description-again", '--token', "5c36ab84439c45a3719644c0d9bd7b31929afd9f"])
+def test_create_device(runner, access_token):
+    result = runner.invoke(create_device_type, ["description-again", '--token', access_token])
     type_id = re.search('type_id": "(.+)"', result.output, re.IGNORECASE).group(1)
-    result = runner.invoke(create_device, [type_id, "1", "CLITest", '--token', "5c36ab84439c45a3719644c0d9bd7b31929afd9f"])
+    result = runner.invoke(create_device, [type_id, "1", "CLITest", '--token', access_token])
     assert "\"success\": true" in result.output
     assert "\"id\": " in result.output
 
 
-def test_get_device(runner, client):
+def test_get_device(runner, client, access_token):
     device_name = "my_raspberry"
     user_id = "1"
     device_name_bi = hash(device_name, user_id)
 
-    result = runner.invoke(get_devices, [device_name, user_id, '--token', "5c36ab84439c45a3719644c0d9bd7b31929afd9f"])
+    result = runner.invoke(get_devices, [device_name, user_id, '--token', access_token])
     assert device_name_bi in result.output
     assert "failed correctness hash test!" not in result.output
 
 
-def test_get_device_data_by_time_range(runner, client):
+def test_get_device_data_by_time_range(runner, client, access_token):
 
-    result = runner.invoke(get_device_data_by_time_range, ['--token', "5c36ab84439c45a3719644c0d9bd7b31929afd9f"])
+    result = runner.invoke(get_device_data_by_time_range, ['--token', access_token])
     json_output = json_string_with_bytes_to_dict(result.output)
     assert len(json_output["device_data"]) == 4
     assert "failed correctness hash test!" not in result.output
 
-    result = runner.invoke(get_device_data_by_time_range, ["--lower", 129952183, '--token', "5c36ab84439c45a3719644c0d9bd7b31929afd9f"])
+    result = runner.invoke(get_device_data_by_time_range, ["--lower", 129952183, '--token', access_token])
     json_output = json_string_with_bytes_to_dict(result.output)
     assert len(json_output["device_data"]) == 2
     assert "failed correctness hash test!" not in result.output
 
-    result = runner.invoke(get_device_data_by_time_range, ["--lower", 129952183, "--upper", 262690267, '--token', "5c36ab84439c45a3719644c0d9bd7b31929afd9f"])
+    result = runner.invoke(get_device_data_by_time_range, ["--lower", 129952183, "--upper", 262690267, '--token', access_token])
     json_output = json_string_with_bytes_to_dict(result.output)
     assert len(json_output["device_data"]) == 1
     assert "failed correctness hash test!" not in result.output
 
-    result = runner.invoke(get_device_data_by_time_range, ["--upper", 163081415, '--token', "5c36ab84439c45a3719644c0d9bd7b31929afd9f"])
+    result = runner.invoke(get_device_data_by_time_range, ["--upper", 163081415, '--token', access_token])
     json_output = json_string_with_bytes_to_dict(result.output)
     assert len(json_output["device_data"]) == 2
     assert "failed correctness hash test!" not in result.output

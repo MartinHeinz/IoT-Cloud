@@ -35,3 +35,8 @@ def application():
     app = create_app(os.getenv('TESTING_ENV', "testing"))
     yield app
     db.drop_all()
+
+
+@pytest.fixture(scope="session")
+def access_token():
+    return "5c36ab84439c45a3719644c0d9bd7b31929afd9f"

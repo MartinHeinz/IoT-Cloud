@@ -25,10 +25,10 @@ def test_parse_email_throws_in_missing_primary():
         parse_email(response)
 
 
-def test_validate_token(app_and_ctx):
+def test_validate_token(app_and_ctx, access_token):
     app, ctx = app_and_ctx
     with app.app_context():
-        assert validate_token("5c36ab84439c45a3719644c0d9bd7b31929afd9f")
+        assert validate_token(access_token)
         assert validate_token("5c36ab84439c45a37196dftgd9bd7b31929afd9f") is False  # Not in generated schema
 
 

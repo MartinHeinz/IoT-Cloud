@@ -7,7 +7,7 @@ from app.api.utils import is_number, get_user_by_access_token
 from app.app_setup import client, db
 from app.auth.utils import require_api_token
 from app.models.models import DeviceType, Device, DeviceData
-from app.utils import http_json_response, check_missing_request_argument
+from app.utils import http_json_response, check_missing_request_argument, is_valid_uuid
 
 DEVICE_TYPE_ID_MISSING_ERROR_MSG = 'Missing device type id.'
 DEVICE_TYPE_ID_INCORRECT_ERROR_MSG = 'Incorrect device type id.'
@@ -60,9 +60,10 @@ def create_device():
     if arg_check is not True:
         return arg_check
     dt = None
-    try:  # TODO do check whether UUID is valid (test_api_dv_create)
-        dt = db.session.query(DeviceType).filter(DeviceType.type_id == device_type_id).first()
-    finally:  # TODO change to except and provide specific exception?
+    try:
+        if is_valid_uuid(device_type_id):
+            dt = db.session.query(DeviceType).filter(DeviceType.type_id == device_type_id).first()
+    finally:
         if dt is None:
             return http_json_response(False, 400, **{"error": DEVICE_TYPE_ID_INCORRECT_ERROR_MSG})
     dv = Device(device_type_id=device_type_id,
