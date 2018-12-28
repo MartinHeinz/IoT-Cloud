@@ -1,12 +1,43 @@
 from authlib.common.security import generate_token
 from flask import request, url_for, current_app, session
 
-from app.auth import remote, nonce_key, backend, login
+from app.auth import login, login_aa, remote_aa, nonce_key_aa, backend_aa
+from app.auth import remote as remote_app, nonce_key as nonce_key_app, backend as backend_app
 from app.auth.utils import handle_authorize
 
 
 @login.route('/auth')
 def auth():
+    auth_common(remote_app, nonce_key_app)
+
+
+@login.route('/login')
+def login():
+    login_common(remote_app, ".auth", backend_app, nonce_key_app)
+
+
+@login_aa.route('/auth')
+def auth_aa():
+    auth_common(remote_aa, nonce_key_aa)
+
+
+@login_aa.route('/login')
+def login_aa():
+    login_common(remote_aa, ".auth_aa", backend_aa, nonce_key_aa)
+
+
+def login_common(remote, url_for_auth, backend, nonce_key):
+    redirect_uri = url_for(url_for_auth, _external=True, _scheme='https')
+    conf_key = '{}_AUTHORIZE_PARAMS'.format(backend.OAUTH_NAME.upper())
+    params = current_app.config.get(conf_key, {})
+    if 'oidc' in backend.OAUTH_TYPE:
+        nonce = generate_token(20)
+        session[nonce_key] = nonce
+        params['nonce'] = nonce
+    return remote.authorize_redirect(redirect_uri, **params)
+
+
+def auth_common(remote, nonce_key):
     id_token = request.args.get('id_token')
     if request.args.get('code'):
         token = remote.authorize_access_token()
@@ -26,15 +57,3 @@ def auth():
     else:
         user_info = remote.profile(token=token)
     return handle_authorize(remote, token, user_info)
-
-
-@login.route('/login')
-def login():
-    redirect_uri = url_for('.auth', _external=True, _scheme='https')
-    conf_key = '{}_AUTHORIZE_PARAMS'.format(backend.OAUTH_NAME.upper())
-    params = current_app.config.get(conf_key, {})
-    if 'oidc' in backend.OAUTH_TYPE:
-        nonce = generate_token(20)
-        session[nonce_key] = nonce
-        params['nonce'] = nonce
-    return remote.authorize_redirect(redirect_uri, **params)

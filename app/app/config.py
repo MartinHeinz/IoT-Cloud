@@ -36,6 +36,9 @@ class Config:
     GITHUB_CLIENT_ID = os.getenv('GITHUB_CLIENT_ID', 'missing-id')
     GITHUB_CLIENT_SECRET = os.getenv('GITHUB_CLIENT_SECRET', 'very-secret')
 
+    STACKOVERFLOW_CLIENT_ID = os.getenv('STACKOVERFLOW_CLIENT_ID', 'missing-id')
+    STACKOVERFLOW_CLIENT_SECRET = os.getenv('STACKOVERFLOW_CLIENT_SECRET', 'very-secret')
+
     @staticmethod
     def init_app(app):
         pass

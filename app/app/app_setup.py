@@ -32,6 +32,8 @@ def create_app(config_name):
     db.init_app(app)
     from app.auth import oauth
     oauth.init_app(app)
+    from app.auth import oauth_aa
+    oauth_aa.init_app(app)
 
     # Set up extensions
     register_models()
@@ -58,6 +60,9 @@ def create_app(config_name):
 
     from app.auth import login as login_blueprint
     app.register_blueprint(login_blueprint, url_prefix='/')
+
+    from app.auth import login_aa as aa_login_blueprint
+    app.register_blueprint(aa_login_blueprint, url_prefix='/attr_auth')
 
     from app.errors import errors
     app.register_error_handler(Exception, errors.handle_error)
