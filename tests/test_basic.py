@@ -322,11 +322,6 @@ def test_api_get_device_data_by_range_out_of_range(client, app_and_ctx, access_t
     assert json_data["error"] == DATA_OUT_OF_OUTPUT_RANGE_ERROR_MSG
 
 
-def test_abe():
-    from .context import ABE_main
-    assert ABE_main.test_abe() is True
-
-
 def test_hash_bcrypt():
     assert hash("raspberry", "1234srfh") == "$2b$12$1234srfhxxxxxxxxxxxxxu9oRez2BjitmNvretimcFcTsuR/HtxQa"
     with pytest.raises(Exception):

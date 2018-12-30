@@ -1,4 +1,4 @@
-TRUNCATE public."user", public.device_type, public.device, public.user_device CASCADE;
+TRUNCATE public."user", public.device_type, public.device, public.user_device, public.action CASCADE;
 
 INSERT INTO public."user" (id, name, email, access_token, access_token_update) VALUES (1, 'MartinHeinz', 'martin7.heinz@gmail.com', '5c36ab84439c45a3719644c0d9bd7b31929afd9f', '2018-12-24 10:23:54');
 INSERT INTO public."user" (id, name, email, access_token, access_token_update) VALUES (2, 'TestUser', 'testuser@domain.com', '5c36ab84439c55a3c196f4csd9bd7b319291239f', '2018-12-10 15:12:34');

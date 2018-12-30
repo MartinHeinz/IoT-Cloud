@@ -28,7 +28,7 @@ def publish_message():
 
 
 @api.route('/device_type/create', methods=['POST'])
-@require_api_token
+@require_api_token()
 def create_device_type():
     description = request.args.get("description", None)
     correctness_hash = request.args.get("correctness_hash", None)
@@ -45,7 +45,7 @@ def create_device_type():
 
 
 @api.route('/device/create', methods=['POST'])
-@require_api_token
+@require_api_token()
 def create_device():
     device_type_id = request.args.get("type_id", None)
     correctness_hash = request.args.get("correctness_hash", None)
@@ -78,7 +78,7 @@ def create_device():
 
 
 @api.route('/device/get', methods=['POST'])
-@require_api_token
+@require_api_token()
 def get_device_by_name():
     device_name_bi = request.args.get("name_bi", None)
     user = get_user_by_access_token(request.args.get("access_token", ""))
@@ -92,7 +92,7 @@ def get_device_by_name():
 
 
 @api.route('/data/get_time_range', methods=['POST'])
-@require_api_token
+@require_api_token()
 def get_data_by_time_range():
     lower_bound = request.args.get("lower", "")
     upper_bound = request.args.get("upper", "")

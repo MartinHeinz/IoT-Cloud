@@ -122,3 +122,52 @@ class Scene(db.Model):
         back_populates="scenes")
 
     correctness_hash = db.Column(db.String(200), nullable=False)  # correctness_hash("name", "description")
+
+
+class AttrAuthUser(db.Model):
+    __table_args__ = {'extend_existing': True}
+    __bind_key__ = 'attr_auth'
+
+    id = db.Column(db.Integer, primary_key=True)
+    name = db.Column(db.String(200), unique=False, nullable=True)
+    access_token = db.Column(db.String(200), unique=True, nullable=False)  # TODO Give the token expiration date/time and force user to generate new token through `/login` endpoint
+    access_token_update = db.Column(db.DateTime, nullable=False)
+    public_key = relationship("PublicKey", back_populates="attr_auth_user", uselist=False)
+
+    private_keys = relationship("PrivateKey", backref="user", foreign_keys=lambda: PrivateKey.user_id)
+
+
+class PrivateKey(db.Model):
+    __table_args__ = {'extend_existing': True}
+    __bind_key__ = 'attr_auth'
+
+    id = db.Column(db.Integer, primary_key=True)
+    data = db.Column(db.LargeBinary, nullable=False)
+    key_update = db.Column(db.DateTime(timezone=True), server_default=func.now())
+    attributes = relationship("Attribute", backref="private_key")
+
+    user_id = db.Column(db.Integer, db.ForeignKey('attr_auth_user.id'))
+
+    challenger_id = db.Column(db.Integer, db.ForeignKey('attr_auth_user.id'))
+    challenger = relationship("AttrAuthUser", uselist=False, foreign_keys=[challenger_id])
+
+
+class PublicKey(db.Model):
+    __table_args__ = {'extend_existing': True}
+    __bind_key__ = 'attr_auth'
+
+    id = db.Column(db.Integer, primary_key=True)
+    data = db.Column(db.LargeBinary, nullable=False)
+    key_update = db.Column(db.DateTime(timezone=True), server_default=func.now())
+    attr_auth_user_id = db.Column(db.Integer, db.ForeignKey('attr_auth_user.id'))
+    attr_auth_user = relationship("AttrAuthUser", back_populates="public_key")
+
+
+class Attribute(db.Model):
+    __table_args__ = {'extend_existing': True}
+    __bind_key__ = 'attr_auth'
+
+    id = db.Column(db.Integer, primary_key=True)
+    value = db.Column(db.String(200), unique=False, nullable=True)
+
+    private_key_id = db.Column(db.Integer, db.ForeignKey('private_key.id'))

@@ -5,7 +5,7 @@ from unittest.mock import Mock
 import pytest
 
 from app.auth.utils import parse_email, validate_token, save_user, require_api_token, INVALID_ACCESS_TOKEN_ERROR_MSG
-from app.models.models import User
+from app.models.models import User, AttrAuthUser
 from .conftest import db
 
 
@@ -28,8 +28,8 @@ def test_parse_email_throws_in_missing_primary():
 def test_validate_token(app_and_ctx, access_token):
     app, ctx = app_and_ctx
     with app.app_context():
-        assert validate_token(access_token)
-        assert validate_token("5c36ab84439c45a37196dftgd9bd7b31929afd9f") is False  # Not in generated schema
+        assert validate_token(None, access_token)
+        assert validate_token(None, "5c36ab84439c45a37196dftgd9bd7b31929afd9f") is False  # Not in generated schema
 
 
 def test_save_user_github(app_and_ctx):
@@ -76,19 +76,20 @@ def test_save_user_stackoverflow(app_and_ctx):
              'token_type': 'Bearer'}
     app, ctx = app_and_ctx
     with app.app_context():
-        user = db.session.query(User).filter(User.id == user_info["sub"]).first()
+        user = db.session.query(AttrAuthUser).filter(AttrAuthUser.id == user_info["sub"]).first()
         assert user is None
         save_user(remote, user_info, token)
-        user = db.session.query(User).filter(User.id == user_info["sub"]).first()
+        user = db.session.query(AttrAuthUser).filter(AttrAuthUser.id == user_info["sub"]).first()
+        user_github = db.session.query(User).filter(User.id == user_info["sub"]).first()
         assert user is not None
+        assert user_github is None
         assert user.access_token == token["access_token"]
         assert user.id == int(user_info["sub"])
-        assert user.email is None
 
 
-def test_require_api_token(application):
+def test_require_api_token_in_base_db(application):
     func = Mock()
-    decorated_func = require_api_token(func)
+    decorated_func = require_api_token(None)(func)
     with application.test_request_context("/?access_token=Missing"):
         json_data = json.loads(decorated_func()[0].data.decode("utf-8"))
         assert INVALID_ACCESS_TOKEN_ERROR_MSG == json_data["error"]
@@ -97,4 +98,27 @@ def test_require_api_token(application):
         assert func.call_count == 1
 
 
-
+def test_require_api_token_in_attr_auth_db(application):
+    remote = Mock()
+    remote.name = "stackoverflow"
+    user_info = {'sub': '34566567',
+                 'name': 'Test',
+                 'preferred_username': 'Test',
+                 'profile': '',
+                 'picture': '',
+                 'address': '',
+                 'updated_at': 1514634372}
+    token = {'access_token': '5BagPr4ZdV9PvyyBNkjFvA))',  # Not present
+             'token_type': 'Bearer'}
+    func = Mock()
+    decorated_func = require_api_token("attr_auth")(func)
+    with application.test_request_context("/?access_token=Missing"):
+        json_data = json.loads(decorated_func()[0].data.decode("utf-8"))
+        assert INVALID_ACCESS_TOKEN_ERROR_MSG == json_data["error"]
+    with application.test_request_context("/?access_token=5BagPr4ZdV9PvyyBNkjFvA))"):
+        decorated_func()
+        assert func.call_count == 0
+    save_user(remote, user_info, token)
+    with application.test_request_context("/?access_token=5BagPr4ZdV9PvyyBNkjFvA))"):
+        decorated_func()
+        assert func.call_count == 1

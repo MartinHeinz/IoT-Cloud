@@ -14,7 +14,7 @@ client = mqtt.Client()
 
 
 def register_models():
-    from app.models.models import Device, DeviceType, User, DeviceData, Action, Scene  # noqa pylint: disable=unused-variable, cyclic-import
+    from app.models.models import Device, DeviceType, User, DeviceData, Action, Scene, AttrAuthUser, PublicKey, PrivateKey, Attribute  # noqa pylint: disable=unused-variable, cyclic-import
 
 
 def create_app(config_name):
@@ -46,6 +46,8 @@ def create_app(config_name):
         db.create_all()
         with open(app.config["POPULATE_PATH"], 'r') as sql:
             db.engine.execute(sql.read())
+        with open(app.config["ATTR_AUTH_POPULATE_PATH"], 'r') as sql:
+            db.get_engine(app, 'attr_auth').execute(sql.read())
         db.session.commit()
 
     # Create app blueprints

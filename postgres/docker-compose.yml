@@ -13,6 +13,8 @@ services:
       POSTGRES_USER: "postgres"
       POSTGRES_PASSWORD: "postgres"
       TESTING_DB_NAME: "testing"
+      ATTR_AUTH_DB_NAME: "attr_auth"
+      TEST_DB_ATTR_AUTH_NAME: "attr_auth_testing"
       POSTGRES_DB: postgres
       PGPORT: 5430
 

@@ -32,6 +32,7 @@ class Config:
     CLIENT_KEYFILE_PATH = None
 
     POPULATE_PATH = os.path.join(os.path.dirname(__file__), "..", "populate.sql")
+    ATTR_AUTH_POPULATE_PATH = os.path.join(os.path.dirname(__file__), "..", "attr_auth_populate.sql")
 
     GITHUB_CLIENT_ID = os.getenv('GITHUB_CLIENT_ID', 'missing-id')
     GITHUB_CLIENT_SECRET = os.getenv('GITHUB_CLIENT_SECRET', 'very-secret')
@@ -48,18 +49,27 @@ class DevelopmentConfig(Config):
     DEBUG = True
     ASSETS_DEBUG = True
     ENV = 'development'
-    SQLALCHEMY_DATABASE_URI = os.getenv('DEV_DATABASE_URL', 'postgres+psycopg2://postgres:postgres@localhost/flask_test')
+    SQLALCHEMY_DATABASE_URI = os.getenv('DEV_DATABASE_URL', 'postgres+psycopg2://postgres:postgres@<local-ip>:5430/postgres')
+    SQLALCHEMY_BINDS = {
+        'attr_auth': os.getenv('DEV_DATABASE_ATTR_AUTH_URL', 'postgres+psycopg2://postgres:postgres@<local-ip>:5430/attr_auth'),
+    }
     print('THIS APP IS IN DEBUG MODE. YOU SHOULD NOT SEE THIS IN PRODUCTION.')
 
 
 class TestingConfig(Config):
     TESTING = True
-    SQLALCHEMY_DATABASE_URI = os.getenv('TEST_DATABASE_URL', 'postgres+psycopg2://postgres:postgres@localhost/testing')
+    SQLALCHEMY_DATABASE_URI = os.getenv('TEST_DATABASE_URL', 'postgres+psycopg2://postgres:postgres@db_test/testing')
+    SQLALCHEMY_BINDS = {
+        'attr_auth': os.getenv('TEST_DATABASE_ATTR_AUTH_URL', 'postgres+psycopg2://postgres:postgres@db_test/attr_auth_testing'),
+    }
     WTF_CSRF_ENABLED = False
 
 
 class HostTestingConfig(TestingConfig):
-    SQLALCHEMY_DATABASE_URI = os.getenv('TEST_DATABASE_HOST_URL', 'postgres+psycopg2://postgres:postgres@localhost/testing')
+    SQLALCHEMY_DATABASE_URI = os.getenv('TEST_DATABASE_HOST_URL', 'postgres+psycopg2://postgres:postgres@<local-ip>:5430/testing')
+    SQLALCHEMY_BINDS = {
+        'attr_auth': os.getenv('TEST_DATABASE_HOST_ATTR_AUTH_URL', 'postgres+psycopg2://postgres:postgres@<local-ip>:5430/attr_auth_testing')
+    }
     MQTT_BROKER_URL = os.getenv('MQTT_BROKER_HOST_URL', 'localhost')
 
 
@@ -67,7 +77,10 @@ class DockerConfig(Config):
     DEBUG = True
     ASSETS_DEBUG = True
     ENV = 'development'
-    SQLALCHEMY_DATABASE_URI = os.getenv('DOCKER_DATABASE_URL', 'postgres+psycopg2://postgres:postgres@db/flask_test')
+    SQLALCHEMY_DATABASE_URI = os.getenv('DOCKER_DATABASE_URL', 'postgres+psycopg2://postgres:postgres@<local-ip>:5430/postgres')
+    SQLALCHEMY_BINDS = {
+        'attr_auth': os.getenv('DOCKER_DATABASE_ATTR_AUTH_URL', 'postgres+psycopg2://postgres:postgres@<local-ip>:5430/attr_auth')
+    }
 
 
 config = {

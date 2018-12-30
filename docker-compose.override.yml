@@ -11,7 +11,11 @@ services:
     environment:
       POSTGRES_USER: "postgres"
       POSTGRES_PASSWORD: "postgres"
-      POSTGRES_DB: testing
+      TESTING_DB_NAME: "testing"
+      ATTR_AUTH_DB_NAME: "attr_auth"
+      TEST_DB_ATTR_AUTH_NAME: "attr_auth_testing"
+      POSTGRES_DB: postgres
+      PGPORT: 5432
   web:
     container_name: iot_cloud_web
     working_dir: /app
