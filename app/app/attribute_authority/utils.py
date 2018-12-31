@@ -1,8 +1,9 @@
 import datetime
 import re
 
+from charm.adapters.abenc_adapt_hybrid import HybridABEnc
 from charm.core.engine.util import objectToBytes, bytesToObject
-from charm.schemes.abenc.ac17 import AC17CPABE
+from charm.schemes.abenc.abenc_bsw07 import CPabe_BSW07
 from charm.toolbox.pairinggroup import PairingGroup
 
 from app.app_setup import db
@@ -23,8 +24,9 @@ def create_pairing_group():
 
 
 def create_cp_abe():
-    """ AC17 CP-ABE under DLIN (2-linear) """
-    return AC17CPABE(create_pairing_group(), 2)
+    pairing_group = create_pairing_group()
+    cpabe = CPabe_BSW07(pairing_group)
+    return HybridABEnc(cpabe, pairing_group)
 
 
 def get_user_by_id(user_id):

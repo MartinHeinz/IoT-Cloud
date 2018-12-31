@@ -66,7 +66,7 @@ def key_setup():
 
 @attr_authority.route('/keygen', methods=['POST'])
 @require_api_token("attr_auth")
-def keygen():  # TODO test
+def keygen():
     token = request.args.get("access_token", None)
     serialized_master_key = request.args.get("master_key", None)
     attr_list = request.args.get("attr_list", None)
@@ -90,7 +90,7 @@ def keygen():  # TODO test
     master_key = deserialize_key(str.encode(serialized_master_key), create_pairing_group())  # TODO check `serialized_master_key` before using `str.encode()`
     cp_abe = create_cp_abe()
 
-    data_owner = db.session.query(AttrAuthUser).filter(AttrAuthUser.access_token == token).first()  # TODO test remaining lines in this function
+    data_owner = db.session.query(AttrAuthUser).filter(AttrAuthUser.access_token == token).first()
     public_key = deserialize_key(data_owner.public_key.data, create_pairing_group())
     private_key = cp_abe.keygen(public_key, master_key, attr_list)
     serialized_private_key = serialize_key(private_key, create_pairing_group())
