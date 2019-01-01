@@ -10,11 +10,11 @@ from app.app_setup import db
 from app.models.models import AttrAuthUser, Attribute
 
 
-def serialize_key(key, group):
+def serialize_charm_object(key, group):
     return objectToBytes(key, group)
 
 
-def deserialize_key(key, group):
+def deserialize_charm_object(key, group):
     return bytesToObject(key, group)
 
 

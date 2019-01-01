@@ -6,8 +6,9 @@ from charm.schemes.abenc.abenc_bsw07 import CPabe_BSW07
 from charm.toolbox.pairinggroup import PairingGroup, GT
 
 from app.app_setup import db
-from app.attribute_authority.endpoints import INCORRECT_RECEIVER_ID_ERROR_MSG, INVALID_ATTR_LIST_ERROR_MSG
-from app.attribute_authority.utils import create_pairing_group, create_cp_abe, serialize_key, deserialize_key, already_has_key_from_owner, create_attributes, \
+from app.attribute_authority.endpoints import INCORRECT_RECEIVER_ID_ERROR_MSG, INVALID_ATTR_LIST_ERROR_MSG, MESSAGE_MISSING_ERROR_MSG, \
+    POLICY_STRING_MISSING_ERROR_MSG, PRIVATE_KEY_MISSING_ERROR_MSG, PUBLIC_KEY_MISSING_ERROR_MSG, CIPHERTEXT_MISSING_ERROR_MSG, COULD_NOT_DECRYPT_ERROR_MSG
+from app.attribute_authority.utils import create_pairing_group, create_cp_abe, serialize_charm_object, deserialize_charm_object, already_has_key_from_owner, create_attributes, \
     replace_existing_key, parse_attr_list
 from app.auth.utils import INVALID_ACCESS_TOKEN_ERROR_MSG
 from app.models.models import AttrAuthUser
@@ -26,11 +27,11 @@ def test_charm_crypto():
     attr_list = ['TODAY']
     key = hyb_abe.keygen(pk, msk, attr_list)
 
-    serialized_pk = serialize_key(pk, pairing_group)
-    pk = deserialize_key(serialized_pk, pairing_group)
+    serialized_pk = serialize_charm_object(pk, pairing_group)
+    pk = deserialize_charm_object(serialized_pk, pairing_group)
 
-    serialized_key = serialize_key(key, pairing_group)
-    key = deserialize_key(serialized_key, pairing_group)
+    serialized_key = serialize_charm_object(key, pairing_group)
+    key = deserialize_charm_object(serialized_key, pairing_group)
 
     # choose a random message
     msg = "Hello World"
@@ -55,7 +56,7 @@ def test_serialize_and_deserialize_pk():
 
     public_key, master_key = cp_abe.setup()
 
-    assert public_key == deserialize_key(serialize_key(public_key, pairing_group), pairing_group)
+    assert public_key == deserialize_charm_object(serialize_charm_object(public_key, pairing_group), pairing_group)
 
 
 def test_require_attr_auth_access_token_missing(client):
@@ -97,6 +98,107 @@ def test_create_attributes():
     assert attrs[0].value == "TODAY"
     assert attrs[1].value == "TOMORROW"
     assert len(attrs) == 2
+
+
+def test_decrypt_missing_private_key(client, attr_auth_access_token_one):
+    data = {
+        "access_token": attr_auth_access_token_one
+    }
+    response = client.post('/attr_auth/decrypt', query_string=data, follow_redirects=True)
+    assert response.status_code == 400
+    json_data = json.loads(response.data.decode("utf-8"))
+    assert (json_data["error"]) == PRIVATE_KEY_MISSING_ERROR_MSG
+
+
+def test_decrypt_missing_public_key(client, attr_auth_access_token_one):
+    data = {
+        "access_token": attr_auth_access_token_one,
+        "private_key": "anything"
+    }
+    response = client.post('/attr_auth/decrypt', query_string=data, follow_redirects=True)
+    assert response.status_code == 400
+    json_data = json.loads(response.data.decode("utf-8"))
+    assert (json_data["error"]) == PUBLIC_KEY_MISSING_ERROR_MSG
+
+
+def test_decrypt_missing_ciphertext(client, attr_auth_access_token_one):
+    data = {
+        "access_token": attr_auth_access_token_one,
+        "private_key": "anything",
+        "public_key": "anything"
+    }
+    response = client.post('/attr_auth/decrypt', query_string=data, follow_redirects=True)
+    assert response.status_code == 400
+    json_data = json.loads(response.data.decode("utf-8"))
+    assert (json_data["error"]) == CIPHERTEXT_MISSING_ERROR_MSG
+
+
+def test_decrypt_could_not_decrypt(client, app_and_ctx, attr_auth_access_token_one, attr_auth_access_token_two):
+    data = {
+        "access_token": attr_auth_access_token_two
+    }
+    app, ctx = app_and_ctx
+    with app.app_context():
+        decryptor = db.session.query(AttrAuthUser) \
+            .filter(AttrAuthUser.access_token == attr_auth_access_token_two) \
+            .first()  # TestUser access_token
+        private_key = next(key for key in decryptor.private_keys if key.challenger_id == 1)
+        data["private_key"] = private_key.data.decode("utf-8")
+        owner = db.session.query(AttrAuthUser) \
+            .filter(AttrAuthUser.access_token == attr_auth_access_token_one) \
+            .first()
+        data["public_key"] = owner.public_key.data.decode("utf-8")
+
+        plaintext = "any text"
+        data_encrypt = {
+            "access_token": attr_auth_access_token_one,
+            "message": plaintext,
+            "policy_string": "(TODAY)"  # INVALID
+        }
+        response = client.post('/attr_auth/encrypt', query_string=data_encrypt, follow_redirects=True)
+        assert response.status_code == 200
+        json_data = json.loads(response.data.decode("utf-8"))
+        assert (json_data["ciphertext"]) is not None
+        data["ciphertext"] = json_data["ciphertext"]
+
+        response = client.post('/attr_auth/decrypt', query_string=data, follow_redirects=True)
+        assert response.status_code == 400
+        json_data = json.loads(response.data.decode("utf-8"))
+        assert (json_data["error"]) == COULD_NOT_DECRYPT_ERROR_MSG
+
+
+def test_decrypt_succesfull(client, app_and_ctx, attr_auth_access_token_one, attr_auth_access_token_two):
+    data = {
+        "access_token": attr_auth_access_token_two
+    }
+    app, ctx = app_and_ctx
+    with app.app_context():
+        decryptor = db.session.query(AttrAuthUser) \
+            .filter(AttrAuthUser.access_token == attr_auth_access_token_two) \
+            .first()  # TestUser access_token
+        private_key = next(key for key in decryptor.private_keys if key.challenger_id == 1)
+        data["private_key"] = private_key.data.decode("utf-8")
+        owner = db.session.query(AttrAuthUser) \
+            .filter(AttrAuthUser.access_token == attr_auth_access_token_one) \
+            .first()
+        data["public_key"] = owner.public_key.data.decode("utf-8")
+
+        plaintext = "any text"
+        data_encrypt = {
+            "access_token": attr_auth_access_token_one,
+            "message": plaintext,
+            "policy_string": "(GUESTTODAY)"
+        }
+        response = client.post('/attr_auth/encrypt', query_string=data_encrypt, follow_redirects=True)
+        assert response.status_code == 200
+        json_data = json.loads(response.data.decode("utf-8"))
+        assert (json_data["ciphertext"]) is not None
+        data["ciphertext"] = json_data["ciphertext"]
+
+        response = client.post('/attr_auth/decrypt', query_string=data, follow_redirects=True)
+        assert response.status_code == 200
+        json_data = json.loads(response.data.decode("utf-8"))
+        assert (json_data["plaintext"]) == plaintext
 
 
 def test_keygen_invalid_receiver(client, master_key_user_one, attr_auth_access_token_one):
@@ -170,8 +272,8 @@ def test_keygen_already_has_key_from_owner(client, app_and_ctx, master_key_user_
             .filter(AttrAuthUser.access_token == attr_auth_access_token_one) \
             .first()
         policy_str = '(TODAY)'
-        public_key = deserialize_key(data_owner.public_key.data, pairing_group)
-        new_private_key = deserialize_key(new_private_key.data, pairing_group)
+        public_key = deserialize_charm_object(data_owner.public_key.data, pairing_group)
+        new_private_key = deserialize_charm_object(new_private_key.data, pairing_group)
         ciphertext = cp_abe.encrypt(public_key, plaintext, policy_str)
         decrypted_msg = cp_abe.decrypt(public_key, new_private_key, ciphertext)
         assert plaintext == decrypted_msg.decode("utf-8")
@@ -188,7 +290,7 @@ def test_keygen_doesnt_have_key_from_owner(client, app_and_ctx, master_key_user_
     with app.app_context():
         receiver = db.session.query(AttrAuthUser) \
             .filter(AttrAuthUser.access_token == attr_auth_access_token_one) \
-            .first()  # TestUser access_token
+            .first()
 
         num_of_old_keys = len(receiver.private_keys)
 
@@ -197,7 +299,7 @@ def test_keygen_doesnt_have_key_from_owner(client, app_and_ctx, master_key_user_
 
         receiver = db.session.query(AttrAuthUser) \
             .filter(AttrAuthUser.access_token == attr_auth_access_token_one) \
-            .first()  # TestUser access_token
+            .first()
         new_private_key = next(key for key in receiver.private_keys if key.challenger_id == 2)
 
         assert len(receiver.private_keys) == num_of_old_keys + 1
@@ -210,8 +312,8 @@ def test_keygen_doesnt_have_key_from_owner(client, app_and_ctx, master_key_user_
             .filter(AttrAuthUser.access_token == attr_auth_access_token_two) \
             .first()
         policy_str = '(GUEST)'
-        public_key = deserialize_key(data_owner.public_key.data, pairing_group)
-        new_private_key = deserialize_key(new_private_key.data, pairing_group)
+        public_key = deserialize_charm_object(data_owner.public_key.data, pairing_group)
+        new_private_key = deserialize_charm_object(new_private_key.data, pairing_group)
         ciphertext = cp_abe.encrypt(public_key, plaintext, policy_str)
         decrypted_msg = cp_abe.decrypt(public_key, new_private_key, ciphertext)
         assert plaintext == decrypted_msg.decode("utf-8")
@@ -224,6 +326,55 @@ def test_parse_attr_list():
     assert parse_attr_list(attr_list) == ['QH', 'QD', 'JC', 'KD', '4', 'JS']
     assert len(parse_attr_list(empty_attr_list)) == 0
     assert len(parse_attr_list(invalid_attr_list)) == 0
+
+
+def test_key_setup(client, app_and_ctx, attr_auth_access_token_one):
+    data = {"access_token": attr_auth_access_token_one}
+    response = client.post('/attr_auth/setup', query_string=data, follow_redirects=True)
+    assert response.status_code == 200
+    json_data = json.loads(response.data.decode("utf-8"))
+    serialized_public_key_response = json_data["public_key"]
+
+    app, ctx = app_and_ctx
+    with app.app_context():
+        serialized_public_key_from_db = db.session.query(AttrAuthUser)\
+            .filter(AttrAuthUser.access_token == data["access_token"])\
+            .first()\
+            .public_key.data.decode("utf-8")
+        assert serialized_public_key_response == serialized_public_key_from_db
+
+
+def test_encrypt_missing_plaintext(client, attr_auth_access_token_one):
+    data = {
+        "access_token": attr_auth_access_token_one
+    }
+    response = client.post('/attr_auth/encrypt', query_string=data, follow_redirects=True)
+    assert response.status_code == 400
+    json_data = json.loads(response.data.decode("utf-8"))
+    assert (json_data["error"]) == MESSAGE_MISSING_ERROR_MSG
+
+
+def test_encrypt_missing_policy_string(client, attr_auth_access_token_one):
+    data = {
+        "access_token": attr_auth_access_token_one,
+        "message": "any text"
+    }
+    response = client.post('/attr_auth/encrypt', query_string=data, follow_redirects=True)
+    assert response.status_code == 400
+    json_data = json.loads(response.data.decode("utf-8"))
+    assert (json_data["error"]) == POLICY_STRING_MISSING_ERROR_MSG
+
+
+def test_encrypt_succesfull(client, attr_auth_access_token_one):
+    data = {
+        "access_token": attr_auth_access_token_one,
+        "message": "any text",
+        "policy_string": "(TODAY)"
+    }
+    response = client.post('/attr_auth/encrypt', query_string=data, follow_redirects=True)
+    assert response.status_code == 200
+    json_data = json.loads(response.data.decode("utf-8"))
+    assert (json_data["ciphertext"]) is not None
 
 
 def test_replace_existing_key(app_and_ctx, attr_auth_access_token_two):
@@ -242,19 +393,3 @@ def test_replace_existing_key(app_and_ctx, attr_auth_access_token_two):
         modified_key = receiver.private_keys[0]
         assert modified_key.data == dummy_serialized_key
         assert modified_key.attributes[0].value == "TODAY"
-
-
-def test_key_setup(client, app_and_ctx, attr_auth_access_token_one):
-    data = {"access_token": attr_auth_access_token_one}
-    response = client.post('/attr_auth/setup', query_string=data, follow_redirects=True)
-    assert response.status_code == 200
-    json_data = json.loads(response.data.decode("utf-8"))
-    serialized_public_key_response = json_data["public_key"]
-
-    app, ctx = app_and_ctx
-    with app.app_context():
-        serialized_public_key_from_db = db.session.query(AttrAuthUser)\
-            .filter(AttrAuthUser.access_token == data["access_token"])\
-            .first()\
-            .public_key.data.decode("utf-8")
-        assert serialized_public_key_response == serialized_public_key_from_db

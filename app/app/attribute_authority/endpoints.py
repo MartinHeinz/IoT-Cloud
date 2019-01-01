@@ -4,7 +4,7 @@ from app.api.utils import is_number
 from app.attribute_authority.utils import already_has_key_from_owner, replace_existing_key, create_attributes, parse_attr_list
 from app.app_setup import db
 from app.attribute_authority import attr_authority
-from app.attribute_authority.utils import serialize_key, create_cp_abe, create_pairing_group, deserialize_key, get_user_by_id
+from app.attribute_authority.utils import serialize_charm_object, create_cp_abe, create_pairing_group, deserialize_charm_object, get_user_by_id
 from app.auth.utils import require_api_token
 from app.models.models import AttrAuthUser, PublicKey, PrivateKey
 from app.utils import http_json_response, check_missing_request_argument
@@ -41,6 +41,12 @@ ATTR_LIST_MISSING_ERROR_MSG = 'Missing attribute list argument.'
 RECEIVER_ID_MISSING_ERROR_MSG = 'Missing receiver id argument.'
 INCORRECT_RECEIVER_ID_ERROR_MSG = 'Incorrect receiver ID.'
 INVALID_ATTR_LIST_ERROR_MSG = 'Invalid attribute list (only alphanumeric values separated with whitespaces are allowed).'
+MESSAGE_MISSING_ERROR_MSG = 'Missing plaintext message to be encrypted.'
+POLICY_STRING_MISSING_ERROR_MSG = 'Missing Policy string in format `((four or three) and (two or one))`'
+PRIVATE_KEY_MISSING_ERROR_MSG = 'Missing private key argument.'
+PUBLIC_KEY_MISSING_ERROR_MSG = 'Missing public key argument.'
+CIPHERTEXT_MISSING_ERROR_MSG = 'Missing ciphertext to be decrypted.'
+COULD_NOT_DECRYPT_ERROR_MSG = "We could not decrypt your message (MAC might be invalid = Your data was tampered with or your key is wrong)."
 
 
 @attr_authority.route('/setup', methods=['POST'])
@@ -54,8 +60,8 @@ def key_setup():
     # "store PK in DB"
     token = request.args.get("access_token", None)
     user = db.session.query(AttrAuthUser).filter(AttrAuthUser.access_token == token).first()
-    serialized_public_key = serialize_key(public_key, pairing_group)
-    serialized_master_key = serialize_key(master_key, pairing_group)
+    serialized_public_key = serialize_charm_object(public_key, pairing_group)
+    serialized_master_key = serialize_charm_object(master_key, pairing_group)
     user.public_key = PublicKey(data=serialized_public_key)
     db.session.add(user)
     db.session.commit()
@@ -87,13 +93,13 @@ def keygen():
     if len(attr_list) == 0:
         return http_json_response(False, 400, **{"error": INVALID_ATTR_LIST_ERROR_MSG})
 
-    master_key = deserialize_key(str.encode(serialized_master_key), create_pairing_group())  # TODO check `serialized_master_key` before using `str.encode()`
+    master_key = deserialize_charm_object(str.encode(serialized_master_key), create_pairing_group())  # TODO check `serialized_master_key` before using `str.encode()`
     cp_abe = create_cp_abe()
 
     data_owner = db.session.query(AttrAuthUser).filter(AttrAuthUser.access_token == token).first()
-    public_key = deserialize_key(data_owner.public_key.data, create_pairing_group())
+    public_key = deserialize_charm_object(data_owner.public_key.data, create_pairing_group())
     private_key = cp_abe.keygen(public_key, master_key, attr_list)
-    serialized_private_key = serialize_key(private_key, create_pairing_group())
+    serialized_private_key = serialize_charm_object(private_key, create_pairing_group())
 
     # delegate to receiver of generated key
     if already_has_key_from_owner(receiver, data_owner):
@@ -107,23 +113,56 @@ def keygen():
 
 
 @attr_authority.route('/encrypt', methods=['POST'])
+@require_api_token("attr_auth")
 def encrypt():
     token = request.args.get("access_token", None)
-    policy_str = request.args.get("policy_str")
-    message = request.args.get("message")
-    public_key = deserialize_key(db.session.query(AttrAuthUser).filter(AttrAuthUser.access_token == token).first().public_key.data, create_pairing_group())
-    cp_abe = create_cp_abe()
+    plaintext = request.args.get("message", None)
+    policy_string = request.args.get("policy_string", None)
+    # TODO can't tell if `policy_string` is valid or not based on produced ciphertext, options: write function to parse it or find something in Charm
 
-    ciphertext = cp_abe.encrypt(public_key, message, policy_str)
+    arg_check = check_missing_request_argument(
+        (plaintext, MESSAGE_MISSING_ERROR_MSG),
+        (policy_string, POLICY_STRING_MISSING_ERROR_MSG))
+    if arg_check is not True:
+        return arg_check
+
+    pairing_group = create_pairing_group()
+    cp_abe = create_cp_abe()
+    data_owner = db.session.query(AttrAuthUser) \
+        .filter(AttrAuthUser.access_token == token) \
+        .first()
+    public_key = deserialize_charm_object(data_owner.public_key.data, pairing_group)  # TODO can throw Exception
+    ciphertext = cp_abe.encrypt(public_key, plaintext, policy_string)
+
     # return ciphertext
-    return http_json_response(**{'ciphertext': ciphertext})
+    return http_json_response(**{'ciphertext': serialize_charm_object(ciphertext, pairing_group).decode("utf-8")})
 
 
 @attr_authority.route('/decrypt', methods=['POST'])
+@require_api_token("attr_auth")
 def decrypt():
-    key = request.args.get("key")
-    # pk = request.args.get("pk")
-    ciphertext = request.args.get("ciphertext")
+    serialized_private_key = request.args.get("private_key", None)
+    serialized_public_key = request.args.get("public_key", None)
+    serialized_ciphertext = request.args.get("ciphertext", None)
 
-    # plaintext = cpabe.decrypt(pk, ciphertext, key)
+    arg_check = check_missing_request_argument(
+        (serialized_private_key, PRIVATE_KEY_MISSING_ERROR_MSG),
+        (serialized_public_key, PUBLIC_KEY_MISSING_ERROR_MSG),
+        (serialized_ciphertext, CIPHERTEXT_MISSING_ERROR_MSG))
+    if arg_check is not True:
+        return arg_check
+
+    pairing_group = create_pairing_group()
+    cp_abe = create_cp_abe()
+
+    public_key = deserialize_charm_object(str.encode(serialized_public_key), pairing_group)  # TODO can throw Exception
+    private_key = deserialize_charm_object(str.encode(serialized_private_key), pairing_group)
+    ciphertext = deserialize_charm_object(str.encode(serialized_ciphertext), pairing_group)
+
+    try:
+        plaintext = cp_abe.decrypt(public_key, private_key, ciphertext)
+    except:
+        return http_json_response(False, 400, **{"error": COULD_NOT_DECRYPT_ERROR_MSG})
+
     # return plaintext
+    return http_json_response(**{'plaintext': plaintext.decode("utf-8")})
