@@ -140,7 +140,7 @@ def encrypt():
 
 @attr_authority.route('/decrypt', methods=['POST'])
 @require_api_token("attr_auth")
-def decrypt():
+def decrypt():  # TODO modify this endpoint so it gets the private and public keys from DB based on owner, so the user (CLI) doesn't need to store private keys
     serialized_private_key = request.args.get("private_key", None)
     serialized_public_key = request.args.get("public_key", None)
     serialized_ciphertext = request.args.get("ciphertext", None)

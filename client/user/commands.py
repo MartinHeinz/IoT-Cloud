@@ -1,9 +1,13 @@
 import base64
 import json
+import os
+import re
 from datetime import datetime
 
 import click
 import requests
+from tinydb import TinyDB, where
+
 from crypto_utils import encrypt, hash, correctness_hash, check_correctness_hash
 from utils import json_string_with_bytes_to_dict
 
@@ -13,6 +17,14 @@ URL_CREATE_DEVICE_TYPE = URL_BASE + "device_type/create"
 URL_CREATE_DEVICE = URL_BASE + "device/create"
 URL_GET_DEVICE = URL_BASE + "device/get"
 URL_GET_DEVICE_DATA_BY_RANGE = URL_BASE + "data/get_time_range"
+
+AA_URL_BASE = "https://localhost/attr_auth/"
+AA_URL_SETUP = AA_URL_BASE + "setup"
+AA_URL_KEYGEN = AA_URL_BASE + "keygen"
+AA_URL_ENCRYPT = AA_URL_BASE + "encrypt"
+
+dir_path = os.path.dirname(os.path.realpath(__file__))
+path = f'{dir_path}/keystore.json'
 
 
 @click.group()
@@ -96,6 +108,60 @@ def get_device_data_by_time_range(lower=None, upper=None, token=""):  # TODO add
         item["added"] = str(datetime.strptime(item["added"], "%a, %d %b %Y %H:%M:%S %Z").date())
     check_correctness_hash(json_content["device_data"], 'added', 'data', 'num_data')
     click.echo(content)
+
+
+@user.command()
+@click.option('--token', envvar='AA_ACCESS_TOKEN')
+def get_attr_auth_keys(token):
+    data = {"access_token": token}
+    r = requests.post(AA_URL_SETUP, params=data, verify=False)
+    content = json.loads(r.content.decode('unicode-escape'))
+    click.echo(f"Saving keys to {path}")
+    db = TinyDB(path)
+    table = db.table(name='aa_keys')
+    doc = table.get(where('public_key').exists() & where('master_key').exists())
+    data = {"public_key": content["public_key"], "master_key": content["master_key"]}
+    if doc:
+        table.update(data)
+    else:
+        table.insert(data)
+
+
+@user.command()
+@click.argument('attr_list')
+@click.argument('receiver_id')
+@click.option('--token', envvar='AA_ACCESS_TOKEN')
+def attr_auth_keygen(attr_list, receiver_id, token):
+    db = TinyDB(path)
+    table = db.table(name='aa_keys')
+    doc = table.get(where('public_key').exists() & where('master_key').exists())
+    if not doc:
+        with click.Context(get_attr_auth_keys) as ctx:
+            click.echo(f"Master key not present, please use: {ctx.command.name}")
+            click.echo(get_attr_auth_keys.get_help(ctx))
+            return
+    data = {
+        "access_token": token,
+        "master_key": doc['master_key'],
+        "attr_list": re.sub('[\']', '', attr_list),
+        "receiver_id": receiver_id
+    }
+    r = requests.post(AA_URL_KEYGEN, params=data, verify=False)
+    click.echo(r.content.decode('unicode-escape'))
+
+
+@user.command()
+@click.argument('message')
+@click.argument('policy_string')
+@click.option('--token', envvar='AA_ACCESS_TOKEN')
+def attr_auth_encrypt(message, policy_string, token):
+    data = {
+        "access_token": token,
+        "message": message,
+        "policy_string": policy_string
+    }
+    r = requests.post(AA_URL_ENCRYPT, params=data, verify=False)
+    click.echo(r.content.decode('unicode-escape'))
 
 
 if __name__ == '__main__':
