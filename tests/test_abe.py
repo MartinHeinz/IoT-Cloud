@@ -1,4 +1,5 @@
 import json
+from unittest.mock import Mock
 
 import pytest
 from charm.adapters.abenc_adapt_hybrid import HybridABEnc
@@ -7,11 +8,13 @@ from charm.toolbox.pairinggroup import PairingGroup, GT
 
 from app.app_setup import db
 from app.attribute_authority.endpoints import INCORRECT_RECEIVER_ID_ERROR_MSG, INVALID_ATTR_LIST_ERROR_MSG, MESSAGE_MISSING_ERROR_MSG, \
-    POLICY_STRING_MISSING_ERROR_MSG, PRIVATE_KEY_MISSING_ERROR_MSG, PUBLIC_KEY_MISSING_ERROR_MSG, CIPHERTEXT_MISSING_ERROR_MSG, COULD_NOT_DECRYPT_ERROR_MSG
-from app.attribute_authority.utils import create_pairing_group, create_cp_abe, serialize_charm_object, deserialize_charm_object, already_has_key_from_owner, create_attributes, \
-    replace_existing_key, parse_attr_list
+    POLICY_STRING_MISSING_ERROR_MSG, CIPHERTEXT_MISSING_ERROR_MSG, COULD_NOT_DECRYPT_ERROR_MSG, OWNER_API_USERNAME_MISSING_ERROR_MSG, \
+    INVALID_OWNER_API_USERNAME_ERROR_MSG, API_USERNAME_MISSING_ERROR_MSG
+from app.attribute_authority.utils import create_pairing_group, create_cp_abe, serialize_charm_object, deserialize_charm_object, already_has_key_from_owner, \
+    create_attributes, \
+    replace_existing_key, parse_attr_list, get_private_key_based_on_owner
 from app.auth.utils import INVALID_ACCESS_TOKEN_ERROR_MSG
-from app.models.models import AttrAuthUser
+from app.models.models import AttrAuthUser, PrivateKey
 
 
 def test_charm_crypto():
@@ -67,6 +70,31 @@ def test_require_attr_auth_access_token_missing(client):
     assert (json_data["error"]) == INVALID_ACCESS_TOKEN_ERROR_MSG
 
 
+def test_set_username_missing_api_username(client, attr_auth_access_token_one):
+    data = {"access_token": attr_auth_access_token_one}
+    response = client.post('/attr_auth/set_username', query_string=data, follow_redirects=True)
+    assert response.status_code == 400
+    json_data = json.loads(response.data.decode("utf-8"))
+    assert (json_data["error"]) == API_USERNAME_MISSING_ERROR_MSG
+
+
+def test_set_username(client, app_and_ctx, attr_auth_access_token_one):
+    data = {"access_token": attr_auth_access_token_one, "api_username": "Changed"}
+    response = client.post('/attr_auth/set_username', query_string=data, follow_redirects=True)
+    assert response.status_code == 200
+
+    app, ctx = app_and_ctx
+    with app.app_context():
+        user = db.session.query(AttrAuthUser).filter(AttrAuthUser.access_token == attr_auth_access_token_one).first()
+        assert user.api_username == "Changed"
+
+        data = {"access_token": attr_auth_access_token_one, "api_username": "MartinHeinz"}
+        response = client.post('/attr_auth/set_username', query_string=data, follow_redirects=True)
+        user = db.session.query(AttrAuthUser).filter(AttrAuthUser.access_token == attr_auth_access_token_one).first()
+        assert response.status_code == 200
+        assert user.api_username == "MartinHeinz"
+
+
 def test_already_has_key_from_owner(app_and_ctx, attr_auth_access_token_two):
     app, ctx = app_and_ctx
     with app.app_context():
@@ -100,32 +128,20 @@ def test_create_attributes():
     assert len(attrs) == 2
 
 
-def test_decrypt_missing_private_key(client, attr_auth_access_token_one):
+def test_decrypt_missing_owner_api_username(client, attr_auth_access_token_one):
     data = {
         "access_token": attr_auth_access_token_one
     }
     response = client.post('/attr_auth/decrypt', query_string=data, follow_redirects=True)
     assert response.status_code == 400
     json_data = json.loads(response.data.decode("utf-8"))
-    assert (json_data["error"]) == PRIVATE_KEY_MISSING_ERROR_MSG
-
-
-def test_decrypt_missing_public_key(client, attr_auth_access_token_one):
-    data = {
-        "access_token": attr_auth_access_token_one,
-        "private_key": "anything"
-    }
-    response = client.post('/attr_auth/decrypt', query_string=data, follow_redirects=True)
-    assert response.status_code == 400
-    json_data = json.loads(response.data.decode("utf-8"))
-    assert (json_data["error"]) == PUBLIC_KEY_MISSING_ERROR_MSG
+    assert (json_data["error"]) == OWNER_API_USERNAME_MISSING_ERROR_MSG
 
 
 def test_decrypt_missing_ciphertext(client, attr_auth_access_token_one):
     data = {
         "access_token": attr_auth_access_token_one,
-        "private_key": "anything",
-        "public_key": "anything"
+        "api_username": "MartinHeinz"
     }
     response = client.post('/attr_auth/decrypt', query_string=data, follow_redirects=True)
     assert response.status_code == 400
@@ -133,72 +149,62 @@ def test_decrypt_missing_ciphertext(client, attr_auth_access_token_one):
     assert (json_data["error"]) == CIPHERTEXT_MISSING_ERROR_MSG
 
 
-def test_decrypt_could_not_decrypt(client, app_and_ctx, attr_auth_access_token_one, attr_auth_access_token_two):
+def test_decrypt_invalid_owner(client, attr_auth_access_token_one, attr_auth_access_token_two):
     data = {
-        "access_token": attr_auth_access_token_two
+        "access_token": attr_auth_access_token_two,
+        "api_username": "INVALID",
+        "ciphertext": "anything-doesnt-matter"
     }
-    app, ctx = app_and_ctx
-    with app.app_context():
-        decryptor = db.session.query(AttrAuthUser) \
-            .filter(AttrAuthUser.access_token == attr_auth_access_token_two) \
-            .first()  # TestUser access_token
-        private_key = next(key for key in decryptor.private_keys if key.challenger_id == 1)
-        data["private_key"] = private_key.data.decode("utf-8")
-        owner = db.session.query(AttrAuthUser) \
-            .filter(AttrAuthUser.access_token == attr_auth_access_token_one) \
-            .first()
-        data["public_key"] = owner.public_key.data.decode("utf-8")
-
-        plaintext = "any text"
-        data_encrypt = {
-            "access_token": attr_auth_access_token_one,
-            "message": plaintext,
-            "policy_string": "(TODAY)"  # INVALID
-        }
-        response = client.post('/attr_auth/encrypt', query_string=data_encrypt, follow_redirects=True)
-        assert response.status_code == 200
-        json_data = json.loads(response.data.decode("utf-8"))
-        assert (json_data["ciphertext"]) is not None
-        data["ciphertext"] = json_data["ciphertext"]
-
-        response = client.post('/attr_auth/decrypt', query_string=data, follow_redirects=True)
-        assert response.status_code == 400
-        json_data = json.loads(response.data.decode("utf-8"))
-        assert (json_data["error"]) == COULD_NOT_DECRYPT_ERROR_MSG
+    response = client.post('/attr_auth/decrypt', query_string=data, follow_redirects=True)
+    assert response.status_code == 400
+    json_data = json.loads(response.data.decode("utf-8"))
+    assert (json_data["error"]) == INVALID_OWNER_API_USERNAME_ERROR_MSG
 
 
-def test_decrypt_succesfull(client, app_and_ctx, attr_auth_access_token_one, attr_auth_access_token_two):
+def test_decrypt_could_not_decrypt(client, attr_auth_access_token_one, attr_auth_access_token_two):
     data = {
-        "access_token": attr_auth_access_token_two
+        "access_token": attr_auth_access_token_two,
+        "api_username": "MartinHeinz"
     }
-    app, ctx = app_and_ctx
-    with app.app_context():
-        decryptor = db.session.query(AttrAuthUser) \
-            .filter(AttrAuthUser.access_token == attr_auth_access_token_two) \
-            .first()  # TestUser access_token
-        private_key = next(key for key in decryptor.private_keys if key.challenger_id == 1)
-        data["private_key"] = private_key.data.decode("utf-8")
-        owner = db.session.query(AttrAuthUser) \
-            .filter(AttrAuthUser.access_token == attr_auth_access_token_one) \
-            .first()
-        data["public_key"] = owner.public_key.data.decode("utf-8")
+    plaintext = "any text"
+    data_encrypt = {
+        "access_token": attr_auth_access_token_one,
+        "message": plaintext,
+        "policy_string": "(TODAY)"  # INVALID
+    }
+    response = client.post('/attr_auth/encrypt', query_string=data_encrypt, follow_redirects=True)
+    assert response.status_code == 200
+    json_data = json.loads(response.data.decode("utf-8"))
+    assert (json_data["ciphertext"]) is not None
+    data["ciphertext"] = json_data["ciphertext"]
 
-        plaintext = "any text"
-        data_encrypt = {
-            "access_token": attr_auth_access_token_one,
-            "message": plaintext,
-            "policy_string": "(GUESTTODAY)"
-        }
-        response = client.post('/attr_auth/encrypt', query_string=data_encrypt, follow_redirects=True)
-        assert response.status_code == 200
-        json_data = json.loads(response.data.decode("utf-8"))
-        assert (json_data["ciphertext"]) is not None
-        data["ciphertext"] = json_data["ciphertext"]
+    response = client.post('/attr_auth/decrypt', query_string=data, follow_redirects=True)
+    assert response.status_code == 400
+    json_data = json.loads(response.data.decode("utf-8"))
+    assert (json_data["error"]) == COULD_NOT_DECRYPT_ERROR_MSG
 
-        response = client.post('/attr_auth/decrypt', query_string=data, follow_redirects=True)
-        assert response.status_code == 200
-        json_data = json.loads(response.data.decode("utf-8"))
-        assert (json_data["plaintext"]) == plaintext
+
+def test_decrypt_succesfull(client, attr_auth_access_token_one, attr_auth_access_token_two):
+    data = {
+        "access_token": attr_auth_access_token_two,
+        "api_username": "MartinHeinz"
+    }
+    plaintext = "any text"
+    data_encrypt = {
+        "access_token": attr_auth_access_token_one,
+        "message": plaintext,
+        "policy_string": "(GUESTTODAY)"
+    }
+    response = client.post('/attr_auth/encrypt', query_string=data_encrypt, follow_redirects=True)
+    assert response.status_code == 200
+    json_data = json.loads(response.data.decode("utf-8"))
+    assert (json_data["ciphertext"]) is not None
+    data["ciphertext"] = json_data["ciphertext"]
+
+    response = client.post('/attr_auth/decrypt', query_string=data, follow_redirects=True)
+    assert response.status_code == 200
+    json_data = json.loads(response.data.decode("utf-8"))
+    assert (json_data["plaintext"]) == plaintext
 
 
 def test_keygen_invalid_receiver(client, master_key_user_one, attr_auth_access_token_one):
@@ -326,6 +332,25 @@ def test_parse_attr_list():
     assert parse_attr_list(attr_list) == ['QH', 'QD', 'JC', 'KD', '4', 'JS']
     assert len(parse_attr_list(empty_attr_list)) == 0
     assert len(parse_attr_list(invalid_attr_list)) == 0
+
+
+def test_get_private_key_based_on_owner():
+    decryptor = Mock()
+    expected = PrivateKey(challenger=AttrAuthUser(id=10))
+    decryptor.private_keys = [PrivateKey(challenger=AttrAuthUser(id=11)), expected, PrivateKey(challenger=AttrAuthUser(id=25))]
+    owner = expected.challenger
+    key = get_private_key_based_on_owner(decryptor, owner)
+    assert key == expected
+
+
+def test_get_private_key_based_on_owner_missing():
+    decryptor = Mock()
+    decryptor.private_keys = [PrivateKey(challenger=AttrAuthUser(id=10)),
+                              PrivateKey(challenger=AttrAuthUser(id=34)),
+                              PrivateKey(challenger=AttrAuthUser(id=37))]
+    owner = AttrAuthUser(id=235)
+    with pytest.raises(Exception):
+        get_private_key_based_on_owner(decryptor, owner)
 
 
 def test_key_setup(client, app_and_ctx, attr_auth_access_token_one):

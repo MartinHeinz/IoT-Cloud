@@ -1,7 +1,7 @@
 from flask import request
 
 from app.api.utils import is_number
-from app.attribute_authority.utils import already_has_key_from_owner, replace_existing_key, create_attributes, parse_attr_list
+from app.attribute_authority.utils import already_has_key_from_owner, replace_existing_key, create_attributes, parse_attr_list, get_private_key_based_on_owner
 from app.app_setup import db
 from app.attribute_authority import attr_authority
 from app.attribute_authority.utils import serialize_charm_object, create_cp_abe, create_pairing_group, deserialize_charm_object, get_user_by_id
@@ -43,10 +43,29 @@ INCORRECT_RECEIVER_ID_ERROR_MSG = 'Incorrect receiver ID.'
 INVALID_ATTR_LIST_ERROR_MSG = 'Invalid attribute list (only alphanumeric values separated with whitespaces are allowed).'
 MESSAGE_MISSING_ERROR_MSG = 'Missing plaintext message to be encrypted.'
 POLICY_STRING_MISSING_ERROR_MSG = 'Missing Policy string in format `((four or three) and (two or one))`'
-PRIVATE_KEY_MISSING_ERROR_MSG = 'Missing private key argument.'
-PUBLIC_KEY_MISSING_ERROR_MSG = 'Missing public key argument.'
 CIPHERTEXT_MISSING_ERROR_MSG = 'Missing ciphertext to be decrypted.'
 COULD_NOT_DECRYPT_ERROR_MSG = "We could not decrypt your message (MAC might be invalid = Your data was tampered with or your key is wrong)."
+INVALID_OWNER_API_USERNAME_ERROR_MSG = 'Specified API username of data owner is invalid.'
+OWNER_API_USERNAME_MISSING_ERROR_MSG = 'Specified API username of data owner is invalid is not present.'
+API_USERNAME_MISSING_ERROR_MSG = 'Missing API username argument.'
+
+
+@attr_authority.route('/set_username', methods=['POST'])
+@require_api_token("attr_auth")
+def set_username():
+    token = request.args.get("access_token", None)
+    api_username = request.args.get("api_username", None)
+
+    arg_check = check_missing_request_argument((api_username, API_USERNAME_MISSING_ERROR_MSG))
+    if arg_check is not True:
+        return arg_check
+
+    user = db.session.query(AttrAuthUser).filter(AttrAuthUser.access_token == token).first()
+    user.api_username = api_username
+    db.session.add(user)
+    db.session.commit()
+
+    return http_json_response()
 
 
 @attr_authority.route('/setup', methods=['POST'])
@@ -140,14 +159,13 @@ def encrypt():
 
 @attr_authority.route('/decrypt', methods=['POST'])
 @require_api_token("attr_auth")
-def decrypt():  # TODO modify this endpoint so it gets the private and public keys from DB based on owner, so the user (CLI) doesn't need to store private keys
-    serialized_private_key = request.args.get("private_key", None)
-    serialized_public_key = request.args.get("public_key", None)
+def decrypt():
+    token = request.args.get("access_token", None)
+    owner_api_username = request.args.get("api_username", None)
     serialized_ciphertext = request.args.get("ciphertext", None)
 
     arg_check = check_missing_request_argument(
-        (serialized_private_key, PRIVATE_KEY_MISSING_ERROR_MSG),
-        (serialized_public_key, PUBLIC_KEY_MISSING_ERROR_MSG),
+        (owner_api_username, OWNER_API_USERNAME_MISSING_ERROR_MSG),
         (serialized_ciphertext, CIPHERTEXT_MISSING_ERROR_MSG))
     if arg_check is not True:
         return arg_check
@@ -155,8 +173,17 @@ def decrypt():  # TODO modify this endpoint so it gets the private and public ke
     pairing_group = create_pairing_group()
     cp_abe = create_cp_abe()
 
-    public_key = deserialize_charm_object(str.encode(serialized_public_key), pairing_group)  # TODO can throw Exception
-    private_key = deserialize_charm_object(str.encode(serialized_private_key), pairing_group)
+    data_owner = db.session.query(AttrAuthUser) \
+        .filter(AttrAuthUser.api_username == owner_api_username) \
+        .first()
+    if data_owner is None:
+        return http_json_response(False, 400, **{"error": INVALID_OWNER_API_USERNAME_ERROR_MSG})
+
+    decryptor = db.session.query(AttrAuthUser) \
+        .filter(AttrAuthUser.access_token == token) \
+        .first()
+    public_key = deserialize_charm_object(data_owner.public_key.data, pairing_group)
+    private_key = deserialize_charm_object(get_private_key_based_on_owner(decryptor, data_owner).data, pairing_group)
     ciphertext = deserialize_charm_object(str.encode(serialized_ciphertext), pairing_group)
 
     try:

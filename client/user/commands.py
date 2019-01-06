@@ -19,9 +19,11 @@ URL_GET_DEVICE = URL_BASE + "device/get"
 URL_GET_DEVICE_DATA_BY_RANGE = URL_BASE + "data/get_time_range"
 
 AA_URL_BASE = "https://localhost/attr_auth/"
+AA_URL_SET_USERNAME = AA_URL_BASE + "set_username"
 AA_URL_SETUP = AA_URL_BASE + "setup"
 AA_URL_KEYGEN = AA_URL_BASE + "keygen"
 AA_URL_ENCRYPT = AA_URL_BASE + "encrypt"
+AA_URL_DECRYPT = AA_URL_BASE + "decrypt"
 
 dir_path = os.path.dirname(os.path.realpath(__file__))
 path = f'{dir_path}/keystore.json'
@@ -111,6 +113,15 @@ def get_device_data_by_time_range(lower=None, upper=None, token=""):  # TODO add
 
 
 @user.command()
+@click.argument('username')
+@click.option('--token', envvar='AA_ACCESS_TOKEN')
+def attr_auth_set_api_username(username, token):
+    data = {"api_username": username, "access_token": token}
+    r = requests.post(AA_URL_SET_USERNAME, params=data, verify=False)
+    click.echo(r.content.decode('unicode-escape'))
+
+
+@user.command()
 @click.option('--token', envvar='AA_ACCESS_TOKEN')
 def get_attr_auth_keys(token):
     data = {"access_token": token}
@@ -161,6 +172,20 @@ def attr_auth_encrypt(message, policy_string, token):
         "policy_string": policy_string
     }
     r = requests.post(AA_URL_ENCRYPT, params=data, verify=False)
+    click.echo(r.content.decode('unicode-escape'))
+
+
+@user.command()
+@click.argument('owner_username')
+@click.argument('ciphertext')  # TODO allow specifying file path
+@click.option('--token', envvar='AA_ACCESS_TOKEN')
+def attr_auth_decrypt(owner_username, ciphertext, token):
+    data = {
+        "access_token": token,
+        "api_username": owner_username,
+        "ciphertext": ciphertext
+    }
+    r = requests.post(AA_URL_DECRYPT, params=data, verify=False)
     click.echo(r.content.decode('unicode-escape'))
 
 

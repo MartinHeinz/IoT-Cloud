@@ -130,6 +130,7 @@ class AttrAuthUser(db.Model):
 
     id = db.Column(db.Integer, primary_key=True)
     name = db.Column(db.String(200), unique=False, nullable=True)
+    api_username = db.Column(db.String(200), unique=True, nullable=True)
     access_token = db.Column(db.String(200), unique=True, nullable=False)  # TODO Give the token expiration date/time and force user to generate new token through `/login` endpoint
     access_token_update = db.Column(db.DateTime, nullable=False)
     public_key = relationship("PublicKey", back_populates="attr_auth_user", uselist=False)

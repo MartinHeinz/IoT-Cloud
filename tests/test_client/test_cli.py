@@ -4,14 +4,28 @@ import re
 import tempfile
 from contextlib import redirect_stdout
 
+import pytest
 from tinydb import TinyDB, where
 
+from app.app_setup import db
 from app.cli import populate
 import client.user.commands as cmd
 from crypto_utils import hash, check_correctness_hash
 from utils import json_string_with_bytes_to_dict
 
 cmd.path = '/tmp/keystore.json'
+
+
+@pytest.fixture(scope="module", autouse=True)
+def reset_attr_auth_db(app_and_ctx):
+    """ Resets Dev DB before running CLI tests which have to be run against Dev Environment."""
+    app, ctx = app_and_ctx
+    app.config["SQLALCHEMY_BINDS"]["attr_auth"] = app.config["SQLALCHEMY_BINDS"]["attr_auth"].replace("attr_auth_testing", "attr_auth")
+    with app.app_context():
+        with open(app.config["ATTR_AUTH_POPULATE_PATH"], 'r') as sql:
+            db.get_engine(app, 'attr_auth').execute(sql.read())
+        db.session.commit()
+    app.config["SQLALCHEMY_BINDS"]["attr_auth"] = app.config["SQLALCHEMY_BINDS"]["attr_auth"].replace("attr_auth", "attr_auth_testing")
 
 
 def test_populate(runner):
@@ -113,6 +127,25 @@ def test_check_correctness_hash():
         check_correctness_hash(query_result, "name")
     out = f.getvalue()
     assert "failed correctness hash test!" in out
+
+
+def test_aa_decrypt(runner, client, app_and_ctx, attr_auth_access_token_one, attr_auth_access_token_two):
+    plaintext = "any text"
+
+    result = runner.invoke(cmd.attr_auth_encrypt, [plaintext, "(GUESTTODAY)", '--token', attr_auth_access_token_one])
+    assert "\"success\": true" in result.output
+    ciphertext = re.search('\"ciphertext\": \"(.+)\"', result.output)
+    assert ciphertext is not None
+    ciphertext_string = ciphertext.group(1)
+
+    result = runner.invoke(cmd.attr_auth_decrypt, ["MartinHeinz", ciphertext_string, '--token', attr_auth_access_token_two])
+    assert "\"success\": true" in result.output
+    assert plaintext in result.output
+
+
+def test_aa_set_api_username(runner, attr_auth_access_token_one):
+    result = runner.invoke(cmd.attr_auth_set_api_username, ["MartinHeinz", '--token', attr_auth_access_token_one])
+    assert "\"success\": true" in result.output
 
 
 def test_aa_setup(runner, attr_auth_access_token_one):

@@ -60,3 +60,10 @@ def parse_attr_list(str_value):
     if valid:
         return str_value.split()
     return []
+
+
+def get_private_key_based_on_owner(decryptor, owner):
+    for key in decryptor.private_keys:
+        if key.challenger == owner:
+            return key
+    raise Exception("Decryptor doesn't have any key from specified owner.")
