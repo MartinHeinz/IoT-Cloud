@@ -11,13 +11,25 @@ from .conftest import db
 
 def test_parse_email_valid():
     response = Mock()
-    response.content = b'[{"email":"mail@gmail.com","primary":true,"verified":true,"visibility":"public"},{"email":"student@uni.com","primary":false,"verified":true,"visibility":null}]'
+    response.content = b'[{"email":"mail@gmail.com",' \
+                       b'"primary":true,"verified":true,' \
+                       b'"visibility":"public"},' \
+                       b'{"email":"student@uni.com",' \
+                       b'"primary":false,' \
+                       b'"verified":true,' \
+                       b'"visibility":null}]'
     assert parse_email(response) == "mail@gmail.com"
 
 
 def test_parse_email_throws_in_missing_primary():
     response = Mock()
-    response.content = b'[{"email":"mail@gmail.com","primary":false,"verified":true,"visibility":"public"},{"email":"student@uni.com","primary":false,"verified":true,"visibility":null}]'
+    response.content = b'[{"email":"mail@gmail.com",' \
+                       b'"primary":false,' \
+                       b'"verified":true,' \
+                       b'"visibility":"public"},' \
+                       b'{"email":"student@uni.com",' \
+                       b'"primary":false,"verified":true,' \
+                       b'"visibility":null}]'
     with pytest.raises(Exception):
         parse_email(response)
     response.content = b'nothing'
@@ -36,7 +48,13 @@ def test_save_user_github(app_and_ctx):
     response = Mock()
     remote = Mock()
     remote.name = "github"
-    response.content = b'[{"email":"mail@gmail.com","primary":true,"verified":true,"visibility":"public"},{"email":"student@uni.com","primary":false,"verified":true,"visibility":null}]'
+    response.content = b'[{"email":"mail@gmail.com",' \
+                       b'"primary":true,"verified":true,' \
+                       b'"visibility":"public"},' \
+                       b'{"email":"student@uni.com",' \
+                       b'"primary":false,' \
+                       b'"verified":true,' \
+                       b'"visibility":null}]'
     user_info = {'sub': '456456',  # Made-up
                  'name': None,
                  'email': None,

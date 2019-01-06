@@ -56,7 +56,7 @@ def create_attributes(attr_list):
 
 
 def parse_attr_list(str_value):
-    valid = re.match('^([^_\W]|\s)+$', str_value) is not None
+    valid = re.match(r'^([^_\W]|\s)+$', str_value) is not None
     if valid:
         return str_value.split()
     return []

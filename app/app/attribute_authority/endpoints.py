@@ -1,6 +1,6 @@
 from flask import request
 
-from app.api.utils import is_number
+from app.api.utils import is_number, get_aa_user_by_access_token
 from app.attribute_authority.utils import already_has_key_from_owner, replace_existing_key, create_attributes, parse_attr_list, get_private_key_based_on_owner
 from app.app_setup import db
 from app.attribute_authority import attr_authority
@@ -18,16 +18,16 @@ NOTES:
     - Therefore it will need own database or at least isolated tables in existing DB
     - DB will store users and their PK(s?)
 - DB will store PKs, generated secret keys (from keygen)?, user info
-    
+
 - (pk, msk) = cpabe.setup()
     - ran for every user
     - PK stored in DB
     - msk is Master SECRET key -> it needs to be securely transfered to user and not stored on server
-    
+
 - key = cpabe.keygen(pk, msk, attr_list)
     - Owner (Challenger) needs to supply msk from previous step (stored locally)
     - generated key is then send to user with attributes == attr_list
-    
+
 - ctxt = cpabe.encrypt(pk, msg, policy_str)
     - anybody with access to pk can encrypt (This can be public endpoint = no login required)
 
@@ -60,7 +60,7 @@ def set_username():
     if arg_check is not True:
         return arg_check
 
-    user = db.session.query(AttrAuthUser).filter(AttrAuthUser.access_token == token).first()
+    user = get_aa_user_by_access_token(token)
     user.api_username = api_username
     db.session.add(user)
     db.session.commit()
@@ -78,7 +78,7 @@ def key_setup():
 
     # "store PK in DB"
     token = request.args.get("access_token", None)
-    user = db.session.query(AttrAuthUser).filter(AttrAuthUser.access_token == token).first()
+    user = get_aa_user_by_access_token(token)
     serialized_public_key = serialize_charm_object(public_key, pairing_group)
     serialized_master_key = serialize_charm_object(master_key, pairing_group)
     user.public_key = PublicKey(data=serialized_public_key)
@@ -109,13 +109,13 @@ def keygen():
         return http_json_response(False, 400, **{"error": INCORRECT_RECEIVER_ID_ERROR_MSG})
 
     attr_list = parse_attr_list(attr_list)
-    if len(attr_list) == 0:
+    if not attr_list:
         return http_json_response(False, 400, **{"error": INVALID_ATTR_LIST_ERROR_MSG})
 
     master_key = deserialize_charm_object(str.encode(serialized_master_key), create_pairing_group())  # TODO check `serialized_master_key` before using `str.encode()`
     cp_abe = create_cp_abe()
 
-    data_owner = db.session.query(AttrAuthUser).filter(AttrAuthUser.access_token == token).first()
+    data_owner = get_aa_user_by_access_token(token)
     public_key = deserialize_charm_object(data_owner.public_key.data, create_pairing_group())
     private_key = cp_abe.keygen(public_key, master_key, attr_list)
     serialized_private_key = serialize_charm_object(private_key, create_pairing_group())
@@ -147,9 +147,7 @@ def encrypt():
 
     pairing_group = create_pairing_group()
     cp_abe = create_cp_abe()
-    data_owner = db.session.query(AttrAuthUser) \
-        .filter(AttrAuthUser.access_token == token) \
-        .first()
+    data_owner = get_aa_user_by_access_token(token)
     public_key = deserialize_charm_object(data_owner.public_key.data, pairing_group)  # TODO can throw Exception
     ciphertext = cp_abe.encrypt(public_key, plaintext, policy_string)
 
@@ -179,9 +177,7 @@ def decrypt():
     if data_owner is None:
         return http_json_response(False, 400, **{"error": INVALID_OWNER_API_USERNAME_ERROR_MSG})
 
-    decryptor = db.session.query(AttrAuthUser) \
-        .filter(AttrAuthUser.access_token == token) \
-        .first()
+    decryptor = get_aa_user_by_access_token(token)
     public_key = deserialize_charm_object(data_owner.public_key.data, pairing_group)
     private_key = deserialize_charm_object(get_private_key_based_on_owner(decryptor, data_owner).data, pairing_group)
     ciphertext = deserialize_charm_object(str.encode(serialized_ciphertext), pairing_group)

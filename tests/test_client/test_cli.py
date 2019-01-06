@@ -14,6 +14,7 @@ from crypto_utils import hash, check_correctness_hash
 from utils import json_string_with_bytes_to_dict
 
 cmd.path = '/tmp/keystore.json'
+cmd.VERIFY_CERTS = False
 
 
 @pytest.fixture(scope="module", autouse=True)

@@ -29,11 +29,10 @@ class Payload:
 def convert_based_on_type(value):
     if isinstance(value, int):
         return str(value)
-    elif isinstance(value, bytes):
+    if isinstance(value, bytes):
         return value.decode('utf-8')
-    elif isinstance(value, date):
+    if isinstance(value, date):
         return str(value)
-    elif isinstance(value, datetime):
+    if isinstance(value, datetime):
         return str(value.date())
-    else:
-        return str(value)
+    return str(value)

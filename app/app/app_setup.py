@@ -20,7 +20,7 @@ def register_models():
 def create_app(config_name):
     app = Flask(__name__)
     app.config.from_object(config[config_name])
-    print("USING CONFIGURATION TYPE: " + config_name, flush=True)
+    app.logger.info("USING CONFIGURATION TYPE: " + config_name)
     app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
     # not using sqlalchemy event system, hence disabling it
 
@@ -39,7 +39,7 @@ def create_app(config_name):
     register_models()
 
     dir_path = os.path.dirname(os.path.realpath(__file__))
-    print("WORKING DIR: " + dir_path, flush=True)
+    app.logger.info("WORKING DIR: " + dir_path)
 
     with app.app_context():
         db.drop_all()
@@ -95,9 +95,9 @@ def create_app(config_name):
                        tls_version=ssl.PROTOCOL_TLSv1_2)
         client.tls_insecure_set(app.config["SSL_INSECURE"])
     except ValueError as e:
-        print(e)
+        app.logger.error(e)
     client.connect(app.config["MQTT_BROKER_URL"], app.config["MQTT_BROKER_PORT"], 60)
-    print("Client connected...", flush=True)
+    app.logger.info("Client connected...")
 
     scheduler = BackgroundScheduler()
     scheduler.add_job(func=client.loop, trigger="interval", seconds=3)

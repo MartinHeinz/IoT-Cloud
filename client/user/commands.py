@@ -28,10 +28,14 @@ AA_URL_DECRYPT = AA_URL_BASE + "decrypt"
 dir_path = os.path.dirname(os.path.realpath(__file__))
 path = f'{dir_path}/keystore.json'
 
+VERIFY_CERTS = True
+
 
 @click.group()
-def user():
-    pass
+@click.pass_context
+def user(ctx):
+    global VERIFY_CERTS
+    VERIFY_CERTS = ctx.obj['VERIFY_CERTS']
 
 
 @user.command()
@@ -48,7 +52,7 @@ def send_message():
     data = {"ciphertext": str(base64.b64encode(ciphertext), 'utf-8'), "tag": str(base64.b64encode(tag), 'utf-8'), "topic": topic}
     click.echo(data)
 
-    r = requests.post(URL_PUBLISH, params=data, verify=False)
+    r = requests.post(URL_PUBLISH, params=data, verify=VERIFY_CERTS)
     click.echo(r.content.decode('unicode-escape'))
 
 
@@ -57,7 +61,7 @@ def send_message():
 @click.option('--token', envvar='ACCESS_TOKEN')
 def create_device_type(description, token):
     data = {"description": description, "access_token": token, "correctness_hash": correctness_hash(description)}
-    r = requests.post(URL_CREATE_DEVICE_TYPE, params=data, verify=False)
+    r = requests.post(URL_CREATE_DEVICE_TYPE, params=data, verify=VERIFY_CERTS)
     click.echo(r.content.decode('unicode-escape'))
 
 
@@ -73,7 +77,7 @@ def create_device(device_type_id, user_id, device_name, token):
         "name": device_name,
         "correctness_hash": correctness_hash(device_name),
         "name_bi": hash(device_name, user_id)}
-    r = requests.post(URL_CREATE_DEVICE, params=data, verify=False)
+    r = requests.post(URL_CREATE_DEVICE, params=data, verify=VERIFY_CERTS)
     click.echo(r.content.decode('unicode-escape'))
 
 
@@ -84,7 +88,7 @@ def create_device(device_type_id, user_id, device_name, token):
 def get_devices(device_name, user_id, token):
     device_name_bi = hash(device_name, user_id)
     data = {"name_bi": device_name_bi, "access_token": token}
-    r = requests.post(URL_GET_DEVICE, params=data, verify=False)
+    r = requests.post(URL_GET_DEVICE, params=data, verify=VERIFY_CERTS)
     content = json.loads(r.content.decode('unicode-escape'))
     check_correctness_hash(content["devices"], "name")
     click.echo(content["devices"])
@@ -103,7 +107,7 @@ def get_device_data_by_time_range(lower=None, upper=None, token=""):  # TODO add
         data = {"upper": int(upper), "access_token": token}
     else:
         data = {"lower": 0, "upper": 2147483647, "access_token": token}
-    r = requests.post(URL_GET_DEVICE_DATA_BY_RANGE, params=data, verify=False)
+    r = requests.post(URL_GET_DEVICE_DATA_BY_RANGE, params=data, verify=VERIFY_CERTS)
     content = r.content.decode('unicode-escape')
     json_content = json_string_with_bytes_to_dict(content)
     for item in json_content["device_data"]:
@@ -117,7 +121,7 @@ def get_device_data_by_time_range(lower=None, upper=None, token=""):  # TODO add
 @click.option('--token', envvar='AA_ACCESS_TOKEN')
 def attr_auth_set_api_username(username, token):
     data = {"api_username": username, "access_token": token}
-    r = requests.post(AA_URL_SET_USERNAME, params=data, verify=False)
+    r = requests.post(AA_URL_SET_USERNAME, params=data, verify=VERIFY_CERTS)
     click.echo(r.content.decode('unicode-escape'))
 
 
@@ -125,7 +129,7 @@ def attr_auth_set_api_username(username, token):
 @click.option('--token', envvar='AA_ACCESS_TOKEN')
 def get_attr_auth_keys(token):
     data = {"access_token": token}
-    r = requests.post(AA_URL_SETUP, params=data, verify=False)
+    r = requests.post(AA_URL_SETUP, params=data, verify=VERIFY_CERTS)
     content = json.loads(r.content.decode('unicode-escape'))
     click.echo(f"Saving keys to {path}")
     db = TinyDB(path)
@@ -157,7 +161,7 @@ def attr_auth_keygen(attr_list, receiver_id, token):
         "attr_list": re.sub('[\']', '', attr_list),
         "receiver_id": receiver_id
     }
-    r = requests.post(AA_URL_KEYGEN, params=data, verify=False)
+    r = requests.post(AA_URL_KEYGEN, params=data, verify=VERIFY_CERTS)
     click.echo(r.content.decode('unicode-escape'))
 
 
@@ -171,7 +175,7 @@ def attr_auth_encrypt(message, policy_string, token):
         "message": message,
         "policy_string": policy_string
     }
-    r = requests.post(AA_URL_ENCRYPT, params=data, verify=False)
+    r = requests.post(AA_URL_ENCRYPT, params=data, verify=VERIFY_CERTS)
     click.echo(r.content.decode('unicode-escape'))
 
 
@@ -185,7 +189,7 @@ def attr_auth_decrypt(owner_username, ciphertext, token):
         "api_username": owner_username,
         "ciphertext": ciphertext
     }
-    r = requests.post(AA_URL_DECRYPT, params=data, verify=False)
+    r = requests.post(AA_URL_DECRYPT, params=data, verify=VERIFY_CERTS)
     click.echo(r.content.decode('unicode-escape'))
 
 

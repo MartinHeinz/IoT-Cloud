@@ -5,6 +5,7 @@ from uuid import UUID
 
 import pytest
 from paho.mqtt.client import MQTTMessage
+from passlib.hash import bcrypt
 
 from app.api.endpoints import DEVICE_TYPE_ID_MISSING_ERROR_MSG, DEVICE_TYPE_ID_INCORRECT_ERROR_MSG, DEVICE_NAME_BI_MISSING_ERROR_MSG, \
     DATA_RANGE_MISSING_ERROR_MSG, DATA_OUT_OF_OUTPUT_RANGE_ERROR_MSG, DEVICE_NAME_MISSING_ERROR_MSG, CORRECTNESS_HASH_MISSING_ERROR_MSG
@@ -14,7 +15,6 @@ from app.app_setup import client as mqtt_client
 from app.mqtt.utils import Payload
 from app.utils import is_valid_uuid
 from client.crypto_utils import encrypt, hash, correctness_hash
-from passlib.hash import bcrypt
 
 from .conftest import db
 
@@ -287,7 +287,7 @@ def test_api_get_device_data_by_range_with_both_bounds(client, app_and_ctx, acce
         "lower": "110284915",  # 1700
         "upper": "262690267",  # 4000
         "access_token": access_token
-            }
+        }
     response = client.post('/api/data/get_time_range', query_string=data, follow_redirects=True)
     assert response.status_code == 200
     json_data = json.loads(response.data.decode("utf-8"))

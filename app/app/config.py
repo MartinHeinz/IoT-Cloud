@@ -12,6 +12,7 @@ if os.path.exists(config_path):
 
 
 class Config:
+    DEBUG = True
     APP_NAME = os.getenv('APP_NAME', 'IoT-Cloud')
     SECRET_KEY = os.environ.get('SECRET_KEY') or 'you-will-never-guess'
     SQLALCHEMY_COMMIT_ON_TEARDOWN = True
@@ -46,7 +47,6 @@ class Config:
 
 
 class DevelopmentConfig(Config):
-    DEBUG = True
     ASSETS_DEBUG = True
     ENV = 'development'
     SQLALCHEMY_DATABASE_URI = os.getenv('DEV_DATABASE_URL', 'postgres+psycopg2://postgres:postgres@<local-ip>:5430/postgres')
@@ -74,7 +74,6 @@ class HostTestingConfig(TestingConfig):
 
 
 class DockerConfig(Config):
-    DEBUG = True
     ASSETS_DEBUG = True
     ENV = 'development'
     SQLALCHEMY_DATABASE_URI = os.getenv('DOCKER_DATABASE_URL', 'postgres+psycopg2://postgres:postgres@<local-ip>:5430/postgres')

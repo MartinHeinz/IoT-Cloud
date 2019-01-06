@@ -12,7 +12,7 @@ def auth():
 
 
 @login.route('/login')
-def login():
+def login():  # noqa pylint: disable=function-redefined
     login_common(remote_app, ".auth", backend_app, nonce_key_app)
 
 
@@ -22,7 +22,7 @@ def auth_aa():
 
 
 @login_aa.route('/login')
-def login_aa():
+def login_aa():  # noqa pylint: disable=function-redefined
     login_common(remote_aa, ".auth_aa", backend_aa, nonce_key_aa)
 
 

@@ -107,20 +107,24 @@ def get_data_by_time_range():
         upper_bound = int(upper_bound)
 
     data = []
-    if type(lower_bound) is int and type(upper_bound) is int:
+    if isinstance(lower_bound, int) and isinstance(upper_bound, int):
         if 0 <= lower_bound < upper_bound <= 2147483647:
-            data = db.session.query(DeviceData).filter(and_(DeviceData.num_data > lower_bound, DeviceData.num_data < upper_bound, DeviceData.device_id.in_(d.id for d in user.owned_devices))).all()
+            data = db.session.query(DeviceData).filter(and_(DeviceData.num_data > lower_bound,
+                                                            DeviceData.num_data < upper_bound,
+                                                            DeviceData.device_id.in_(d.id for d in user.owned_devices))).all()
         else:
             return http_json_response(False, 400, **{"error": DATA_OUT_OF_OUTPUT_RANGE_ERROR_MSG})
-    elif type(upper_bound) is not int and type(lower_bound) is int:
+    elif not isinstance(upper_bound, int) and isinstance(lower_bound, int):
         if 0 <= lower_bound <= 2147483647:
-            data = db.session.query(DeviceData).filter(and_(DeviceData.num_data > lower_bound, DeviceData.device_id.in_(d.id for d in user.owned_devices))).all()
+            data = db.session.query(DeviceData).filter(and_(DeviceData.num_data > lower_bound,
+                                                            DeviceData.device_id.in_(d.id for d in user.owned_devices))).all()
         else:
             return http_json_response(False, 400, **{"error": DATA_OUT_OF_OUTPUT_RANGE_ERROR_MSG})
 
-    elif type(lower_bound) is not int and type(upper_bound) is int:
+    elif not isinstance(lower_bound, int) and isinstance(upper_bound, int):
         if 0 <= upper_bound <= 2147483647:
-            data = db.session.query(DeviceData).filter(and_(DeviceData.num_data < upper_bound, DeviceData.device_id.in_(d.id for d in user.owned_devices))).all()
+            data = db.session.query(DeviceData).filter(and_(DeviceData.num_data < upper_bound,
+                                                            DeviceData.device_id.in_(d.id for d in user.owned_devices))).all()
         else:
             return http_json_response(False, 400, **{"error": DATA_OUT_OF_OUTPUT_RANGE_ERROR_MSG})
 
