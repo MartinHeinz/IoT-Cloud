@@ -6,7 +6,10 @@ from datetime import datetime
 
 import click
 import requests
-from tinydb import TinyDB, where
+from cryptography.hazmat.backends import default_backend
+from cryptography.hazmat.primitives import serialization
+from cryptography.hazmat.primitives.asymmetric import ec
+from tinydb import TinyDB, where, Query
 
 from crypto_utils import encrypt, hash, correctness_hash, check_correctness_hash
 from utils import json_string_with_bytes_to_dict
@@ -17,6 +20,7 @@ URL_CREATE_DEVICE_TYPE = URL_BASE + "device_type/create"
 URL_CREATE_DEVICE = URL_BASE + "device/create"
 URL_GET_DEVICE = URL_BASE + "device/get"
 URL_GET_DEVICE_DATA_BY_RANGE = URL_BASE + "data/get_time_range"
+URL_START_KEY_EXCHANGE = URL_BASE + "exchange_session_keys"
 
 AA_URL_BASE = "https://localhost/attr_auth/"
 AA_URL_SET_USERNAME = AA_URL_BASE + "set_username"
@@ -114,6 +118,39 @@ def get_device_data_by_time_range(lower=None, upper=None, token=""):  # TODO add
         item["added"] = str(datetime.strptime(item["added"], "%a, %d %b %Y %H:%M:%S %Z").date())
     check_correctness_hash(json_content["device_data"], 'added', 'data', 'num_data')
     click.echo(content)
+
+
+@user.command()
+@click.argument('device_id')
+@click.option('--token', envvar='ACCESS_TOKEN')
+def send_key_to_device(device_id, token):
+    private_key = ec.generate_private_key(ec.SECP384R1(), default_backend())
+    public_key = private_key.public_key()
+    public_pem = public_key.public_bytes(
+        encoding=serialization.Encoding.PEM,
+        format=serialization.PublicFormat.SubjectPublicKeyInfo
+    ).decode('utf-8')
+
+    private_pem = private_key.private_bytes(
+        encoding=serialization.Encoding.PEM,
+        format=serialization.PrivateFormat.TraditionalOpenSSL,
+        encryption_algorithm=serialization.NoEncryption()
+    ).decode()
+    db = TinyDB(path)
+    table = db.table(name='device_keys')
+    table.upsert({
+        'device_id': device_id,
+        'public_key': public_pem,
+        'private_key': private_pem
+    }, Query().device_id == device_id)
+
+    data = {
+        'device_id': device_id,
+        'public_key': public_pem,
+        'access_token': token
+    }
+    r = requests.post(URL_START_KEY_EXCHANGE, params=data, verify=VERIFY_CERTS)
+    click.echo(r.content.decode('unicode-escape'))
 
 
 @user.command()

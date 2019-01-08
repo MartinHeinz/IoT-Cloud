@@ -94,6 +94,24 @@ def test_get_device_data_by_time_range(runner, client, access_token):
     assert "failed correctness hash test!" not in result.output
 
 
+def test_send_key_to_device(runner, access_token_two):
+    device_id = '45'
+    device_id_2 = '34'
+    if os.path.isfile(cmd.path):
+        os.remove(cmd.path)
+
+    result = runner.invoke(cmd.send_key_to_device, [device_id, '--token', access_token_two])
+    assert "\"success\": true" in result.output
+    result = runner.invoke(cmd.send_key_to_device, [device_id_2, '--token', access_token_two])
+    assert "\"success\": true" in result.output
+
+    db = TinyDB(cmd.path)
+    table = db.table(name='device_keys')
+    doc = table.search(where('device_id').exists() & where('public_key').exists() & where('private_key').exists())
+    assert doc is not None, "Keys not present in DB."
+    assert len(doc) == 2
+
+
 def test_check_correctness_hash():
     query_result = [
         {

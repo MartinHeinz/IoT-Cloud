@@ -1,8 +1,10 @@
 import click
 from cryptography.hazmat.backends import default_backend
+from cryptography.hazmat.primitives import hashes
 from cryptography.hazmat.primitives.ciphers import (
     Cipher, algorithms, modes
 )
+from cryptography.hazmat.primitives.kdf.hkdf import HKDF
 from passlib.hash import bcrypt
 
 
@@ -64,3 +66,13 @@ def check_correctness_hash(query_result, *keys):
         secret = "".join(str(item[key]) for key in keys)
         if not bcrypt.verify(secret, item["correctness_hash"]):
             click.echo(f"{item} failed correctness hash test!")
+
+
+def derive_key(key):
+    return HKDF(
+        algorithm=hashes.SHA256(),
+        length=32,
+        salt=None,
+        info=b'',
+        backend=default_backend()
+    ).derive(key)

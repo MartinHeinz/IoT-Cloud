@@ -3,10 +3,11 @@ from flask import request
 from sqlalchemy import and_
 
 from app.api import api
-from app.api.utils import is_number, get_user_by_access_token
+from app.api.utils import is_number, get_user_by_access_token, can_use_device
 from app.app_setup import client, db
 from app.auth.utils import require_api_token
 from app.models.models import DeviceType, Device, DeviceData
+from app.mqtt.utils import Payload
 from app.utils import http_json_response, check_missing_request_argument, is_valid_uuid
 
 DEVICE_TYPE_ID_MISSING_ERROR_MSG = 'Missing device type id.'
@@ -17,6 +18,9 @@ DEVICE_NAME_MISSING_ERROR_MSG = 'Missing device Name.'
 DATA_RANGE_MISSING_ERROR_MSG = 'Missing upper and lower range for query.'
 DATA_OUT_OF_OUTPUT_RANGE_ERROR_MSG = 'Value out of OPE output range.'
 CORRECTNESS_HASH_MISSING_ERROR_MSG = 'Correctness Hash needs to be provided.'
+DEVICE_ID_MISSING_ERROR_MSG = 'Missing device id.'
+PUBLIC_KEY_MISSING_ERROR_MSG = 'Missing user public key for key exchange.'
+UNAUTHORIZED_USER_ERROR_MSG = 'Specified user is not authorized to use this device.'
 
 
 @api.route('/publish', methods=['POST'])
@@ -133,3 +137,25 @@ def get_data_by_time_range():
         result.append(row.as_dict())
         result[-1]["data"] = result[-1]["data"].decode("utf-8")
     return http_json_response(**{'device_data': result})
+
+
+@api.route('/exchange_session_keys', methods=['POST'])
+@require_api_token()
+def exchange_session_keys():
+    user_public_key_bytes = request.args.get("public_key", None)
+    device_id = request.args.get("device_id", None)
+    user_access_token = request.args.get("access_token", "")
+
+    arg_check = check_missing_request_argument(
+        (user_public_key_bytes, PUBLIC_KEY_MISSING_ERROR_MSG),
+        (device_id, DEVICE_ID_MISSING_ERROR_MSG))
+    if arg_check is not True:
+        return arg_check
+
+    if not can_use_device(user_access_token, device_id):
+        return http_json_response(False, 400, **{"error": UNAUTHORIZED_USER_ERROR_MSG})
+
+    # TODO save `user_public_key_bytes` to User Device Association Object?
+    payload_bytes = bytes(Payload(user_public_key=user_public_key_bytes))
+    client.publish(device_id, payload_bytes)
+    return http_json_response()

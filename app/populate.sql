@@ -25,10 +25,10 @@ INSERT INTO public.device_data (id, added, num_data, data, device_id, correctnes
 INSERT INTO public.device_data (id, added, num_data, data, device_id, correctness_hash) VALUES (24, '2018-11-14 00:00:00+00', 32808983, '\x5c303031', 45, '$2b$12$UGcKsKwj7y1T6uaU94/p8u7wDmx7INX9Adp7.n2y5qTm81FCDPXxe'); -- 500
 INSERT INTO public.device_data (id, added, num_data, data, device_id, correctness_hash) VALUES (25, '2018-12-11 00:00:00+00', 214357163, '\x5c303031', 45, '$2b$12$ug4.rQscibshf4LY.g1ZseSaG3TSABHZgS6oVkN7Iu4ZzZiDIDQFC'); -- 3245
 
-INSERT INTO public.user_device (user_id, device_id) VALUES (2, 45);
-INSERT INTO public.user_device (user_id, device_id) VALUES (2, 34);
-INSERT INTO public.user_device (user_id, device_id) VALUES (2, 37);
-INSERT INTO public.user_device (user_id, device_id) VALUES (1, 23);
+INSERT INTO public.user_device (user_id, device_id, device_public_session_key, added) VALUES (1, 23, NULL, NULL);
+INSERT INTO public.user_device (user_id, device_id, device_public_session_key, added) VALUES (2, 45, NULL, NULL);
+INSERT INTO public.user_device (user_id, device_id, device_public_session_key, added) VALUES (2, 34, NULL, NULL);
+INSERT INTO public.user_device (user_id, device_id, device_public_session_key, added) VALUES (2, 37, NULL, NULL);
 
 SELECT pg_catalog.setval('public.action_id_seq', 6, true);
 SELECT pg_catalog.setval('public.device_data_id_seq', 1, false);

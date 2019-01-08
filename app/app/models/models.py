@@ -1,3 +1,4 @@
+import datetime
 from uuid import uuid4
 from sqlalchemy import func
 from sqlalchemy.dialects.postgresql import UUID
@@ -5,17 +6,21 @@ from sqlalchemy.orm import relationship
 
 from app.app_setup import db
 
-user_device_table = db.Table('user_device',
-                             db.Column("user_id", db.Integer, db.ForeignKey('user.id')),
-                             db.Column('device_id', db.Integer, db.ForeignKey('device.id')),
-                             extend_existing=True
-                             )
-
 scene_device_table = db.Table('scene_device',
                               db.Column("scene_id", db.Integer, db.ForeignKey('scene.id')),
                               db.Column('device_id', db.Integer, db.ForeignKey('device.id')),
                               extend_existing=True
                               )
+
+
+class UserDevice(db.Model):
+    __tablename__ = 'user_device'
+    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), primary_key=True)
+    device_id = db.Column(db.Integer, db.ForeignKey('device.id'), primary_key=True)
+    device_public_session_key = db.Column(db.String(200))
+    added = db.Column(db.DateTime(timezone=True), onupdate=datetime.datetime.now)
+    device = relationship("Device", back_populates="users")
+    user = relationship("User", back_populates="devices")
 
 
 class User(db.Model):
@@ -28,11 +33,7 @@ class User(db.Model):
     access_token = db.Column(db.String(200), unique=True, nullable=False)  # TODO Give the token expiration date/time and force user to generate new token through `/login` endpoint
     access_token_update = db.Column(db.DateTime, nullable=False)
     device_types = relationship("DeviceType", back_populates="owner")
-
-    devices = relationship(
-        "Device",
-        secondary=user_device_table,
-        back_populates="users")
+    devices = relationship("UserDevice", back_populates="user")
     owned_devices = relationship("Device", back_populates="owner")
 
 
@@ -58,10 +59,7 @@ class Device(db.Model):
     status = db.Column(db.Boolean, default=False)
     device_type = relationship("DeviceType", back_populates="devices")
     device_type_id = db.Column(db.Integer, db.ForeignKey('device_type.id'))
-    users = relationship(  # TODO Maybe remove this?
-        "User",
-        secondary=user_device_table,
-        back_populates="devices")
+    users = relationship("UserDevice", back_populates="device")
     data = relationship("DeviceData", back_populates="device")
     actions = relationship("Action", back_populates="device")
     scenes = relationship(
