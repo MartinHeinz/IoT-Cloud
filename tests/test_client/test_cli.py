@@ -10,11 +10,14 @@ from tinydb import TinyDB, where
 from app.app_setup import db
 from app.cli import populate
 import client.user.commands as cmd
+import client.device.commands as device_cmd
 from crypto_utils import hash, check_correctness_hash
 from utils import json_string_with_bytes_to_dict
 
 cmd.path = '/tmp/keystore.json'
 cmd.VERIFY_CERTS = False
+
+device_cmd.path = '/tmp/data.json'
 
 
 @pytest.fixture(scope="module", autouse=True)
@@ -203,3 +206,38 @@ def test_aa_encrypt(runner, attr_auth_access_token_one):
     result = runner.invoke(cmd.attr_auth_encrypt, ["Hello World", "(GUESTTODAY)", '--token', attr_auth_access_token_one])
     assert "\"success\": true" in result.output
     assert "\"ciphertext\": " in result.output
+
+
+def test_device_init(runner):
+    if os.path.isfile(device_cmd.path):
+        os.remove(device_cmd.path)
+
+    runner.invoke(device_cmd.init, ["23"])
+    db = TinyDB(device_cmd.path)
+    table = db.table(name='device')
+    doc = table.search(where('id').exists())
+    assert doc is not None, "Keys not present in DB."
+    assert len(doc) == 1
+    assert int(doc[0]['id']) == 23
+
+    os.remove(device_cmd.path)
+
+
+def test_device_receive_pk(runner):
+    data = "{'user_public_key': '-----BEGIN PUBLIC KEY-----\nMHYwEAYHKoZIzj0CAQYFK4EEACIDYgAE8z5FnI9EoJZmxSXmKItAvZcdL/bjd4VM\nI2KCZU5gud4R034+VKfy0ameLSty3ImUzoOCClkXAvSBqIe+qKRuteGBeCrnVaIV\nWyk8DgOt4Y2Pp3W9Tm/5dRdxxl8RkCg7\n-----END PUBLIC KEY-----\n', 'user_id': '1'}"
+
+    if os.path.isfile(device_cmd.path):
+        os.remove(device_cmd.path)
+
+    result = runner.invoke(device_cmd.receive_pk, [data])
+    db = TinyDB(device_cmd.path)
+    table = db.table(name='users')
+    doc = table.search(where('id').exists() & where('shared_key').exists())
+    assert doc is not None, "Keys not present in DB."
+    assert len(doc) == 1
+    assert doc[0]['id'] == 1
+
+    assert "\"user_id\": 1" in result.output
+    assert "\"device_public_key\": \"-----BEGIN PUBLIC KEY-----" in result.output
+
+    os.remove(device_cmd.path)

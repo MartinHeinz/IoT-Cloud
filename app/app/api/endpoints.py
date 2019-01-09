@@ -145,6 +145,7 @@ def exchange_session_keys():
     user_public_key_bytes = request.args.get("public_key", None)
     device_id = request.args.get("device_id", None)
     user_access_token = request.args.get("access_token", "")
+    user = get_user_by_access_token(user_access_token)
 
     arg_check = check_missing_request_argument(
         (user_public_key_bytes, PUBLIC_KEY_MISSING_ERROR_MSG),
@@ -156,6 +157,9 @@ def exchange_session_keys():
         return http_json_response(False, 400, **{"error": UNAUTHORIZED_USER_ERROR_MSG})
 
     # TODO save `user_public_key_bytes` to User Device Association Object?
-    payload_bytes = bytes(Payload(user_public_key=user_public_key_bytes))
-    client.publish(device_id, payload_bytes)
+    payload_bytes = bytes(Payload(
+        user_public_key=user_public_key_bytes,
+        user_id=user.id
+    ))
+    client.publish(f'server/{device_id}', f'"{payload_bytes.decode("utf-8")}"'.encode())
     return http_json_response()

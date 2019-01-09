@@ -10,7 +10,7 @@ from flask_sqlalchemy import SQLAlchemy
 from app.config import config
 
 db = SQLAlchemy()
-client = mqtt.Client()
+client = mqtt.Client(client_id='server')
 
 
 def register_models():

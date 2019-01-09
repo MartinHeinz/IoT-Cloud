@@ -6,22 +6,23 @@ from app.utils import bytes_to_json
 
 # The callback for when the client receives a CONNACK response from the server.
 def handle_on_connect(client, userdata, flags, rc):
-    current_app.logger.info("Connected with result code " + str(rc))
-
+    print("Connected with result code " + str(rc), flush=True)
     # Subscribing in on_connect() means that if we lose the connection and
     # reconnect then subscriptions will be renewed.
+
+    # TODO listen for f'{device_id}/server'
     client.subscribe("#")
 
 
 # The callback for when a PUBLISH message is received from the server.
 def handle_on_message(client, userdata, msg, app, db):
     msg.payload = bytes_to_json(msg.payload)
-    current_app.logger.info("Received message '" + str(msg.payload) + "' on topic '" + msg.topic + "' with QoS " + str(msg.qos))
+    print("Received message '" + str(msg.payload) + "' on topic '" + msg.topic + "' with QoS " + str(msg.qos), flush=True)
 
     if msg.topic == "save_data":
         with app.app_context():
             device = db.session.query(Device).filter(Device.id == msg.payload["device_id"]).first()
-            current_app.logger.info("Querying device with id: " + str(msg.payload["device_id"]))
+            print("Querying device with id: " + str(msg.payload["device_id"]), flush=True)
             if device is not None:
                 db.session.add(DeviceData(
                     data=str.encode(msg.payload["device_data"]),
@@ -31,15 +32,15 @@ def handle_on_message(client, userdata, msg, app, db):
                     added=datetime.strptime(msg.payload["added"], "%Y-%m-%d %H:%M:%S")
                 ))
                 db.session.commit()
-                current_app.logger.info("Inserting device data for device: " + str(msg.payload["device_id"]) + " data: " + msg.payload["device_data"])
+                print("Inserting device data for device: " + str(msg.payload["device_id"]) + " data: " + msg.payload["device_data"], flush=True)
             else:
-                current_app.logger.info("Device with id: " + str(msg.payload["device_id"]) + " doesn't exist.")
+                print("Device with id: " + str(msg.payload["device_id"]) + " doesn't exist.", flush=True)
 
 
 def handle_on_log(client, userdata, level, buf):
     if not current_app.testing:
-        current_app.logger.info("[ON LOG]: level: {} data: {}".format(level, buf))
+        print("[ON LOG]: level: {} data: {}".format(level, buf), flush=True)
 
 
 def handle_on_publish(client, userdata, mid):
-    current_app.logger.info("[ON PUBLISH]: userdata: {}  mid: {}".format(userdata, mid))
+    print("[ON PUBLISH]: userdata: {}  mid: {}".format(userdata, mid), flush=True)
