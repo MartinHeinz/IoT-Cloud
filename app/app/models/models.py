@@ -17,7 +17,7 @@ class UserDevice(db.Model):
     __tablename__ = 'user_device'
     user_id = db.Column(db.Integer, db.ForeignKey('user.id'), primary_key=True)
     device_id = db.Column(db.Integer, db.ForeignKey('device.id'), primary_key=True)
-    device_public_session_key = db.Column(db.String(200))
+    device_public_session_key = db.Column(db.String(250))
     added = db.Column(db.DateTime(timezone=True), onupdate=datetime.datetime.now)
     device = relationship("Device", back_populates="users")
     user = relationship("User", back_populates="devices")

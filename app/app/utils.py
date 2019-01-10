@@ -3,6 +3,9 @@ from uuid import UUID
 
 from flask import jsonify
 
+from app.app_setup import db
+from app.models.models import User
+
 
 def http_json_response(success=True, code=200, **data):
     return jsonify(success=success, **data), code
@@ -27,3 +30,7 @@ def is_valid_uuid(uuid_to_test, version=4):
         return False
 
     return str(uuid_obj) == uuid_to_test
+
+
+def get_user_by_id(user_id):
+    return db.session.query(User).filter(User.id == user_id).first()

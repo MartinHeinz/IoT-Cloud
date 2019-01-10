@@ -29,7 +29,7 @@ def create_cp_abe():
     return HybridABEnc(cpabe, pairing_group)
 
 
-def get_user_by_id(user_id):
+def get_aa_user_by_id(user_id):
     return db.session.query(AttrAuthUser).filter(AttrAuthUser.id == user_id).first()
 
 

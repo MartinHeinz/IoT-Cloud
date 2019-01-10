@@ -4,7 +4,7 @@ from app.api.utils import is_number, get_aa_user_by_access_token
 from app.attribute_authority.utils import already_has_key_from_owner, replace_existing_key, create_attributes, parse_attr_list, get_private_key_based_on_owner
 from app.app_setup import db
 from app.attribute_authority import attr_authority
-from app.attribute_authority.utils import serialize_charm_object, create_cp_abe, create_pairing_group, deserialize_charm_object, get_user_by_id
+from app.attribute_authority.utils import serialize_charm_object, create_cp_abe, create_pairing_group, deserialize_charm_object, get_aa_user_by_id
 from app.auth.utils import require_api_token
 from app.models.models import AttrAuthUser, PublicKey, PrivateKey
 from app.utils import http_json_response, check_missing_request_argument
@@ -104,7 +104,7 @@ def keygen():
     if arg_check is not True:
         return arg_check
 
-    receiver = get_user_by_id(int(receiver_id) if is_number(receiver_id) else 0)
+    receiver = get_aa_user_by_id(int(receiver_id) if is_number(receiver_id) else 0)
     if receiver is None:
         return http_json_response(False, 400, **{"error": INCORRECT_RECEIVER_ID_ERROR_MSG})
 
