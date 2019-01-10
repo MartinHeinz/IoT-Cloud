@@ -185,6 +185,7 @@ def retrieve_public_key():
         .filter(and_(UserDevice.device_id == device_id,
                      UserDevice.user_id == user.id)).first()
 
+    # TODO remove key after retrieval
     if user_device.device_public_session_key:
         return http_json_response(**{'device_public_key': user_device.device_public_session_key})
     return http_json_response(False, 400, **{"error": NO_PUBLIC_KEY_ERROR_MSG})

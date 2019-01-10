@@ -2,6 +2,7 @@ import base64
 import json
 import os
 import re
+from binascii import b2a_hex
 from datetime import datetime
 
 import click
@@ -9,6 +10,8 @@ import requests
 from cryptography.hazmat.backends import default_backend
 from cryptography.hazmat.primitives import serialization
 from cryptography.hazmat.primitives.asymmetric import ec
+from cryptography.hazmat.primitives.asymmetric.ec import EllipticCurvePublicKey, EllipticCurvePrivateKey
+from cryptography.hazmat.primitives.serialization import load_pem_private_key, load_pem_public_key
 from tinydb import TinyDB, where, Query
 
 from crypto_utils import encrypt, hash, correctness_hash, check_correctness_hash
@@ -21,6 +24,7 @@ URL_CREATE_DEVICE = URL_BASE + "device/create"
 URL_GET_DEVICE = URL_BASE + "device/get"
 URL_GET_DEVICE_DATA_BY_RANGE = URL_BASE + "data/get_time_range"
 URL_START_KEY_EXCHANGE = URL_BASE + "exchange_session_keys"
+URL_RECEIVE_PUBLIC_KEY = URL_BASE + "retrieve_public_key"
 
 AA_URL_BASE = "https://localhost/attr_auth/"
 AA_URL_SET_USERNAME = AA_URL_BASE + "set_username"
@@ -43,7 +47,7 @@ def user(ctx):
 
 
 @user.command()
-def send_message():
+def send_message():  # TODO rewrite to use key from DB, throw error if exchange for divece wasn't done
     key = b'f\x9c\xeb Lj\x13n\x84B\xf5S\xb5\xdfnl53d\x10\x12\x92\x82\xe1\xe3~\xc8*\x16\x9f\xd69'  # os.urandom(32)
 
     iv, ciphertext, tag = encrypt(
@@ -151,6 +155,42 @@ def send_key_to_device(device_id, token):
     }
     r = requests.post(URL_START_KEY_EXCHANGE, params=data, verify=VERIFY_CERTS)
     click.echo(r.content.decode('unicode-escape'))
+
+
+@user.command()
+@click.argument('device_id')
+@click.option('--token', envvar='ACCESS_TOKEN')
+def retrieve_device_public_key(device_id, token):
+    data = {
+        "access_token": token,
+        "device_id": device_id
+    }
+    r = requests.post(URL_RECEIVE_PUBLIC_KEY, params=data, verify=VERIFY_CERTS)
+    if r.status_code != 200:
+        click.echo(r.content.decode('unicode-escape'))
+        return
+    db = TinyDB(path)
+    table = db.table(name='device_keys')
+    doc = table.get(Query().device_id == device_id)
+
+    if not doc:
+        with click.Context(send_key_to_device) as ctx:
+            click.echo(f"Keys for device {device_id} not present, please use: {ctx.command.name}")
+            click.echo(get_attr_auth_keys.get_help(ctx))
+            return
+
+    content = r.content.decode('unicode-escape')
+    json_content = json_string_with_bytes_to_dict(content)
+
+    private_key = load_pem_private_key(doc["private_key"].encode(), password=None, backend=default_backend())
+    assert isinstance(private_key, EllipticCurvePrivateKey)  # TODO change asserts to prints (asserts are only for programmers, not for users)
+    device_public_key = load_pem_public_key(json_content["device_public_key"].encode(), backend=default_backend())
+    assert isinstance(device_public_key, EllipticCurvePublicKey)
+    shared_key = private_key.exchange(ec.ECDH(), device_public_key)
+
+    key = b2a_hex(shared_key[:32]).decode()  # NOTE: retrieve key as `a2b_hex(key.encode())`
+    table.remove(Query().device_id == device_id)
+    table.insert({'device_id': device_id, 'shared_key': key})
 
 
 @user.command()

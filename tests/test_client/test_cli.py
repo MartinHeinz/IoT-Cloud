@@ -5,7 +5,7 @@ import tempfile
 from contextlib import redirect_stdout
 
 import pytest
-from tinydb import TinyDB, where
+from tinydb import TinyDB, where, Query
 
 from app.app_setup import db
 from app.cli import populate
@@ -75,7 +75,6 @@ def test_get_device(runner, client, access_token):
 
 
 def test_get_device_data_by_time_range(runner, client, access_token):
-
     result = runner.invoke(cmd.get_device_data_by_time_range, ['--token', access_token])
     json_output = json_string_with_bytes_to_dict(result.output)
     assert len(json_output["device_data"]) == 4
@@ -241,3 +240,31 @@ def test_device_receive_pk(runner):
     assert "\"device_public_key\": \"-----BEGIN PUBLIC KEY-----" in result.output
 
     os.remove(device_cmd.path)
+
+
+def test_retrieve_device_public_key(runner, access_token):
+    if os.path.isfile(device_cmd.path):
+        os.remove(device_cmd.path)
+
+    result = runner.invoke(cmd.retrieve_device_public_key, ["99", '--token', access_token])
+    assert "\"success\": false" in result.output
+
+    device_id = "23"
+    result = runner.invoke(cmd.retrieve_device_public_key, [device_id, '--token', access_token])
+    assert f"Keys for device {device_id} not present, please use:" in result.output
+
+    db = TinyDB(cmd.path)
+    table = db.table(name='device_keys')
+    table.insert({
+        "device_id": device_id,
+        "public_key": "-----BEGIN PUBLIC KEY-----\nMHYwEAYHKoZIzj0CAQYFK4EEACIDYgAEP1oBLtMBa94A6IxKINUkIaOJRYShIsr+\nxu7H3ObkRljibL139knm8XXCTXG5jG/IIJvBdsDmTiHwPznZ0KRN9oIAc+CUqIeU\nUkEPQ87XAYqS2WTgg8vTPOml/htk3QbN\n-----END PUBLIC KEY-----\n",
+        "private_key": "-----BEGIN EC PRIVATE KEY-----\nMIGkAgEBBDA9Nyrj4U915ZY6H//GY9o7WwchqnxqrUt8aIh64hfM9141yQa5qnTz\nTJCsZRcZSPSgBwYFK4EEACKhZANiAAQ/WgEu0wFr3gDojEog1SQho4lFhKEiyv7G\n7sfc5uRGWOJsvXf2SebxdcJNcbmMb8ggm8F2wOZOIfA/OdnQpE32ggBz4JSoh5RS\nQQ9DztcBipLZZOCDy9M86aX+G2TdBs0=\n-----END EC PRIVATE KEY-----\n"
+    })
+    runner.invoke(cmd.retrieve_device_public_key, [device_id, '--token', access_token])
+
+    db = TinyDB(cmd.path)
+    table = db.table(name='device_keys')
+    doc = table.get(Query().device_id == device_id)
+    assert "device_id" in doc and "shared_key" in doc
+    assert "public_key" not in doc and "master_key" not in doc, "public_key and master_key should not be present anymore (Ephemeral keys need to be wiped)."
+    os.remove(cmd.path)
