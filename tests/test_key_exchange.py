@@ -2,6 +2,7 @@ import base64
 import json
 from unittest import mock
 
+import pytest
 from cryptography.fernet import Fernet
 from cryptography.hazmat.backends import default_backend
 from cryptography.hazmat.primitives import serialization
@@ -10,7 +11,7 @@ from cryptography.hazmat.primitives.asymmetric.ec import EllipticCurvePublicKey
 from cryptography.hazmat.primitives.asymmetric.x25519 import X25519PrivateKey, X25519PublicKey
 from cryptography.hazmat.primitives.serialization import load_pem_public_key
 
-from app.api.endpoints import PUBLIC_KEY_MISSING_ERROR_MSG, DEVICE_ID_MISSING_ERROR_MSG, UNAUTHORIZED_USER_ERROR_MSG
+from app.api.endpoints import PUBLIC_KEY_MISSING_ERROR_MSG, DEVICE_ID_MISSING_ERROR_MSG, UNAUTHORIZED_USER_ERROR_MSG, NO_PUBLIC_KEY_ERROR_MSG
 from client.crypto_utils import derive_key
 
 
@@ -106,26 +107,34 @@ def test_exchange_session_keys_missing_public_key(client, access_token):
     assert (json_data["error"]) == PUBLIC_KEY_MISSING_ERROR_MSG
 
 
-def test_exchange_session_keys_missing_device_id(client, access_token):
+@pytest.mark.parametrize("endpoint", [
+    "exchange_session_keys",
+    "retrieve_public_key"
+])
+def test_exchange_session_keys_and_retrieve_public_key_missing_device_id(client, access_token, endpoint):
     data = {
         "access_token": access_token,
         "public_key": '-----BEGIN PUBLIC KEY-----\nMHYwEAYHKoZIzj0CAQYFK4EEACIDYgAEDM0W/Tn8gv7VjDzvGMqke8rcfZe2zWAG\nRdABvWRRZNmioOeH8U/gFBgiDd9Nd61JuTa3BQx'
                       'WUYPEMNsSF3yWjlWlzgJCxwJX\nE80D4mcE/gNLI3+86bs4q3wWcJY0fk3I\n-----END PUBLIC KEY-----\n'
     }
-    response = client.post('/api/exchange_session_keys', query_string=data, follow_redirects=True)
+    response = client.post(f'/api/{endpoint}', query_string=data, follow_redirects=True)
     assert response.status_code == 400
     json_data = json.loads(response.data.decode("utf-8"))
     assert (json_data["error"]) == DEVICE_ID_MISSING_ERROR_MSG
 
 
-def test_exchange_session_keys_unauthorized_user(client, access_token_two):
+@pytest.mark.parametrize("endpoint", [
+    "exchange_session_keys",
+    "retrieve_public_key"
+])
+def test_exchange_session_keys_and_retrieve_public_key_unauthorized_user(client, access_token_two, endpoint):
     data = {
         "access_token": access_token_two,
         "public_key": '-----BEGIN PUBLIC KEY-----\nMHYwEAYHKoZIzj0CAQYFK4EEACIDYgAEDM0W/Tn8gv7VjDzvGMqke8rcfZe2zWAG\nRdABvWRRZNmioOeH8U/gFBgiDd9Nd61JuTa3BQx'
                       'WUYPEMNsSF3yWjlWlzgJCxwJX\nE80D4mcE/gNLI3+86bs4q3wWcJY0fk3I\n-----END PUBLIC KEY-----\n',
         "device_id": 23
     }
-    response = client.post('/api/exchange_session_keys', query_string=data, follow_redirects=True)
+    response = client.post(f'/api/{endpoint}', query_string=data, follow_redirects=True)
     assert response.status_code == 400
     json_data = json.loads(response.data.decode("utf-8"))
     assert (json_data["error"]) == UNAUTHORIZED_USER_ERROR_MSG
@@ -144,3 +153,36 @@ def test_exchange_session_keys_success(client, access_token_two):
         response = client.post('/api/exchange_session_keys', query_string=data, follow_redirects=True)
         assert response.status_code == 200
         publish.assert_called_once()
+
+
+def test_retrieve_public_key_no_such_key(client, access_token):
+    data = {
+        "device_id": 23,
+        "access_token": access_token
+    }
+    response = client.post(f'/api/retrieve_public_key', query_string=data, follow_redirects=True)
+    assert response.status_code == 400
+    json_data = json.loads(response.data.decode("utf-8"))
+    assert (json_data["error"]) == NO_PUBLIC_KEY_ERROR_MSG
+
+
+@pytest.mark.parametrize('setup_user_device_public_key',
+                         [(23,
+                           1,
+                           '-----BEGIN PUBLIC KEY-----\n'
+                           'MHYwEAYHKoZIzj0CAQYFK4EEACIDYgAE2rD6Bhju8WSEFogdBxZt/N+n7ziUPi5C\n'
+                           'QU1gSQQDNm57fdDuYNDOR7Wwb1fq5tSl2TC1D6WRTIt1gzzCsApGpZ3PIs7Wdbil\n'
+                           'eJL/ETGa2Sqwav7JDH4r0V30sF4NqDok\n'
+                           '-----END PUBLIC KEY-----\n')
+                          ], indirect=True)
+def test_retrieve_public_key_success(client, access_token, setup_user_device_public_key):
+    device_id = 23
+    data = {
+        "device_id": device_id,
+        "access_token": access_token
+    }
+
+    response = client.post(f'/api/retrieve_public_key', query_string=data, follow_redirects=True)
+    assert response.status_code == 200
+    json_data = json.loads(response.data.decode("utf-8"))
+    assert (json_data["device_public_key"]).startswith("-----BEGIN PUBLIC KEY----")

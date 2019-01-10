@@ -6,7 +6,7 @@ from app.api import api
 from app.api.utils import is_number, get_user_by_access_token, can_use_device
 from app.app_setup import client, db
 from app.auth.utils import require_api_token
-from app.models.models import DeviceType, Device, DeviceData
+from app.models.models import DeviceType, Device, DeviceData, UserDevice
 from app.mqtt.utils import Payload
 from app.utils import http_json_response, check_missing_request_argument, is_valid_uuid
 
@@ -21,6 +21,7 @@ CORRECTNESS_HASH_MISSING_ERROR_MSG = 'Correctness Hash needs to be provided.'
 DEVICE_ID_MISSING_ERROR_MSG = 'Missing device id.'
 PUBLIC_KEY_MISSING_ERROR_MSG = 'Missing user public key for key exchange.'
 UNAUTHORIZED_USER_ERROR_MSG = 'Specified user is not authorized to use this device.'
+NO_PUBLIC_KEY_ERROR_MSG = 'No public key available for this device.'
 
 
 @api.route('/publish', methods=['POST'])
@@ -163,3 +164,27 @@ def exchange_session_keys():
     ))
     client.publish(f'server/{device_id}', f'"{payload_bytes.decode("utf-8")}"'.encode())
     return http_json_response()
+
+
+@api.route('/retrieve_public_key', methods=['POST'])
+@require_api_token()
+def retrieve_public_key():
+    device_id = request.args.get("device_id", None)
+    user_access_token = request.args.get("access_token", "")
+    user = get_user_by_access_token(user_access_token)
+
+    arg_check = check_missing_request_argument(
+        (device_id, DEVICE_ID_MISSING_ERROR_MSG))
+    if arg_check is not True:
+        return arg_check
+
+    if not can_use_device(user_access_token, device_id):
+        return http_json_response(False, 400, **{"error": UNAUTHORIZED_USER_ERROR_MSG})
+
+    user_device = db.session.query(UserDevice) \
+        .filter(and_(UserDevice.device_id == device_id,
+                     UserDevice.user_id == user.id)).first()
+
+    if user_device.device_public_session_key:
+        return http_json_response(**{'device_public_key': user_device.device_public_session_key})
+    return http_json_response(False, 400, **{"error": NO_PUBLIC_KEY_ERROR_MSG})

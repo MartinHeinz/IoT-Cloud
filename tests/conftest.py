@@ -2,9 +2,11 @@ import os
 import warnings
 import pytest
 from click.testing import CliRunner
+from sqlalchemy import and_
 from sqlalchemy.exc import SADeprecationWarning
 
 from app.app_setup import create_app, db
+from app.models.models import UserDevice
 
 
 @pytest.fixture(scope="module")
@@ -70,3 +72,24 @@ def attr_auth_access_token_one():
 @pytest.fixture(scope="session")
 def attr_auth_access_token_two():
     return '7jagPr4edVdgvyyBNkjdaQ))'
+
+
+@pytest.fixture(scope='function')
+def setup_user_device_public_key(request, app_and_ctx):
+    device_id, user_id, pk = request.param
+    app, ctx = app_and_ctx
+    with app.app_context():
+        user_device = db.session.query(UserDevice) \
+            .filter(and_(UserDevice.device_id == device_id,
+                         UserDevice.user_id == user_id)).first()
+        user_device.device_public_session_key = pk
+        db.session.add(user_device)
+        db.session.commit()
+    yield None
+    with app.app_context():
+        user_device = db.session.query(UserDevice) \
+            .filter(and_(UserDevice.device_id == device_id,
+                         UserDevice.user_id == user_id)).first()
+        user_device.device_public_session_key = None
+        db.session.add(user_device)
+        db.session.commit()
