@@ -2,11 +2,13 @@ import base64
 import json
 import os
 import re
-from binascii import b2a_hex
+import ssl
+from binascii import b2a_hex, a2b_hex
 from datetime import datetime
 
 import click
 import requests
+from cryptography.fernet import Fernet
 from cryptography.hazmat.backends import default_backend
 from cryptography.hazmat.primitives import serialization
 from cryptography.hazmat.primitives.asymmetric import ec
@@ -14,8 +16,10 @@ from cryptography.hazmat.primitives.asymmetric.ec import EllipticCurvePublicKey,
 from cryptography.hazmat.primitives.serialization import load_pem_private_key, load_pem_public_key
 from tinydb import TinyDB, where, Query
 
-from crypto_utils import encrypt, hash, correctness_hash, check_correctness_hash
+from crypto_utils import hash, correctness_hash, check_correctness_hash
 from utils import json_string_with_bytes_to_dict
+
+import paho.mqtt.client as paho
 
 URL_BASE = "https://localhost/api/"
 URL_PUBLISH = URL_BASE + "publish"
@@ -36,32 +40,51 @@ AA_URL_DECRYPT = AA_URL_BASE + "decrypt"
 dir_path = os.path.dirname(os.path.realpath(__file__))
 path = f'{dir_path}/keystore.json'
 
-VERIFY_CERTS = True
-
 
 @click.group()
 @click.pass_context
 def user(ctx):
     global VERIFY_CERTS
+    global MQTT_BROKER
+    global MQTT_PORT
     VERIFY_CERTS = ctx.obj['VERIFY_CERTS']
+    MQTT_BROKER = ctx.obj['BROKER']
+    MQTT_PORT = ctx.obj['PORT']
 
 
 @user.command()
-def send_message():  # TODO rewrite to use key from DB, throw error if exchange for divece wasn't done
-    key = b'f\x9c\xeb Lj\x13n\x84B\xf5S\xb5\xdfnl53d\x10\x12\x92\x82\xe1\xe3~\xc8*\x16\x9f\xd69'  # os.urandom(32)
+@click.argument('device_id')
+@click.argument('data')
+def send_message(device_id, data):
+    db = TinyDB(path)
+    table = db.table(name='device_keys')
+    doc = table.get(Query().device_id == device_id)
 
-    iv, ciphertext, tag = encrypt(
-        key,
-        b"{\"setOn\": \"True\"}",
-        b"authenticated but not encrypted payload"
-    )
+    if not doc:
+        with click.Context(send_key_to_device) as ctx:
+            click.echo(f"Keys for device {device_id} not present, please use: {ctx.command.name}")
+            click.echo(get_attr_auth_keys.get_help(ctx))
+            return
 
-    topic = "flask_test"
-    data = {"ciphertext": str(base64.b64encode(ciphertext), 'utf-8'), "tag": str(base64.b64encode(tag), 'utf-8'), "topic": topic}
-    click.echo(data)
+    shared_key = a2b_hex(doc["shared_key"].encode())
+    fernet_key = Fernet(base64.urlsafe_b64encode(shared_key))
+    token = fernet_key.encrypt(data.encode())
 
-    r = requests.post(URL_PUBLISH, params=data, verify=VERIFY_CERTS)
-    click.echo(r.content.decode('unicode-escape'))
+    def on_publish(client, userdata, result):
+        click.echo("Data published")
+
+    client = paho.Client("user_id")
+    client.on_publish = on_publish
+
+    client.tls_set(ca_certs=os.path.join(os.path.dirname(__file__), "certs/server.crt"),
+                   certfile=None,
+                   keyfile=None,
+                   tls_version=ssl.PROTOCOL_TLSv1_2)
+    client.tls_insecure_set(True)
+
+    client.connect(MQTT_BROKER, MQTT_PORT)
+    ret = client.publish(f"user_id/{device_id}", token.decode())
+    click.echo(f"RC and MID = {ret}")
 
 
 @user.command()
@@ -274,4 +297,5 @@ if __name__ == '__main__':
     # json_data = json.loads(create_device_type("test desc").content.decode("utf-8"))
     # print(json_data)
     # print(create_device(json_data["type_id"]).content.decode("utf-8"))
-    send_message()
+    # send_message()
+    ...

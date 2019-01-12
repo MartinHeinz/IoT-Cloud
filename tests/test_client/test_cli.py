@@ -2,34 +2,55 @@ import io
 import os
 import re
 import tempfile
+import warnings
 from contextlib import redirect_stdout
 
 import pytest
+from sqlalchemy import and_
+from sqlalchemy.exc import SADeprecationWarning
 from tinydb import TinyDB, where, Query
 
-from app.app_setup import db
+from app.app_setup import db, create_app
 from app.cli import populate
 import client.user.commands as cmd
 import client.device.commands as device_cmd
+from app.models.models import UserDevice
 from crypto_utils import hash, check_correctness_hash
 from utils import json_string_with_bytes_to_dict
 
 cmd.path = '/tmp/keystore.json'
+
+# NOTE: These values are necessary here, because global vars are not properly initialized when using Click Test runner
 cmd.VERIFY_CERTS = False
+cmd.MQTT_BROKER = "172.21.0.3"
+cmd.MQTT_PORT = 8883
 
 device_cmd.path = '/tmp/data.json'
 
 
 @pytest.fixture(scope="module", autouse=True)
-def reset_attr_auth_db(app_and_ctx):
+def reset_attr_auth_db():
     """ Resets Dev DB before running CLI tests which have to be run against Dev Environment."""
-    app, ctx = app_and_ctx
+    warnings.filterwarnings("ignore", category=SADeprecationWarning)
+    app = create_app(os.getenv('TESTING_ENV', "testing"))
     app.config["SQLALCHEMY_BINDS"]["attr_auth"] = app.config["SQLALCHEMY_BINDS"]["attr_auth"].replace("attr_auth_testing", "attr_auth")
     with app.app_context():
         with open(app.config["ATTR_AUTH_POPULATE_PATH"], 'r') as sql:
             db.get_engine(app, 'attr_auth').execute(sql.read())
         db.session.commit()
     app.config["SQLALCHEMY_BINDS"]["attr_auth"] = app.config["SQLALCHEMY_BINDS"]["attr_auth"].replace("attr_auth", "attr_auth_testing")
+
+
+@pytest.fixture(scope="function")
+def change_to_dev_db():
+    """ Changes Default DB to `postgres` for CLI test."""
+    warnings.filterwarnings("ignore", category=SADeprecationWarning)
+    app = create_app(os.getenv('TESTING_ENV', "testing"))
+    app.config["SQLALCHEMY_DATABASE_URI"] = app.config["SQLALCHEMY_DATABASE_URI"].replace("testing", "postgres")
+    ctx = app.app_context()
+    ctx.push()
+    yield app, ctx
+    app.config["SQLALCHEMY_DATABASE_URI"] = re.sub(r"testing$", 'postgres', app.config["SQLALCHEMY_DATABASE_URI"])
 
 
 def test_populate(runner):
@@ -45,9 +66,24 @@ def test_populate(runner):
     assert result.exit_code == 0
 
 
-def test_send_message(runner):
-    result = runner.invoke(cmd.send_message)
-    assert "\"success\": true" in result.output
+def test_send_message(runner, access_token):
+    if os.path.isfile(cmd.path):
+        os.remove(cmd.path)
+
+    device_id = "23"
+    key = "fcf064e7ea97ab828ba80578d255942e648c872d8d0c09a051bf5424640f2e68"
+    result = runner.invoke(cmd.send_message, [device_id, "test"])
+    assert f"Keys for device {device_id} not present, please use:" in result.output
+
+    tiny_db = TinyDB(cmd.path)
+    table = tiny_db.table(name='device_keys')
+    table.insert({'device_id': device_id, 'shared_key': key})
+
+    result = runner.invoke(cmd.send_message, [device_id, "test"])
+    assert "Data published" in result.output
+    assert "RC and MID = (0, 1)" in result.output
+
+    os.remove(cmd.path)
 
 
 def test_create_device_type(runner, access_token):
@@ -150,7 +186,7 @@ def test_check_correctness_hash():
     assert "failed correctness hash test!" in out
 
 
-def test_aa_decrypt(runner, client, app_and_ctx, attr_auth_access_token_one, attr_auth_access_token_two):
+def test_aa_decrypt(runner, client, attr_auth_access_token_one, attr_auth_access_token_two):
     plaintext = "any text"
 
     result = runner.invoke(cmd.attr_auth_encrypt, [plaintext, "(GUESTTODAY)", '--token', attr_auth_access_token_one])
@@ -242,29 +278,48 @@ def test_device_receive_pk(runner):
     os.remove(device_cmd.path)
 
 
-def test_retrieve_device_public_key(runner, access_token):
+def test_retrieve_device_public_key(runner, access_token, change_to_dev_db):
     if os.path.isfile(device_cmd.path):
         os.remove(device_cmd.path)
 
     result = runner.invoke(cmd.retrieve_device_public_key, ["99", '--token', access_token])
     assert "\"success\": false" in result.output
 
-    device_id = "23"
-    result = runner.invoke(cmd.retrieve_device_public_key, [device_id, '--token', access_token])
-    assert f"Keys for device {device_id} not present, please use:" in result.output
+    app, ctx = change_to_dev_db
+    with app.app_context():
+        device_id = "23"
+        user_device = db.session.query(UserDevice).filter(and_(
+            UserDevice.device_id == device_id,
+            UserDevice.user_id == 1,
+        )).first()
+        user_device.device_public_session_key = "-----BEGIN PUBLIC KEY-----\nMHYwEAYHKoZIzj0CAQYFK4EEACIDYgAE/U8n5ytherGcfIMFfT8ZCohWdBN1u10d\n3PWJhEbcEPHXx9kdi4fOkmA6xD2Ol+A2vVm3IriwapZapBJTlsd6zLJQutAUhYez\nmH04jczg1SpYOLOTR2lBO+9pxZg77DYg\n-----END PUBLIC KEY-----\n"
+        db.session.add(user_device)
+        db.session.commit()
 
-    db = TinyDB(cmd.path)
-    table = db.table(name='device_keys')
-    table.insert({
-        "device_id": device_id,
-        "public_key": "-----BEGIN PUBLIC KEY-----\nMHYwEAYHKoZIzj0CAQYFK4EEACIDYgAEP1oBLtMBa94A6IxKINUkIaOJRYShIsr+\nxu7H3ObkRljibL139knm8XXCTXG5jG/IIJvBdsDmTiHwPznZ0KRN9oIAc+CUqIeU\nUkEPQ87XAYqS2WTgg8vTPOml/htk3QbN\n-----END PUBLIC KEY-----\n",
-        "private_key": "-----BEGIN EC PRIVATE KEY-----\nMIGkAgEBBDA9Nyrj4U915ZY6H//GY9o7WwchqnxqrUt8aIh64hfM9141yQa5qnTz\nTJCsZRcZSPSgBwYFK4EEACKhZANiAAQ/WgEu0wFr3gDojEog1SQho4lFhKEiyv7G\n7sfc5uRGWOJsvXf2SebxdcJNcbmMb8ggm8F2wOZOIfA/OdnQpE32ggBz4JSoh5RS\nQQ9DztcBipLZZOCDy9M86aX+G2TdBs0=\n-----END EC PRIVATE KEY-----\n"
-    })
-    runner.invoke(cmd.retrieve_device_public_key, [device_id, '--token', access_token])
+        result = runner.invoke(cmd.retrieve_device_public_key, [device_id, '--token', access_token])
+        assert f"Keys for device {device_id} not present, please use:" in result.output
 
-    db = TinyDB(cmd.path)
-    table = db.table(name='device_keys')
-    doc = table.get(Query().device_id == device_id)
-    assert "device_id" in doc and "shared_key" in doc
-    assert "public_key" not in doc and "master_key" not in doc, "public_key and master_key should not be present anymore (Ephemeral keys need to be wiped)."
+        tiny_db = TinyDB(cmd.path)
+        table = tiny_db.table(name='device_keys')
+        table.insert({
+            "device_id": device_id,
+            "public_key": "-----BEGIN PUBLIC KEY-----\nMHYwEAYHKoZIzj0CAQYFK4EEACIDYgAEP1oBLtMBa94A6IxKINUkIaOJRYShIsr+\nxu7H3ObkRljibL139knm8XXCTXG5jG/IIJvBdsDmTiHwPznZ0KRN9oIAc+CUqIeU\nUkEPQ87XAYqS2WTgg8vTPOml/htk3QbN\n-----END PUBLIC KEY-----\n",
+            "private_key": "-----BEGIN EC PRIVATE KEY-----\nMIGkAgEBBDA9Nyrj4U915ZY6H//GY9o7WwchqnxqrUt8aIh64hfM9141yQa5qnTz\nTJCsZRcZSPSgBwYFK4EEACKhZANiAAQ/WgEu0wFr3gDojEog1SQho4lFhKEiyv7G\n7sfc5uRGWOJsvXf2SebxdcJNcbmMb8ggm8F2wOZOIfA/OdnQpE32ggBz4JSoh5RS\nQQ9DztcBipLZZOCDy9M86aX+G2TdBs0=\n-----END EC PRIVATE KEY-----\n"
+        })
+        runner.invoke(cmd.retrieve_device_public_key, [device_id, '--token', access_token])
+
+        tiny_db = TinyDB(cmd.path)
+        table = tiny_db.table(name='device_keys')
+        doc = table.get(Query().device_id == device_id)
+        assert "device_id" in doc and "shared_key" in doc
+        assert "public_key" not in doc and "master_key" not in doc, "public_key and master_key should not be present anymore (Ephemeral keys need to be wiped)."
+
+        user_device = db.session.query(UserDevice).filter(and_(
+            UserDevice.device_id == device_id,
+            UserDevice.user_id == 1,
+        )).first()
+        user_device.device_public_session_key = None
+        user_device.added = None
+        db.session.add(user_device)
+        db.session.commit()
     os.remove(cmd.path)

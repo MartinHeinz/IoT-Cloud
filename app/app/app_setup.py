@@ -1,6 +1,8 @@
 import atexit
 import ssl
 import os
+import uuid
+
 import paho.mqtt.client as mqtt
 
 from apscheduler.schedulers.background import BackgroundScheduler
@@ -10,7 +12,7 @@ from flask_sqlalchemy import SQLAlchemy
 from app.config import config
 
 db = SQLAlchemy()
-client = mqtt.Client(client_id='server')
+client = mqtt.Client(client_id=f'server_{str(uuid.uuid4())}')
 
 
 def register_models():
