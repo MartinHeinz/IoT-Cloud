@@ -1,17 +1,16 @@
 import base64
 import json
 import os
-from binascii import b2a_hex
+from binascii import b2a_hex, a2b_hex
 
 import click
+from cryptography.fernet import Fernet
 from cryptography.hazmat.backends import default_backend
 from cryptography.hazmat.primitives import serialization
 from cryptography.hazmat.primitives.asymmetric import ec
 from cryptography.hazmat.primitives.asymmetric.ec import EllipticCurvePublicKey
 from cryptography.hazmat.primitives.serialization import load_pem_public_key
 from tinydb import TinyDB, Query
-
-from crypto_utils import decrypt
 
 
 dir_path = os.path.dirname(os.path.realpath(__file__))
@@ -32,26 +31,23 @@ def init(device_id):
 
 
 @device.command()
-@click.argument('ciphertext')
-@click.argument('tag')
-def parse_msg(ciphertext, tag):
-    try:
-        ciphertext_decoded = base64.b64decode(ciphertext)
-        tag_decoded = base64.b64decode(tag)
+@click.argument('data')
+def parse_msg(data):
+    """ Can be trigger by: `./cli.py -b "172.21.0.3" user send-message 23 "{\"action\": true}"` """
+    try:  # TODO sanitize inputs; check for presence of shared key based on user
+        data = json.loads(data)
 
-        key = b'f\x9c\xeb Lj\x13n\x84B\xf5S\xb5\xdfnl53d\x10\x12\x92\x82\xe1\xe3~\xc8*\x16\x9f\xd69'  # os.urandom(32)
-        iv = b'HQ\xd9\xb3Kz\n\xcc\xb224Q\xdb\xc7u\xb7'  # os.urandom(16)
+        db = TinyDB(path)
+        table = db.table(name='users')
+        doc = table.get(Query().id == data["user_id"])
 
-        data = decrypt(
-            key,
-            b"authenticated but not encrypted payload",
-            iv,
-            ciphertext_decoded,
-            tag_decoded
-        )
-        click.echo(data.decode("utf-8"))
-    except:
-        click.echo("Incorrect payload.")
+        shared_key = a2b_hex(doc["shared_key"].encode())
+        fernet_key = Fernet(base64.urlsafe_b64encode(shared_key))
+        plaintext = fernet_key.decrypt(data["ciphertext"].encode())
+        click.echo(plaintext)
+
+    except Exception as e:
+        click.echo(repr(e))
 
 
 @device.command()
@@ -83,4 +79,4 @@ def receive_pk(data):
         payload = f'{{"user_id": {int(user_id)}, "device_public_key": "{public_pem}"}}'
         click.echo(payload)
     except Exception as e:
-        click.echo(str(e))
+        click.echo(repr(e))

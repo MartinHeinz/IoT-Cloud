@@ -86,6 +86,19 @@ def test_send_message(runner, access_token):
     os.remove(cmd.path)
 
 
+def test_parse_msg(runner):
+    data = """{"ciphertext": "gAAAAABcOiilUJ_u1tRSQ-iIghG4DgPOfCjUXOL2_FZ0f2XcPHcp5rDMu1dQMvFZ_4VlPr-QjG79HNes-F6bDxcr7K03R0r-8bWEZaFcS3j-ri0C-sy33Fc=", "user_id": 1}"""
+    if os.path.isfile(device_cmd.path):
+        os.remove(device_cmd.path)
+
+    tiny_db = TinyDB(device_cmd.path)
+    table = tiny_db.table(name='users')
+    table.insert({"id": 1, "shared_key": "aefe715635c3f35f7c58da3eb410453712aaf1f8fd635571aa5180236bb21acc"})
+    result = runner.invoke(device_cmd.parse_msg, [data])
+    assert "{\"action\": true}" in result.output
+    os.remove(device_cmd.path)
+
+
 def test_create_device_type(runner, access_token):
     result = runner.invoke(cmd.create_device_type, ["description", '--token', access_token])
     assert "\"success\": true," in result.output

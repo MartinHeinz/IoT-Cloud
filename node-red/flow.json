@@ -7,36 +7,6 @@
         "info": ""
     },
     {
-        "id": "a0bc715a.1dbdf",
-        "type": "mqtt in",
-        "z": "f1dd4598.5b0fa8",
-        "name": "",
-        "topic": "flask_test",
-        "qos": "2",
-        "broker": "mqtt-broker-tls",
-        "x": 220,
-        "y": 340,
-        "wires": [
-            [
-                "1ac6d612.d7152a"
-            ]
-        ]
-    },
-    {
-        "id": "119d741c.d39a9c",
-        "type": "debug",
-        "z": "f1dd4598.5b0fa8",
-        "name": "Debug",
-        "active": true,
-        "tosidebar": true,
-        "console": false,
-        "tostatus": false,
-        "complete": "true",
-        "x": 950,
-        "y": 360,
-        "wires": []
-    },
-    {
         "id": "39d671ff.8f0f6e",
         "type": "mqtt out",
         "z": "f1dd4598.5b0fa8",
@@ -66,88 +36,6 @@
         "wires": [
             [
                 "39d671ff.8f0f6e"
-            ]
-        ]
-    },
-    {
-        "id": "1ac6d612.d7152a",
-        "type": "exec",
-        "z": "f1dd4598.5b0fa8",
-        "command": "python3 /home/martin/Projects/diplomovka/IoT-Cloud/client/cli.py --no-debug device parse-msg ",
-        "addpay": true,
-        "append": "",
-        "useSpawn": "false",
-        "timer": "5",
-        "oldrc": false,
-        "name": "process",
-        "x": 400,
-        "y": 340,
-        "wires": [
-            [
-                "51b1392c.c4b6c8"
-            ],
-            [],
-            []
-        ]
-    },
-    {
-        "id": "c0336410.2868f8",
-        "type": "switch",
-        "z": "f1dd4598.5b0fa8",
-        "name": "",
-        "property": "payload.setOn",
-        "propertyType": "msg",
-        "rules": [
-            {
-                "t": "eq",
-                "v": "True",
-                "vt": "str"
-            },
-            {
-                "t": "else"
-            }
-        ],
-        "checkall": "true",
-        "repair": true,
-        "outputs": 2,
-        "x": 750,
-        "y": 320,
-        "wires": [
-            [
-                "2e30229.907f9de"
-            ],
-            [
-                "119d741c.d39a9c"
-            ]
-        ]
-    },
-    {
-        "id": "2e30229.907f9de",
-        "type": "debug",
-        "z": "f1dd4598.5b0fa8",
-        "name": "SetOn",
-        "active": true,
-        "tosidebar": true,
-        "console": false,
-        "tostatus": false,
-        "complete": "payload",
-        "x": 950,
-        "y": 280,
-        "wires": []
-    },
-    {
-        "id": "51b1392c.c4b6c8",
-        "type": "json",
-        "z": "f1dd4598.5b0fa8",
-        "name": "",
-        "property": "payload",
-        "action": "",
-        "pretty": true,
-        "x": 590,
-        "y": 320,
-        "wires": [
-            [
-                "c0336410.2868f8"
             ]
         ]
     },
@@ -193,7 +81,7 @@
         "qos": "2",
         "broker": "mqtt-broker-tls",
         "x": 210,
-        "y": 520,
+        "y": 360,
         "wires": [
             [
                 "bb949436.d2c408"
@@ -212,7 +100,7 @@
         "oldrc": false,
         "name": "process",
         "x": 400,
-        "y": 520,
+        "y": 360,
         "wires": [
             [
                 "e9d870ed.dcb8a"
@@ -230,7 +118,7 @@
         "action": "",
         "pretty": true,
         "x": 610,
-        "y": 520,
+        "y": 360,
         "wires": [
             [
                 "c6d39b94.7fed48"
@@ -247,7 +135,7 @@
         "retain": "",
         "broker": "mqtt-broker-tls",
         "x": 810,
-        "y": 520,
+        "y": 360,
         "wires": []
     },
     {
@@ -259,26 +147,106 @@
         "qos": "2",
         "broker": "mqtt-broker-tls",
         "x": 210,
-        "y": 660,
+        "y": 500,
         "wires": [
             [
-                "1e14e1d6.0bc83e"
+                "3c4c1a28.5ef0e6"
             ]
         ]
     },
     {
-        "id": "1e14e1d6.0bc83e",
+        "id": "3c4c1a28.5ef0e6",
+        "type": "exec",
+        "z": "f1dd4598.5b0fa8",
+        "command": "python3 /home/martin/Projects/diplomovka/IoT-Cloud/client/cli.py --no-debug device parse-msg ",
+        "addpay": true,
+        "append": "",
+        "useSpawn": "false",
+        "timer": "5",
+        "oldrc": false,
+        "name": "process",
+        "x": 380,
+        "y": 500,
+        "wires": [
+            [
+                "7cf55674.de2318"
+            ],
+            [],
+            []
+        ]
+    },
+    {
+        "id": "e776d04f.927f2",
         "type": "debug",
         "z": "f1dd4598.5b0fa8",
-        "name": "Log Messages for Device",
+        "name": "Debug",
         "active": true,
         "tosidebar": true,
         "console": false,
         "tostatus": false,
         "complete": "true",
-        "x": 420,
-        "y": 660,
+        "x": 910,
+        "y": 540,
         "wires": []
+    },
+    {
+        "id": "de19777e.1dba28",
+        "type": "switch",
+        "z": "f1dd4598.5b0fa8",
+        "name": "",
+        "property": "payload.action",
+        "propertyType": "msg",
+        "rules": [
+            {
+                "t": "true"
+            },
+            {
+                "t": "else"
+            }
+        ],
+        "checkall": "true",
+        "repair": true,
+        "outputs": 2,
+        "x": 710,
+        "y": 500,
+        "wires": [
+            [
+                "247f8722.253548"
+            ],
+            [
+                "e776d04f.927f2"
+            ]
+        ]
+    },
+    {
+        "id": "247f8722.253548",
+        "type": "debug",
+        "z": "f1dd4598.5b0fa8",
+        "name": "SetOn",
+        "active": true,
+        "tosidebar": true,
+        "console": false,
+        "tostatus": false,
+        "complete": "payload",
+        "x": 910,
+        "y": 460,
+        "wires": []
+    },
+    {
+        "id": "7cf55674.de2318",
+        "type": "json",
+        "z": "f1dd4598.5b0fa8",
+        "name": "",
+        "property": "payload",
+        "action": "",
+        "pretty": true,
+        "x": 570,
+        "y": 500,
+        "wires": [
+            [
+                "de19777e.1dba28"
+            ]
+        ]
     },
     {
         "id": "mqtt-broker-tls",

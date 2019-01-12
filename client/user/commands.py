@@ -73,7 +73,7 @@ def send_message(device_id, data):
     def on_publish(client, userdata, result):
         click.echo("Data published")
 
-    client = paho.Client("user_id")
+    client = paho.Client("user_id")  # TODO replace with actual user_id
     client.on_publish = on_publish
 
     client.tls_set(ca_certs=os.path.join(os.path.dirname(__file__), "certs/server.crt"),
@@ -83,8 +83,10 @@ def send_message(device_id, data):
     client.tls_insecure_set(True)
 
     client.connect(MQTT_BROKER, MQTT_PORT)
-    ret = client.publish(f"user_id/{device_id}", token.decode())
+    payload = {"\"ciphertext\"": f"\"{token.decode()}\"", "\"user_id\"": 1}
+    ret = client.publish(f"1/{device_id}", f"\"{json.dumps(payload)}\"")  # TODO replace with actual user_id, change payload to json and parse it as JSON on device end
     click.echo(f"RC and MID = {ret}")
+    click.echo(f"\"{json.dumps(payload)}\"")
 
 
 @user.command()
