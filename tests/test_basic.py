@@ -7,9 +7,8 @@ import pytest
 from paho.mqtt.client import MQTTMessage
 from passlib.hash import bcrypt
 
-from app.api.endpoints import DEVICE_TYPE_ID_MISSING_ERROR_MSG, DEVICE_TYPE_ID_INCORRECT_ERROR_MSG, DEVICE_NAME_BI_MISSING_ERROR_MSG, \
-    DATA_RANGE_MISSING_ERROR_MSG, DATA_OUT_OF_OUTPUT_RANGE_ERROR_MSG, DEVICE_NAME_MISSING_ERROR_MSG, CORRECTNESS_HASH_MISSING_ERROR_MSG
-from app.errors.errors import SOMETHING_WENT_WRONG_MSG
+from app.consts import DEVICE_TYPE_ID_MISSING_ERROR_MSG, DEVICE_TYPE_ID_INCORRECT_ERROR_MSG, DEVICE_NAME_BI_MISSING_ERROR_MSG, DEVICE_NAME_MISSING_ERROR_MSG, \
+    DATA_RANGE_MISSING_ERROR_MSG, DATA_OUT_OF_OUTPUT_RANGE_ERROR_MSG, CORRECTNESS_HASH_MISSING_ERROR_MSG, SOMETHING_WENT_WRONG_MSG
 from app.models.models import DeviceType, Device, DeviceData
 from app.app_setup import client as mqtt_client
 from app.mqtt.utils import Payload

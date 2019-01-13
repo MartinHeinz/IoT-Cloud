@@ -15,11 +15,11 @@ from cryptography.hazmat.primitives.asymmetric import ec
 from cryptography.hazmat.primitives.asymmetric.ec import EllipticCurvePublicKey, EllipticCurvePrivateKey
 from cryptography.hazmat.primitives.serialization import load_pem_private_key, load_pem_public_key
 from tinydb import TinyDB, where, Query
+import paho.mqtt.client as paho
 
 from crypto_utils import hash, correctness_hash, check_correctness_hash
 from utils import json_string_with_bytes_to_dict
 
-import paho.mqtt.client as paho
 
 URL_BASE = "https://localhost/api/"
 URL_PUBLISH = URL_BASE + "publish"
@@ -83,10 +83,10 @@ def send_message(device_id, data):
     client.tls_insecure_set(True)
 
     client.connect(MQTT_BROKER, MQTT_PORT)
-    payload = {"\"ciphertext\"": f"\"{token.decode()}\"", "\"user_id\"": 1}
-    ret = client.publish(f"1/{device_id}", f"\"{json.dumps(payload)}\"")  # TODO replace with actual user_id, change payload to json and parse it as JSON on device end
+    payload = {'"ciphertext"': f'"{token.decode()}"', '"user_id"': 1}
+    ret = client.publish(f"1/{device_id}", f'"{json.dumps(payload)}"')  # TODO replace with actual user_id, change payload to json and parse it as JSON on device end
     click.echo(f"RC and MID = {ret}")
-    click.echo(f"\"{json.dumps(payload)}\"")
+    click.echo(f'"{json.dumps(payload)}"')
 
 
 @user.command()
@@ -190,10 +190,6 @@ def retrieve_device_public_key(device_id, token):
         "access_token": token,
         "device_id": device_id
     }
-    r = requests.post(URL_RECEIVE_PUBLIC_KEY, params=data, verify=VERIFY_CERTS)
-    if r.status_code != 200:
-        click.echo(r.content.decode('unicode-escape'))
-        return
     db = TinyDB(path)
     table = db.table(name='device_keys')
     doc = table.get(Query().device_id == device_id)
@@ -204,13 +200,18 @@ def retrieve_device_public_key(device_id, token):
             click.echo(get_attr_auth_keys.get_help(ctx))
             return
 
+    r = requests.post(URL_RECEIVE_PUBLIC_KEY, params=data, verify=VERIFY_CERTS)
+    if r.status_code != 200:
+        click.echo(r.content.decode('unicode-escape'))
+        return
+
     content = r.content.decode('unicode-escape')
     json_content = json_string_with_bytes_to_dict(content)
 
     private_key = load_pem_private_key(doc["private_key"].encode(), password=None, backend=default_backend())
-    assert isinstance(private_key, EllipticCurvePrivateKey)  # TODO change asserts to prints (asserts are only for programmers, not for users)
+    assert isinstance(private_key, EllipticCurvePrivateKey), "Loading private key failed! - private_key is not instance of EllipticCurvePrivateKey"
     device_public_key = load_pem_public_key(json_content["device_public_key"].encode(), backend=default_backend())
-    assert isinstance(device_public_key, EllipticCurvePublicKey)
+    assert isinstance(device_public_key, EllipticCurvePublicKey), "Loading public key failed! - private_key is not instance of EllipticCurvePublicKey"
     shared_key = private_key.exchange(ec.ECDH(), device_public_key)
 
     key = b2a_hex(shared_key[:32]).decode()  # NOTE: retrieve key as `a2b_hex(key.encode())`

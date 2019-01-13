@@ -6,22 +6,12 @@ from app.api import api
 from app.api.utils import is_number, get_user_by_access_token, can_use_device
 from app.app_setup import client, db
 from app.auth.utils import require_api_token
+from app.consts import DEVICE_TYPE_ID_MISSING_ERROR_MSG, DEVICE_TYPE_ID_INCORRECT_ERROR_MSG, DEVICE_TYPE_DESC_MISSING_ERROR_MSG, \
+    DEVICE_NAME_BI_MISSING_ERROR_MSG, DEVICE_NAME_MISSING_ERROR_MSG, DATA_RANGE_MISSING_ERROR_MSG, DATA_OUT_OF_OUTPUT_RANGE_ERROR_MSG, \
+    CORRECTNESS_HASH_MISSING_ERROR_MSG, DEVICE_ID_MISSING_ERROR_MSG, PUBLIC_KEY_MISSING_ERROR_MSG, UNAUTHORIZED_USER_ERROR_MSG, NO_PUBLIC_KEY_ERROR_MSG
 from app.models.models import DeviceType, Device, DeviceData, UserDevice
 from app.mqtt.utils import Payload
 from app.utils import http_json_response, check_missing_request_argument, is_valid_uuid
-
-DEVICE_TYPE_ID_MISSING_ERROR_MSG = 'Missing device type id.'
-DEVICE_TYPE_ID_INCORRECT_ERROR_MSG = 'Incorrect device type id.'
-DEVICE_TYPE_DESC_MISSING_ERROR_MSG = 'Missing device type description.'
-DEVICE_NAME_BI_MISSING_ERROR_MSG = 'Missing device Blind Index.'
-DEVICE_NAME_MISSING_ERROR_MSG = 'Missing device Name.'
-DATA_RANGE_MISSING_ERROR_MSG = 'Missing upper and lower range for query.'
-DATA_OUT_OF_OUTPUT_RANGE_ERROR_MSG = 'Value out of OPE output range.'
-CORRECTNESS_HASH_MISSING_ERROR_MSG = 'Correctness Hash needs to be provided.'
-DEVICE_ID_MISSING_ERROR_MSG = 'Missing device id.'
-PUBLIC_KEY_MISSING_ERROR_MSG = 'Missing user public key for key exchange.'
-UNAUTHORIZED_USER_ERROR_MSG = 'Specified user is not authorized to use this device.'
-NO_PUBLIC_KEY_ERROR_MSG = 'No public key available for this device.'
 
 
 @api.route('/publish', methods=['POST'])
@@ -184,8 +174,12 @@ def retrieve_public_key():
     user_device = db.session.query(UserDevice) \
         .filter(and_(UserDevice.device_id == device_id,
                      UserDevice.user_id == user.id)).first()
+    public_key = user_device.device_public_session_key
 
-    # TODO remove key after retrieval
-    if user_device.device_public_session_key:
-        return http_json_response(**{'device_public_key': user_device.device_public_session_key})
+    if public_key:
+        user_device.device_public_session_key = None
+        user_device.added = None
+        db.session.add(user_device)
+        db.session.commit()
+        return http_json_response(**{'device_public_key': public_key})
     return http_json_response(False, 400, **{"error": NO_PUBLIC_KEY_ERROR_MSG})

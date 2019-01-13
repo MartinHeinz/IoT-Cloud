@@ -1,12 +1,12 @@
 import os
+import re
 import warnings
 import pytest
 from click.testing import CliRunner
-from sqlalchemy import and_
 from sqlalchemy.exc import SADeprecationWarning
 
 from app.app_setup import create_app, db
-from app.models.models import UserDevice
+from app.utils import get_user_device_by_ids
 
 
 @pytest.fixture(scope="module")
@@ -75,21 +75,36 @@ def attr_auth_access_token_two():
 
 
 @pytest.fixture(scope='function')
-def setup_user_device_public_key(request, app_and_ctx):
-    device_id, user_id, pk = request.param
-    app, ctx = app_and_ctx
+def setup_user_device_public_key(request):
+    device_id, user_id, pk, db_name = request.param
+    warnings.filterwarnings("ignore", category=SADeprecationWarning)
+    app = create_app(os.getenv('TESTING_ENV', "testing"))
     with app.app_context():
-        user_device = db.session.query(UserDevice) \
-            .filter(and_(UserDevice.device_id == device_id,
-                         UserDevice.user_id == user_id)).first()
-        user_device.device_public_session_key = pk
-        db.session.add(user_device)
-        db.session.commit()
+        _swap_db(app, "testing", db_name)
+        _set_user_device_public_key(device_id, user_id, pk)
+        _swap_db(app, db_name, "testing")
     yield None
     with app.app_context():
-        user_device = db.session.query(UserDevice) \
-            .filter(and_(UserDevice.device_id == device_id,
-                         UserDevice.user_id == user_id)).first()
-        user_device.device_public_session_key = None
-        db.session.add(user_device)
-        db.session.commit()
+        _swap_db(app, "testing", db_name)
+        _set_user_device_public_key(device_id, user_id, None)
+        _swap_db(app, db_name, "testing")
+
+
+@pytest.fixture(scope='function')
+def reset_tiny_db(request):
+    path = request.param
+    if os.path.isfile(path):
+        os.remove(path)
+    yield None
+    os.remove(path)
+
+
+def _swap_db(app, current, new):
+    app.config["SQLALCHEMY_DATABASE_URI"] = re.sub(f"{current}$", new, app.config["SQLALCHEMY_DATABASE_URI"])
+
+
+def _set_user_device_public_key(device_id, user_id, pk):
+    user_device = get_user_device_by_ids(device_id, user_id)
+    user_device.device_public_session_key = pk
+    db.session.add(user_device)
+    db.session.commit()

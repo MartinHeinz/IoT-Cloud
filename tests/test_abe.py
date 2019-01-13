@@ -7,9 +7,9 @@ from charm.schemes.abenc.abenc_bsw07 import CPabe_BSW07
 from charm.toolbox.pairinggroup import PairingGroup
 
 from app.api.utils import get_aa_user_by_access_token
-from app.attribute_authority.endpoints import INCORRECT_RECEIVER_ID_ERROR_MSG, INVALID_ATTR_LIST_ERROR_MSG, MESSAGE_MISSING_ERROR_MSG, \
-    POLICY_STRING_MISSING_ERROR_MSG, CIPHERTEXT_MISSING_ERROR_MSG, COULD_NOT_DECRYPT_ERROR_MSG, OWNER_API_USERNAME_MISSING_ERROR_MSG, \
-    INVALID_OWNER_API_USERNAME_ERROR_MSG, API_USERNAME_MISSING_ERROR_MSG
+from app.consts import INCORRECT_RECEIVER_ID_ERROR_MSG, INVALID_ATTR_LIST_ERROR_MSG, MESSAGE_MISSING_ERROR_MSG, POLICY_STRING_MISSING_ERROR_MSG, \
+    CIPHERTEXT_MISSING_ERROR_MSG, COULD_NOT_DECRYPT_ERROR_MSG, INVALID_OWNER_API_USERNAME_ERROR_MSG, OWNER_API_USERNAME_MISSING_ERROR_MSG, \
+    API_USERNAME_MISSING_ERROR_MSG
 from app.attribute_authority.utils import create_pairing_group, create_cp_abe, serialize_charm_object, deserialize_charm_object, already_has_key_from_owner, \
     create_attributes, \
     replace_existing_key, parse_attr_list, get_private_key_based_on_owner

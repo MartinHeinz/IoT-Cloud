@@ -10,8 +10,11 @@ from cryptography.hazmat.primitives.asymmetric import ec
 from cryptography.hazmat.primitives.asymmetric.ec import EllipticCurvePublicKey
 from cryptography.hazmat.primitives.asymmetric.x25519 import X25519PrivateKey, X25519PublicKey
 from cryptography.hazmat.primitives.serialization import load_pem_public_key
+from sqlalchemy import and_
 
-from app.api.endpoints import PUBLIC_KEY_MISSING_ERROR_MSG, DEVICE_ID_MISSING_ERROR_MSG, UNAUTHORIZED_USER_ERROR_MSG, NO_PUBLIC_KEY_ERROR_MSG
+from app.app_setup import db
+from app.consts import DEVICE_ID_MISSING_ERROR_MSG, PUBLIC_KEY_MISSING_ERROR_MSG, UNAUTHORIZED_USER_ERROR_MSG, NO_PUBLIC_KEY_ERROR_MSG
+from app.models.models import UserDevice
 from client.crypto_utils import derive_key
 
 
@@ -173,9 +176,10 @@ def test_retrieve_public_key_no_such_key(client, access_token):
                            'MHYwEAYHKoZIzj0CAQYFK4EEACIDYgAE2rD6Bhju8WSEFogdBxZt/N+n7ziUPi5C\n'
                            'QU1gSQQDNm57fdDuYNDOR7Wwb1fq5tSl2TC1D6WRTIt1gzzCsApGpZ3PIs7Wdbil\n'
                            'eJL/ETGa2Sqwav7JDH4r0V30sF4NqDok\n'
-                           '-----END PUBLIC KEY-----\n')
+                           '-----END PUBLIC KEY-----\n',
+                           'testing')
                           ], indirect=True)
-def test_retrieve_public_key_success(client, access_token, setup_user_device_public_key):
+def test_retrieve_public_key_success(client, app_and_ctx, access_token, setup_user_device_public_key):
     device_id = 23
     data = {
         "device_id": device_id,
@@ -186,3 +190,10 @@ def test_retrieve_public_key_success(client, access_token, setup_user_device_pub
     assert response.status_code == 200
     json_data = json.loads(response.data.decode("utf-8"))
     assert (json_data["device_public_key"]).startswith("-----BEGIN PUBLIC KEY----")
+    app, ctx = app_and_ctx
+    with app.app_context():
+        user_device = db.session.query(UserDevice) \
+            .filter(and_(UserDevice.device_id == device_id,
+                         UserDevice.user_id == 1)).first()
+        assert user_device.device_public_session_key is None
+        assert user_device.added is None

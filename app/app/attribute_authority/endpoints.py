@@ -6,6 +6,9 @@ from app.app_setup import db
 from app.attribute_authority import attr_authority
 from app.attribute_authority.utils import serialize_charm_object, create_cp_abe, create_pairing_group, deserialize_charm_object, get_aa_user_by_id
 from app.auth.utils import require_api_token
+from app.consts import MASTER_KEY_MISSING_ERROR_MSG, ATTR_LIST_MISSING_ERROR_MSG, RECEIVER_ID_MISSING_ERROR_MSG, INCORRECT_RECEIVER_ID_ERROR_MSG, \
+    INVALID_ATTR_LIST_ERROR_MSG, MESSAGE_MISSING_ERROR_MSG, POLICY_STRING_MISSING_ERROR_MSG, CIPHERTEXT_MISSING_ERROR_MSG, COULD_NOT_DECRYPT_ERROR_MSG, \
+    INVALID_OWNER_API_USERNAME_ERROR_MSG, OWNER_API_USERNAME_MISSING_ERROR_MSG, API_USERNAME_MISSING_ERROR_MSG
 from app.models.models import AttrAuthUser, PublicKey, PrivateKey
 from app.utils import http_json_response, check_missing_request_argument
 
@@ -35,19 +38,6 @@ NOTES:
     - Authority is trusted, so if we assume a secure connection, then we can decrypt on server,
         but can be done on client too - that will require a user to have ABE, pbc and Charm installed though
 """
-
-MASTER_KEY_MISSING_ERROR_MSG = 'Missing serialized master key argument.'
-ATTR_LIST_MISSING_ERROR_MSG = 'Missing attribute list argument.'
-RECEIVER_ID_MISSING_ERROR_MSG = 'Missing receiver id argument.'
-INCORRECT_RECEIVER_ID_ERROR_MSG = 'Incorrect receiver ID.'
-INVALID_ATTR_LIST_ERROR_MSG = 'Invalid attribute list (only alphanumeric values separated with whitespaces are allowed).'
-MESSAGE_MISSING_ERROR_MSG = 'Missing plaintext message to be encrypted.'
-POLICY_STRING_MISSING_ERROR_MSG = 'Missing Policy string in format `((four or three) and (two or one))`'
-CIPHERTEXT_MISSING_ERROR_MSG = 'Missing ciphertext to be decrypted.'
-COULD_NOT_DECRYPT_ERROR_MSG = "We could not decrypt your message (MAC might be invalid = Your data was tampered with or your key is wrong)."
-INVALID_OWNER_API_USERNAME_ERROR_MSG = 'Specified API username of data owner is invalid.'
-OWNER_API_USERNAME_MISSING_ERROR_MSG = 'Specified API username of data owner is invalid is not present.'
-API_USERNAME_MISSING_ERROR_MSG = 'Missing API username argument.'
 
 
 @attr_authority.route('/set_username', methods=['POST'])
@@ -137,7 +127,7 @@ def encrypt():
     token = request.args.get("access_token", None)
     plaintext = request.args.get("message", None)
     policy_string = request.args.get("policy_string", None)
-    # TODO can't tell if `policy_string` is valid or not based on produced ciphertext, options: write function to parse it or find something in Charm
+    # TODO can't tell if `policy_string` is valid or not based on produced ciphertext, could use pyparsing... too complex
 
     arg_check = check_missing_request_argument(
         (plaintext, MESSAGE_MISSING_ERROR_MSG),
