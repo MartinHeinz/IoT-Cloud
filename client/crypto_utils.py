@@ -6,6 +6,8 @@ from cryptography.hazmat.primitives.ciphers import (
 )
 from cryptography.hazmat.primitives.kdf.hkdf import HKDF
 from passlib.hash import bcrypt
+from scipy import signal
+import numpy as np
 
 
 def encrypt(key, plaintext, associated_data):
@@ -59,6 +61,7 @@ def correctness_hash(*strings, fake=False):
     if not fake:
         return bcrypt.using(rounds=12).hash(''.join(map(str, strings)))
     return bcrypt.using(rounds=12).hash(''.join(map(str, strings)) + "1")
+    # TODO bcrypt.using(rounds=12).hash(''.join(map(str, strings))) + "1" <- Based on paper it should be done like this
 
 
 def check_correctness_hash(query_result, *keys):
@@ -76,3 +79,58 @@ def derive_key(key):
         info=b'',
         backend=default_backend()
     ).derive(key)
+
+
+"""
+To see the lists of values:
+print(list(triangle_wave()))
+print(list(sawtooth_wave()))
+print(list(square_wave()))
+print(list(sine_wave()))
+
+To plot:
+import matplotlib.pyplot as plt
+
+t = np.linspace(0, 100, 500)
+triangle = signal.sawtooth(10 * np.pi * 5 * t, 0.5)
+plt.plot(t, triangle)
+plt.show()
+"""
+
+
+def triangle_wave():
+    t = np.linspace(0, 100, 500)
+    triangle = signal.sawtooth(10 * np.pi * 5 * t, 0.5)
+    yield from(round(x, 4) for x in triangle.tolist())
+
+
+def sawtooth_wave():
+    t = np.linspace(0, 100, 500)
+    sawtooth = signal.sawtooth(10 * np.pi * 5 * t)
+    yield from (round(x, 4) for x in sawtooth.tolist())
+
+
+def square_wave():
+    t = np.linspace(0, 100, 500)
+    square = signal.square(8 * np.pi * 5 * t)
+    yield from (round(x, 4) for x in square.tolist())
+
+
+def sine_wave():
+    t = np.linspace(0, 32 * np.pi, 500)
+    sine = np.sin(t)
+    yield from (round(x, 4) for x in sine.tolist())
+
+
+def generate(**kwargs):
+    """
+    :param kwargs: pairs of attribute name and generator that generates value for this attribute
+    """
+    fake_tuple = {}
+    for attr, fun in kwargs.items():
+        fake_tuple[attr] = next(fun)
+    return fake_tuple
+
+
+def fake_tuple_to_hash(pairs):
+    return correctness_hash(*pairs.values(), fake=True)

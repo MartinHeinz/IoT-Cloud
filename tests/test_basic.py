@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 import base64
 import json
+import types
 from uuid import UUID
 
 import pytest
@@ -13,7 +14,7 @@ from app.models.models import DeviceType, Device, DeviceData
 from app.app_setup import client as mqtt_client
 from app.mqtt.utils import Payload
 from app.utils import is_valid_uuid
-from client.crypto_utils import encrypt, hash, correctness_hash
+from client.crypto_utils import encrypt, hash, correctness_hash, triangle_wave, sawtooth_wave, square_wave, sine_wave, generate, fake_tuple_to_hash
 
 from .conftest import db
 
@@ -331,3 +332,31 @@ def test_correctness_hash():
     assert bcrypt.verify("ergh" + "esrge", correctness_hash("ergh", "esrge"))
     assert bcrypt.verify("ergh" + "esrge" + "1", correctness_hash("ergh", "esrge", fake=True))
     assert not bcrypt.verify("ergh" + "esrge" + "wes", correctness_hash("ergh", "esrge"))
+
+
+def test_wave_func():
+    funcs = [triangle_wave, sawtooth_wave, square_wave, sine_wave]
+    for f in funcs:
+        gen = f()
+        assert isinstance(gen, types.GeneratorType)
+        assert len(list(gen)) == 500
+
+
+def test_generate_fake_tuple_and_hash():
+    pairs = {
+        "name": triangle_wave(),
+        "data": sawtooth_wave(),
+        "other": square_wave(),
+        "another": sine_wave()
+    }
+
+    d = generate(**pairs)
+    assert d["name"] == -1.0
+    assert d["data"] == -1.0
+    assert d["other"] == 1.0
+    assert d["another"] == 0.0
+
+    fake_tuple_hash = fake_tuple_to_hash(d)
+    assert bcrypt.verify("-1.0" + "-1.0" + "1.0" + "0.0" + "1", fake_tuple_hash)
+
+
