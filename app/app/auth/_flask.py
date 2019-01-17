@@ -8,22 +8,22 @@ from app.auth.utils import handle_authorize
 
 @login.route('/auth')
 def auth():
-    auth_common(remote_app, nonce_key_app)
+    return auth_common(remote_app, nonce_key_app)
 
 
 @login.route('/login')
 def login():  # noqa pylint: disable=function-redefined
-    login_common(remote_app, ".auth", backend_app, nonce_key_app)
+    return login_common(remote_app, ".auth", backend_app, nonce_key_app)
 
 
 @login_aa.route('/auth')
 def auth_aa():
-    auth_common(remote_aa, nonce_key_aa)
+    return auth_common(remote_aa, nonce_key_aa)
 
 
 @login_aa.route('/login')
 def login_aa():  # noqa pylint: disable=function-redefined
-    login_common(remote_aa, ".auth_aa", backend_aa, nonce_key_aa)
+    return login_common(remote_aa, ".auth_aa", backend_aa, nonce_key_aa)
 
 
 def login_common(remote, url_for_auth, backend, nonce_key):

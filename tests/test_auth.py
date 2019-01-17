@@ -140,3 +140,10 @@ def test_require_api_token_in_attr_auth_db(application):
     with application.test_request_context("/?access_token=5BagPr4ZdV9PvyyBNkjFvA))"):
         decorated_func()
         assert func.call_count == 1
+
+
+def test_redirect_to_provider(client):
+    response = client.get('/login')
+    assert "https://github.com/login/oauth/" in response.location
+    response = client.get('/attr_auth/login')
+    assert "https://stackoverflow.com/oauth" in response.location
