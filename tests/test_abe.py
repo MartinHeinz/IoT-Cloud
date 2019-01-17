@@ -6,7 +6,6 @@ from charm.adapters.abenc_adapt_hybrid import HybridABEnc
 from charm.schemes.abenc.abenc_bsw07 import CPabe_BSW07
 from charm.toolbox.pairinggroup import PairingGroup
 
-from app.api.utils import get_aa_user_by_access_token
 from app.consts import INCORRECT_RECEIVER_ID_ERROR_MSG, INVALID_ATTR_LIST_ERROR_MSG, MESSAGE_MISSING_ERROR_MSG, POLICY_STRING_MISSING_ERROR_MSG, \
     CIPHERTEXT_MISSING_ERROR_MSG, COULD_NOT_DECRYPT_ERROR_MSG, INVALID_OWNER_API_USERNAME_ERROR_MSG, OWNER_API_USERNAME_MISSING_ERROR_MSG, \
     API_USERNAME_MISSING_ERROR_MSG
@@ -85,12 +84,12 @@ def test_set_username(client, app_and_ctx, attr_auth_access_token_one):
 
     app, ctx = app_and_ctx
     with app.app_context():
-        user = get_aa_user_by_access_token(attr_auth_access_token_one)
+        user = AttrAuthUser.get_by_access_token(attr_auth_access_token_one)
         assert user.api_username == "Changed"
 
         data = {"access_token": attr_auth_access_token_one, "api_username": "MartinHeinz"}
         response = client.post('/attr_auth/set_username', query_string=data, follow_redirects=True)
-        user = get_aa_user_by_access_token(attr_auth_access_token_one)
+        user = AttrAuthUser.get_by_access_token(attr_auth_access_token_one)
         assert response.status_code == 200
         assert user.api_username == "MartinHeinz"
 
@@ -98,8 +97,8 @@ def test_set_username(client, app_and_ctx, attr_auth_access_token_one):
 def test_already_has_key_from_owner(app_and_ctx, attr_auth_access_token_one, attr_auth_access_token_two):
     app, ctx = app_and_ctx
     with app.app_context():
-        owner = get_aa_user_by_access_token(attr_auth_access_token_one)
-        receiver = get_aa_user_by_access_token(attr_auth_access_token_two)
+        owner = AttrAuthUser.get_by_access_token(attr_auth_access_token_one)
+        receiver = AttrAuthUser.get_by_access_token(attr_auth_access_token_two)
 
         assert already_has_key_from_owner(receiver, owner)
 
@@ -107,7 +106,7 @@ def test_already_has_key_from_owner(app_and_ctx, attr_auth_access_token_one, att
 def test_doesnt_have_key_from_owner(app_and_ctx, attr_auth_access_token_two):
     app, ctx = app_and_ctx
     with app.app_context():
-        receiver = get_aa_user_by_access_token(attr_auth_access_token_two)
+        receiver = AttrAuthUser.get_by_access_token(attr_auth_access_token_two)
 
         owner = AttrAuthUser()
 
@@ -246,7 +245,7 @@ def test_keygen_already_has_key_from_owner(client, app_and_ctx, master_key_user_
     }
     app, ctx = app_and_ctx
     with app.app_context():
-        receiver = get_aa_user_by_access_token(attr_auth_access_token_two)  # TestUser access_token
+        receiver = AttrAuthUser.get_by_access_token(attr_auth_access_token_two)  # TestUser access_token
         old_private_key = next(key for key in receiver.private_keys if key.challenger_id == 1)
         old_private_key_data = old_private_key.data
         old_private_key_key_update = old_private_key.key_update
@@ -254,7 +253,7 @@ def test_keygen_already_has_key_from_owner(client, app_and_ctx, master_key_user_
         response = client.post('/attr_auth/keygen', query_string=data, follow_redirects=True)
         assert response.status_code == 200
 
-        receiver = get_aa_user_by_access_token(attr_auth_access_token_two)  # TestUser access_token
+        receiver = AttrAuthUser.get_by_access_token(attr_auth_access_token_two)  # TestUser access_token
         new_private_key = next(key for key in receiver.private_keys if key.challenger_id == 1)
 
         assert old_private_key_data != new_private_key.data
@@ -264,7 +263,7 @@ def test_keygen_already_has_key_from_owner(client, app_and_ctx, master_key_user_
         pairing_group = create_pairing_group()
         cp_abe = create_cp_abe()
         plaintext = "Hello World"
-        data_owner = get_aa_user_by_access_token(attr_auth_access_token_one)
+        data_owner = AttrAuthUser.get_by_access_token(attr_auth_access_token_one)
         policy_str = '(TODAY)'
         public_key = deserialize_charm_object(data_owner.public_key.data, pairing_group)
         new_private_key = deserialize_charm_object(new_private_key.data, pairing_group)
@@ -282,14 +281,14 @@ def test_keygen_doesnt_have_key_from_owner(client, app_and_ctx, master_key_user_
     }
     app, ctx = app_and_ctx
     with app.app_context():
-        receiver = get_aa_user_by_access_token(attr_auth_access_token_one)
+        receiver = AttrAuthUser.get_by_access_token(attr_auth_access_token_one)
 
         num_of_old_keys = len(receiver.private_keys)
 
         response = client.post('/attr_auth/keygen', query_string=data, follow_redirects=True)
         assert response.status_code == 200
 
-        receiver = get_aa_user_by_access_token(attr_auth_access_token_one)
+        receiver = AttrAuthUser.get_by_access_token(attr_auth_access_token_one)
         new_private_key = next(key for key in receiver.private_keys if key.challenger_id == 2)
 
         assert len(receiver.private_keys) == num_of_old_keys + 1
@@ -298,7 +297,7 @@ def test_keygen_doesnt_have_key_from_owner(client, app_and_ctx, master_key_user_
         pairing_group = create_pairing_group()
         cp_abe = create_cp_abe()
         plaintext = "Hello World"
-        data_owner = get_aa_user_by_access_token(attr_auth_access_token_two)
+        data_owner = AttrAuthUser.get_by_access_token(attr_auth_access_token_two)
         policy_str = '(GUEST)'
         public_key = deserialize_charm_object(data_owner.public_key.data, pairing_group)
         new_private_key = deserialize_charm_object(new_private_key.data, pairing_group)
@@ -344,7 +343,7 @@ def test_key_setup(client, app_and_ctx, attr_auth_access_token_one):
 
     app, ctx = app_and_ctx
     with app.app_context():
-        serialized_public_key_from_db = get_aa_user_by_access_token(data["access_token"]).public_key.data.decode("utf-8")
+        serialized_public_key_from_db = AttrAuthUser.get_by_access_token(data["access_token"]).public_key.data.decode("utf-8")
         assert serialized_public_key_response == serialized_public_key_from_db
 
 
@@ -386,8 +385,8 @@ def test_replace_existing_key(app_and_ctx, attr_auth_access_token_one, attr_auth
     attr_list = ["TODAY", "TOMORROW"]
     dummy_serialized_key = b'key'
     with app.app_context():
-        owner = get_aa_user_by_access_token(attr_auth_access_token_one)
-        receiver = get_aa_user_by_access_token(attr_auth_access_token_two)
+        owner = AttrAuthUser.get_by_access_token(attr_auth_access_token_one)
+        receiver = AttrAuthUser.get_by_access_token(attr_auth_access_token_two)
 
         replace_existing_key(receiver, dummy_serialized_key, owner, attr_list)
         modified_key = receiver.private_keys[0]

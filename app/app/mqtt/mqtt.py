@@ -1,8 +1,8 @@
 from datetime import datetime
 from flask import current_app
-from app.models.models import Device, DeviceData
+from app.models.models import Device, DeviceData, User
 from app.mqtt.utils import Payload
-from app.utils import bytes_to_json, get_user_by_id
+from app.utils import bytes_to_json
 
 
 # The callback for when the client receives a CONNACK response from the server.
@@ -27,7 +27,7 @@ def handle_on_message(client, userdata, msg, app, db):
             return
         payload = Payload(**msg.payload)
         with app.app_context():
-            user = get_user_by_id(payload.user_id)
+            user = User.get_by_id(payload.user_id)
             user_device = next((d for d in user.devices if d.device_id == device_id), None)
             if user_device:
                 user_device.device_public_session_key = payload.device_public_key

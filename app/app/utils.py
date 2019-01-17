@@ -2,10 +2,6 @@ import json
 from uuid import UUID
 
 from flask import jsonify
-from sqlalchemy import and_
-
-from app.app_setup import db
-from app.models.models import User, UserDevice
 
 
 def http_json_response(success=True, code=200, **data):
@@ -31,13 +27,3 @@ def is_valid_uuid(uuid_to_test, version=4):
         return False
 
     return str(uuid_obj) == uuid_to_test
-
-
-def get_user_by_id(user_id):
-    return db.session.query(User).filter(User.id == user_id).first()
-
-
-def get_user_device_by_ids(device_id, user_id):
-    return db.session.query(UserDevice) \
-        .filter(and_(UserDevice.device_id == device_id,
-                     UserDevice.user_id == user_id)).first()

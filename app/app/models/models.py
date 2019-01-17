@@ -1,10 +1,11 @@
 import datetime
 from uuid import uuid4
-from sqlalchemy import func
+from sqlalchemy import func, and_
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import relationship
 
 from app.app_setup import db
+from app.models.mixins import MixinGetById, MixinAsDict, MixinGetByAccessToken
 
 scene_device_table = db.Table('scene_device',
                               db.Column("scene_id", db.Integer, db.ForeignKey('scene.id')),
@@ -22,8 +23,14 @@ class UserDevice(db.Model):
     device = relationship("Device", back_populates="users")
     user = relationship("User", back_populates="devices")
 
+    @classmethod
+    def get_by_ids(cls, device_id, user_id):
+        return db.session.query(UserDevice) \
+            .filter(and_(UserDevice.device_id == device_id,
+                         UserDevice.user_id == user_id)).first()
 
-class User(db.Model):
+
+class User(MixinGetByAccessToken, MixinGetById, db.Model):
     __tablename__ = 'user'
     __table_args__ = {'extend_existing': True}
 
@@ -35,6 +42,17 @@ class User(db.Model):
     device_types = relationship("DeviceType", back_populates="owner")
     devices = relationship("UserDevice", back_populates="user")
     owned_devices = relationship("Device", back_populates="owner")
+
+    @classmethod
+    def can_use_device(cls, user_access_token, device_id):
+        q = db.session.query(
+            db.session.query(User).
+            join(UserDevice).
+            filter(User.access_token == user_access_token).
+            filter(UserDevice.device_id == device_id).
+            exists()
+        )
+        return q.scalar()
 
 
 class DeviceType(db.Model):
@@ -51,7 +69,7 @@ class DeviceType(db.Model):
     correctness_hash = db.Column(db.String(200), nullable=False)  # correctness_hash("description")
 
 
-class Device(db.Model):
+class Device(MixinGetById, MixinAsDict, db.Model):
     __tablename__ = 'device'
     __table_args__ = {'extend_existing': True}
 
@@ -74,11 +92,8 @@ class Device(db.Model):
 
     correctness_hash = db.Column(db.String(200), nullable=False)  # correctness_hash("name")
 
-    def as_dict(self):
-        return {c.name: getattr(self, c.name) for c in self.__table__.columns}
 
-
-class DeviceData(db.Model):
+class DeviceData(MixinAsDict, db.Model):
     __tablename__ = 'device_data'
     __table_args__ = {'extend_existing': True}
 
@@ -90,9 +105,6 @@ class DeviceData(db.Model):
     device = relationship("Device", back_populates="data")
 
     correctness_hash = db.Column(db.String(200), nullable=False)  # correctness_hash(str(date(2018, 12, 11)), b'\\001'.decode("utf-8"), str(214357163))
-
-    def as_dict(self):
-        return {c.name: getattr(self, c.name) for c in self.__table__.columns}
 
 
 class Action(db.Model):
@@ -122,7 +134,7 @@ class Scene(db.Model):
     correctness_hash = db.Column(db.String(200), nullable=False)  # correctness_hash("name", "description")
 
 
-class AttrAuthUser(db.Model):
+class AttrAuthUser(MixinGetByAccessToken, MixinGetById, db.Model):
     __table_args__ = {'extend_existing': True}
     __bind_key__ = 'attr_auth'
 

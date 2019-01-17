@@ -6,8 +6,7 @@ from charm.core.engine.util import objectToBytes, bytesToObject
 from charm.schemes.abenc.abenc_bsw07 import CPabe_BSW07
 from charm.toolbox.pairinggroup import PairingGroup
 
-from app.app_setup import db
-from app.models.models import AttrAuthUser, Attribute
+from app.models.models import Attribute
 
 
 def serialize_charm_object(key, group):
@@ -27,10 +26,6 @@ def create_cp_abe():
     pairing_group = create_pairing_group()
     cpabe = CPabe_BSW07(pairing_group)
     return HybridABEnc(cpabe, pairing_group)
-
-
-def get_aa_user_by_id(user_id):
-    return db.session.query(AttrAuthUser).filter(AttrAuthUser.id == user_id).first()
 
 
 def already_has_key_from_owner(receiver, owner):

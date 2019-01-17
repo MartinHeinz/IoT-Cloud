@@ -6,7 +6,7 @@ from click.testing import CliRunner
 from sqlalchemy.exc import SADeprecationWarning
 
 from app.app_setup import create_app, db
-from app.utils import get_user_device_by_ids
+from app.models.models import UserDevice
 
 
 @pytest.fixture(scope="module")
@@ -104,7 +104,7 @@ def _swap_db(app, current, new):
 
 
 def _set_user_device_public_key(device_id, user_id, pk):
-    user_device = get_user_device_by_ids(device_id, user_id)
+    user_device = UserDevice.get_by_ids(device_id, user_id)
     user_device.device_public_session_key = pk
     db.session.add(user_device)
     db.session.commit()
