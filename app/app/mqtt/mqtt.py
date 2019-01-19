@@ -1,4 +1,3 @@
-from datetime import datetime
 from flask import current_app
 from app.models.models import Device, DeviceData, User
 from app.mqtt.utils import Payload
@@ -46,7 +45,7 @@ def handle_on_message(client, userdata, msg, app, db):
                     device=device,
                     correctness_hash=msg.payload["correctness_hash"],
                     num_data=msg.payload["num_data"],
-                    added=datetime.strptime(msg.payload["added"], "%Y-%m-%d %H:%M:%S")
+                    added=int(msg.payload["added"])
                 ))
                 db.session.commit()
                 print("Inserting device data for device: " + str(msg.payload["device_id"]) + " data: " + msg.payload["device_data"], flush=True)

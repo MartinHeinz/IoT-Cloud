@@ -4,7 +4,6 @@ import os
 import re
 import ssl
 from binascii import b2a_hex, a2b_hex
-from datetime import datetime
 
 import click
 import requests
@@ -143,8 +142,6 @@ def get_device_data_by_time_range(lower=None, upper=None, token=""):  # TODO add
     r = requests.post(URL_GET_DEVICE_DATA_BY_RANGE, params=data, verify=VERIFY_CERTS)
     content = r.content.decode('unicode-escape')
     json_content = json_string_with_bytes_to_dict(content)
-    for item in json_content["device_data"]:
-        item["added"] = str(datetime.strptime(item["added"], "%a, %d %b %Y %H:%M:%S %Z").date())
     check_correctness_hash(json_content["device_data"], 'added', 'data', 'num_data')
     click.echo(content)
 

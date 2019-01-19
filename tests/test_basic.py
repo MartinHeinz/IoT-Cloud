@@ -36,11 +36,11 @@ def test_mqtt_on_message(app_and_ctx):
         assert device_data_count == db.session.query(DeviceData).count()  # 0 == 0
         msg.topic = b"save_data"
         assert device_data_count == db.session.query(DeviceData).count()  # 0 == 0
-        db.session.add(Device(id=111111, name="testingDevice", correctness_hash=correctness_hash("testingDevice")))
+        db.session.add(Device(id=111111, name=b"testingDevice", correctness_hash=correctness_hash("testingDevice")))
         db.session.commit()
         msg.payload = bytes(Payload(device_id=111111,
                                     device_data='test_data',
-                                    added='2017-12-11 17:12:34',
+                                    added=1513008754,  # '2017-12-11 17:12:34'
                                     num_data=840125,
                                     correctness_hash='$2b$12$5s/6DQkc3Tkq.9dXQ9fK/usP1usuyQh1rpsh5dBCQee8UXdVI7.6e'))
         handle_on_message(None, None, msg, app, db)
@@ -180,7 +180,7 @@ def test_api_dv_create(client, app_and_ctx, access_token):
     app, ctx = app_and_ctx
 
     with app.app_context():
-        dt = DeviceType(description="nothing.....", correctness_hash=correctness_hash("nothing....."))
+        dt = DeviceType(description=b"nothing.....", correctness_hash=correctness_hash("nothing....."))
         db.session.add(dt)
         db.session.commit()
         data = {
@@ -219,12 +219,12 @@ def test_api_get_device_by_name(client, app_and_ctx, access_token):
 
     bi_hash = "$2b$12$1xxxxxxxxxxxxxxxxxxxxuZLbwxnpY0o58unSvIPxddLxGystU.Mq"
     with app.app_context():
-        dt = DeviceType(id=123, description="nothing...", correctness_hash=correctness_hash("nothing..."))
+        dt = DeviceType(id=123, description=b"nothing...", correctness_hash=correctness_hash("nothing..."))
         db.session.add(dt)
         dv = Device(id=1000,
-                    status=False,
+                    status=b"0",
                     device_type=dt,
-                    name="my_raspberry",
+                    name=b"my_raspberry",
                     name_bi=bi_hash,
                     correctness_hash=correctness_hash("my_raspberry"))
         db.session.add(dv)

@@ -9,7 +9,7 @@ def test_device_type_uuid(app_and_ctx):
     app, ctx = app_and_ctx
 
     with app.app_context():
-        dt = DeviceType(description="nothing", correctness_hash=correctness_hash("nothing"))
+        dt = DeviceType(description=b"nothing", correctness_hash=correctness_hash("nothing"))
         db.session.add(dt)
         db.session.commit()
         assert is_valid_uuid(str(dt.type_id))

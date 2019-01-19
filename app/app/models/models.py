@@ -61,7 +61,7 @@ class DeviceType(db.Model):
 
     id = db.Column(db.Integer, primary_key=True)
     type_id = db.Column(UUID(as_uuid=True), unique=True, nullable=False, default=uuid4)
-    description = db.Column(db.String(200), unique=False, nullable=True)
+    description = db.Column(db.LargeBinary, nullable=False)
     devices = relationship("Device", cascade="all, delete-orphan", back_populates="device_type")
     user_id = db.Column(db.Integer, db.ForeignKey('user.id'))
     owner = relationship("User", back_populates="device_types")
@@ -74,7 +74,7 @@ class Device(MixinGetById, MixinAsDict, db.Model):
     __table_args__ = {'extend_existing': True}
 
     id = db.Column(db.Integer, primary_key=True)
-    status = db.Column(db.Boolean, default=False)
+    status = db.Column(db.LargeBinary, default=b'0')  # NOTE: This could use OPE but domain is too small
     device_type = relationship("DeviceType", back_populates="devices")
     device_type_id = db.Column(db.Integer, db.ForeignKey('device_type.id'))
     users = relationship("UserDevice", back_populates="device")
@@ -87,7 +87,7 @@ class Device(MixinGetById, MixinAsDict, db.Model):
     owner_id = db.Column(db.Integer, db.ForeignKey('user.id'))
     owner = relationship("User", back_populates="owned_devices")
 
-    name = db.Column(db.String(200), unique=False, nullable=True)
+    name = db.Column(db.LargeBinary, nullable=False)
     name_bi = db.Column(db.String(200), unique=False, nullable=True)  # Blind index for .name
 
     correctness_hash = db.Column(db.String(200), nullable=False)  # correctness_hash("name")
@@ -98,13 +98,13 @@ class DeviceData(MixinAsDict, db.Model):
     __table_args__ = {'extend_existing': True}
 
     id = db.Column(db.Integer, primary_key=True)
-    added = db.Column(db.DateTime(timezone=True), server_default=func.now())
+    added = db.Column(db.Integer)
     num_data = db.Column(db.Integer)
     data = db.Column(db.LargeBinary)
     device_id = db.Column(db.Integer, db.ForeignKey('device.id'))
     device = relationship("Device", back_populates="data")
 
-    correctness_hash = db.Column(db.String(200), nullable=False)  # correctness_hash(str(date(2018, 12, 11)), b'\\001'.decode("utf-8"), str(214357163))
+    correctness_hash = db.Column(db.String(200), nullable=False)  # correctness_hash(str(985734000), b'\\001'.decode("utf-8"), str(66988873))
 
 
 class Action(db.Model):
@@ -112,7 +112,7 @@ class Action(db.Model):
     __table_args__ = {'extend_existing': True}
 
     id = db.Column(db.Integer, primary_key=True)
-    name = db.Column(db.String(200), unique=False, nullable=True)
+    name = db.Column(db.LargeBinary, nullable=False)
     device_id = db.Column(db.Integer, db.ForeignKey('device.id'))
     device = relationship("Device", back_populates="actions")
 
@@ -124,8 +124,8 @@ class Scene(db.Model):
     __table_args__ = {'extend_existing': True}
 
     id = db.Column(db.Integer, primary_key=True)
-    name = db.Column(db.String(200), unique=False, nullable=True)
-    description = db.Column(db.String(200), unique=False, nullable=True)
+    name = db.Column(db.LargeBinary, nullable=False)
+    description = db.Column(db.LargeBinary, nullable=False)
     devices = relationship(
         "Device",
         secondary=scene_device_table,

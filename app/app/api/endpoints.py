@@ -33,7 +33,7 @@ def create_device_type():
         (correctness_hash, CORRECTNESS_HASH_MISSING_ERROR_MSG))
     if arg_check is not True:
         return arg_check
-    dt = DeviceType(description=description, owner=user, correctness_hash=correctness_hash)
+    dt = DeviceType(description=description.encode(), owner=user, correctness_hash=correctness_hash)
     db.session.add(dt)
     db.session.commit()
     return http_json_response(**{"type_id": str(dt.type_id)})
@@ -65,7 +65,7 @@ def create_device():
                 device_type=dt,
                 owner=user,
                 correctness_hash=correctness_hash,
-                name=name,
+                name=name.encode(),
                 name_bi=name_bi)
     db.session.add(dv)
     db.session.commit()
@@ -82,7 +82,11 @@ def get_device_by_name():
     devices = db.session.query(Device).filter(and_(Device.name_bi == device_name_bi, Device.owner == user))
     result = []
     for device in devices:
-        result.append(device.as_dict())
+        d = device.as_dict()
+        for k, v in d.items():
+            if isinstance(v, bytes):
+                d[k] = v.decode()
+        result.append(d)
     return http_json_response(**{'devices': result})
 
 
