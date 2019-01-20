@@ -1,11 +1,15 @@
+import base64
 import io
 import os
 import re
 import tempfile
 import warnings
+from binascii import a2b_hex
 from contextlib import redirect_stdout
 
 import pytest
+from cryptography.fernet import Fernet
+from pyope.ope import OPE
 from sqlalchemy.exc import SADeprecationWarning
 from tinydb import TinyDB, where, Query
 
@@ -80,6 +84,33 @@ def test_send_message(runner, access_token, reset_tiny_db):
     assert "RC and MID = (0, 1)" in result.output
 
 
+@pytest.mark.parametrize('reset_tiny_db', [cmd.path], indirect=True)
+def test_send_column_keys(runner, access_token, reset_tiny_db):
+    device_id = "23"
+    key = "fcf064e7ea97ab828ba80578d255942e648c872d8d0c09a051bf5424640f2e68"
+    result = runner.invoke(cmd.send_column_keys, [device_id])
+    assert f"Keys for device {device_id} not present, please use:" in result.output
+
+    tiny_db = TinyDB(cmd.path)
+    table = tiny_db.table(name='device_keys')
+    table.insert({'device_id': device_id, 'shared_key': key})
+
+    result = runner.invoke(cmd.send_column_keys, [device_id])
+    assert "Data published" in result.output
+    assert "RC and MID = (0, 1)" in result.output
+
+    tiny_db = TinyDB(cmd.path)
+    table = tiny_db.table(name='device_keys')
+    doc = table.get(Query().device_id == device_id)
+    assert "action:name" in doc
+    assert len(doc) == 9
+    shared_key = a2b_hex(doc["device:name"].encode())
+    fernet_key = Fernet(base64.urlsafe_b64encode(shared_key))
+    assert isinstance(fernet_key, Fernet)
+    cipher = OPE(a2b_hex(doc["device_data:added"].encode()))
+    assert isinstance(cipher, OPE)
+
+
 @pytest.mark.parametrize('reset_tiny_db', [device_cmd.path], indirect=True)
 def test_parse_msg(runner, reset_tiny_db):
     data = """{"ciphertext": "gAAAAABcOiilUJ_u1tRSQ-iIghG4DgPOfCjUXOL2_FZ0f2XcPHcp5rDMu1dQMvFZ_4VlPr-QjG79HNes-F6bDxcr7K03R0r-8bWEZaFcS3j-ri0C-sy33Fc=", "user_id": 1}"""
@@ -89,6 +120,27 @@ def test_parse_msg(runner, reset_tiny_db):
     table.insert({"id": 1, "shared_key": "aefe715635c3f35f7c58da3eb410453712aaf1f8fd635571aa5180236bb21acc"})
     result = runner.invoke(device_cmd.parse_msg, [data])
     assert "{\"action\": true}" in result.output
+
+
+@pytest.mark.parametrize('reset_tiny_db', [device_cmd.path], indirect=True)
+def test_save_column_keys(runner, reset_tiny_db):
+    data = """{"action:name": "gAAAAABcRHibSiR3cHtaSUSk1ipKP_7csl3xTCd4J-JesU8GPlC2iwfblksE3kvuV3U2mAYqiYe3UuYw04JPbYDYaFePY-YTUAzie3OCRzwuMTE6tE9UBJtJ8wUNJSctZnrvSi0rcPzQ", "device_type:description": "gAAAAABcRHibvjQEIYiaSi9yXLm2VPbgPsmye1mKv9DYF9ktCixOf6Cq03dKc1-ZpxucfrKJXOyT7vyq17cfxyrN9k-Bj4pi3BV7M68fLTR__03lK32W8LOLkMLWdMvxcURU1W8gg91f", "device:name": "gAAAAABcRHib0mxfmRE3mg4ALX3XPjP7ZuVQ69NiRdebiNCE-40wZuzzNV1krKcnZeRZVWXwYf4xjYLNNygY-kbbgxltBWNJ5rLanpBIqTeoq8uI9up1bZ_vFFCiGPIjHTpYkMnF5XIN", "device:status": "gAAAAABcRHiboBSiAuKLxvSqS1yu4vOR8FlqGBOnzJSQ85e5UShmQ9avtLAXx_w9fKad2xILHWbi_uFywJML8ukoDGB7iiHkLT39iOnrUCAQHFyOdFERixgl-iFHMji-S1YfGKGwxRIU", "device_data:added": "gAAAAABcRHibuWXtMvF7XgSN7FR-cHyNl2eDb_HHPCuTjqtdMN2VxxZnSxGCjkoJxRNIGMcpBW-z4n1wynPoCCb1VanmH3EukMPwpf7Vwk9WytkNR9h51ApyGt1QEkaj_JF2A5jKu-vw", "scene:name": "gAAAAABcRHibVgsVHRls8IGj95TdFKraKbGfyf_TvDzjg0KV_vu-HawiISBzRaxwrFV_QHI5jA73CTM2dF4ePENaMe0QtIJljtqCBUSRhoQideCy0JL4hDAIJUzpGXFK5RMC2fJHUJ17", "scene:description": "gAAAAABcRHib1iH0Bs9sHff-dt7FY9XOUDzARN-mwaq7eI7iLYYwtmBcMkB3T5ChNnoNWhIRLnh_lQLmvCT_itBvjoIHydBVdIcTjzsyHcTMBUdlxPmohokOjunxdMSCY0B48-pYqzsn", "user_id": 1}"""
+
+    tiny_db = TinyDB(device_cmd.path)
+    table = tiny_db.table(name='users')
+    table.insert({"id": 1, "shared_key": "aefe715635c3f35f7c58da3eb410453712aaf1f8fd635571aa5180236bb21acc"})
+    runner.invoke(device_cmd.save_column_keys, [data])
+
+    tiny_db = TinyDB(device_cmd.path)
+    table = tiny_db.table(name='users')
+    doc = table.get(Query().id == 1)
+    assert "action:name" in doc
+    assert len(doc) == 9
+    shared_key = a2b_hex(doc["device:status"].encode())
+    fernet_key = Fernet(base64.urlsafe_b64encode(shared_key))
+    assert isinstance(fernet_key, Fernet)
+    cipher = OPE(a2b_hex(doc["device_data:added"].encode()))
+    assert isinstance(cipher, OPE)
 
 
 def test_create_device_type(runner, access_token):

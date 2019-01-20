@@ -1,6 +1,7 @@
 import base64
 import json
 import os
+import sys
 from binascii import b2a_hex, a2b_hex
 
 import click
@@ -27,7 +28,7 @@ def device():
 def init(device_id):
     db = TinyDB(path)
     table = db.table(name='device')
-    table.upsert({'id': device_id}, Query().id.exists())
+    table.upsert({'id': device_id}, Query().id.exists())  # TODO change `device_id` to `int(device_id)`
 
 
 @device.command()
@@ -37,17 +38,50 @@ def parse_msg(data):
     try:  # TODO sanitize inputs; check for presence of shared key based on user
         data = json.loads(data)
 
-        db = TinyDB(path)
-        table = db.table(name='users')
-        doc = table.get(Query().id == data["user_id"])
+        if "ciphertext" in data:
+            db = TinyDB(path)
+            table = db.table(name='users')
+            doc = table.get(Query().id == data["user_id"])
 
-        shared_key = a2b_hex(doc["shared_key"].encode())
-        fernet_key = Fernet(base64.urlsafe_b64encode(shared_key))
-        plaintext = fernet_key.decrypt(data["ciphertext"].encode())
-        click.echo(plaintext)
+            shared_key = a2b_hex(doc["shared_key"].encode())
+            fernet_key = Fernet(base64.urlsafe_b64encode(shared_key))
+            plaintext = fernet_key.decrypt(data["ciphertext"].encode())
+            click.echo(plaintext)
 
     except Exception as e:
-        click.echo(repr(e))
+        _, _, exc_tb = sys.exc_info()
+        line = exc_tb.tb_lineno
+        click.echo(f"{repr(e)} at line: {line}")
+
+
+@device.command()
+@click.argument('data')
+def save_column_keys(data):
+    """ Can be trigger by: `./cli.py -b "172.21.0.3" user send-column-keys 23` """
+    with open('/home/martin/Projects/diplomovka/IoT-Cloud/client/device/test.txt', 'a') as the_file:
+        the_file.write(data)
+    try:
+        data = json.loads(data)
+
+        if "ciphertext" not in data:
+            db = TinyDB(path)
+            table = db.table(name='users')
+            doc = table.get(Query().id == data["user_id"])
+            data.pop("user_id", None)
+
+            shared_key = a2b_hex(doc["shared_key"].encode())
+            fernet_key = Fernet(base64.urlsafe_b64encode(shared_key))
+            keys = {}
+            for k, v in data.items():
+                keys[k] = b2a_hex(fernet_key.decrypt(data[k].encode())).decode()
+
+            doc = {**doc, **keys}
+            table.update(doc)
+
+    except Exception as e:
+        _, _, exc_tb = sys.exc_info()
+        line = exc_tb.tb_lineno
+        click.echo(f"{repr(e)} at line: {line}")
 
 
 @device.command()
@@ -78,5 +112,8 @@ def receive_pk(data):
         ).decode('utf-8').replace("\n", "\\n")
         payload = f'{{"user_id": {int(user_id)}, "device_public_key": "{public_pem}"}}'
         click.echo(payload)
+
     except Exception as e:
-        click.echo(repr(e))
+        _, _, exc_tb = sys.exc_info()
+        line = exc_tb.tb_lineno
+        click.echo(f"{repr(e)} at line: {line}")

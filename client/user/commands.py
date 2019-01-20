@@ -13,12 +13,11 @@ from cryptography.hazmat.primitives import serialization
 from cryptography.hazmat.primitives.asymmetric import ec
 from cryptography.hazmat.primitives.asymmetric.ec import EllipticCurvePublicKey, EllipticCurvePrivateKey
 from cryptography.hazmat.primitives.serialization import load_pem_private_key, load_pem_public_key
+from paho.mqtt import client as paho
 from tinydb import TinyDB, where, Query
-import paho.mqtt.client as paho
 
 from crypto_utils import hash, correctness_hash, check_correctness_hash
-from utils import json_string_with_bytes_to_dict
-
+from utils import json_string_with_bytes_to_dict, _create_payload
 
 URL_BASE = "https://localhost/api/"
 URL_PUBLISH = URL_BASE + "publish"
@@ -69,23 +68,11 @@ def send_message(device_id, data):
     fernet_key = Fernet(base64.urlsafe_b64encode(shared_key))
     token = fernet_key.encrypt(data.encode())
 
-    def on_publish(client, userdata, result):
-        click.echo("Data published")
+    client = _setup_client("user_id")  # TODO replace with actual user_id
 
-    client = paho.Client("user_id")  # TODO replace with actual user_id
-    client.on_publish = on_publish
-
-    client.tls_set(ca_certs=os.path.join(os.path.dirname(__file__), "certs/server.crt"),
-                   certfile=None,
-                   keyfile=None,
-                   tls_version=ssl.PROTOCOL_TLSv1_2)
-    client.tls_insecure_set(True)
-
-    client.connect(MQTT_BROKER, MQTT_PORT)
-    payload = {'"ciphertext"': f'"{token.decode()}"', '"user_id"': 1}
-    ret = client.publish(f"1/{device_id}", f'"{json.dumps(payload)}"')  # TODO replace with actual user_id, change payload to json and parse it as JSON on device end
+    payload = _create_payload(1, {"ciphertext": token.decode()})
+    ret = client.publish(f"1/{device_id}", payload)  # TODO replace with actual user_id, change payload to json and parse it as JSON on device end
     click.echo(f"RC and MID = {ret}")
-    click.echo(f'"{json.dumps(payload)}"')
 
 
 @user.command()
@@ -214,6 +201,62 @@ def retrieve_device_public_key(device_id, token):
     key = b2a_hex(shared_key[:32]).decode()  # NOTE: retrieve key as `a2b_hex(key.encode())`
     table.remove(Query().device_id == device_id)
     table.insert({'device_id': device_id, 'shared_key': key})
+
+
+@user.command()
+@click.argument('device_id')
+def send_column_keys(device_id):
+    db = TinyDB(path)
+    table = db.table(name='device_keys')
+    doc = table.get(Query().device_id == device_id)
+
+    if not doc:
+        with click.Context(send_key_to_device) as ctx:
+            click.echo(f"Keys for device {device_id} not present, please use: {ctx.command.name}")
+            click.echo(get_attr_auth_keys.get_help(ctx))
+            return
+
+    shared_key = a2b_hex(doc["shared_key"].encode())
+    fernet_key = Fernet(base64.urlsafe_b64encode(shared_key))
+
+    keys = {
+        "action:name": None,
+        "device_type:description": None,
+        "device:name": None,
+        "device:status": None,
+        "device_data:added": None,
+        "scene:name": None,
+        "scene:description": None
+    }
+
+    payload_keys = {}
+    for k in keys:
+        random_bytes = os.urandom(32)
+        keys[k] = b2a_hex(random_bytes).decode()  # NOTE: retrieve key as `a2b_hex(key.encode())`
+        payload_keys[k] = fernet_key.encrypt(random_bytes).decode()
+
+    doc = {**doc, **keys}
+    table.update(doc)
+
+    client = _setup_client("user_id")  # TODO replace with actual user_id
+    payload = _create_payload(1, payload_keys)
+    ret = client.publish(f"1/{device_id}", payload)  # TODO replace with actual user_id
+    click.echo(f"RC and MID = {ret}")
+
+
+def _setup_client(user_id):
+    def on_publish(client, userdata, result):
+        click.echo("Data published")
+
+    client = paho.Client(user_id)
+    client.on_publish = on_publish
+    client.tls_set(ca_certs=os.path.join(os.path.dirname(__file__), "certs/server.crt"),
+                   certfile=None,
+                   keyfile=None,
+                   tls_version=ssl.PROTOCOL_TLSv1_2)
+    client.tls_insecure_set(True)
+    client.connect(MQTT_BROKER, MQTT_PORT)
+    return client
 
 
 @user.command()

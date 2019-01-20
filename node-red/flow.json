@@ -146,11 +146,12 @@
         "topic": "+/23",
         "qos": "2",
         "broker": "mqtt-broker-tls",
-        "x": 210,
-        "y": 500,
+        "x": 130,
+        "y": 560,
         "wires": [
             [
-                "3c4c1a28.5ef0e6"
+                "3c4c1a28.5ef0e6",
+                "9008fc1a.5294a"
             ]
         ]
     },
@@ -222,13 +223,13 @@
         "id": "247f8722.253548",
         "type": "debug",
         "z": "f1dd4598.5b0fa8",
-        "name": "SetOn",
+        "name": "Plaintext",
         "active": true,
         "tosidebar": true,
         "console": false,
         "tostatus": false,
         "complete": "payload",
-        "x": 910,
+        "x": 920,
         "y": 460,
         "wires": []
     },
@@ -247,6 +248,45 @@
                 "de19777e.1dba28"
             ]
         ]
+    },
+    {
+        "id": "9008fc1a.5294a",
+        "type": "exec",
+        "z": "f1dd4598.5b0fa8",
+        "command": "python3 /home/martin/Projects/diplomovka/IoT-Cloud/client/cli.py --no-debug device save-column-keys ",
+        "addpay": true,
+        "append": "",
+        "useSpawn": "false",
+        "timer": "5",
+        "oldrc": false,
+        "name": "Save Column Keys",
+        "x": 410,
+        "y": 640,
+        "wires": [
+            [
+                "c08c80d3.178c2"
+            ],
+            [
+                "c08c80d3.178c2"
+            ],
+            [
+                "c08c80d3.178c2"
+            ]
+        ]
+    },
+    {
+        "id": "c08c80d3.178c2",
+        "type": "debug",
+        "z": "f1dd4598.5b0fa8",
+        "name": "Errors",
+        "active": true,
+        "tosidebar": true,
+        "console": false,
+        "tostatus": false,
+        "complete": "payload",
+        "x": 630,
+        "y": 640,
+        "wires": []
     },
     {
         "id": "mqtt-broker-tls",
