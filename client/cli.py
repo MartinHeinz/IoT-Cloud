@@ -2,8 +2,8 @@
 
 import click
 
-from user import commands as user_cli
-from device import commands as device_cli
+from .user import commands as user_cli
+from .device import commands as device_cli
 
 VERIFY_CERTS = True
 
@@ -27,5 +27,17 @@ def cli(ctx, debug, broker, port):
 cli.add_command(user_cli.user)
 cli.add_command(device_cli.device)
 
-if __name__ == '__main__':
-    cli(obj={})
+cli(obj={})
+
+
+"""
+NOTES:
+Install package:
+1. create venv
+2. activate venv
+3. `cd` into _IoT-Cloud_
+`pip install --editable .`
+
+Usage:
+In console `iot-cloud-cli user ...`, `iot-cloud-cli device ...`
+"""

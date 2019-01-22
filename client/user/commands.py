@@ -16,8 +16,8 @@ from cryptography.hazmat.primitives.serialization import load_pem_private_key, l
 from paho.mqtt import client as paho
 from tinydb import TinyDB, where, Query
 
-from crypto_utils import hash, correctness_hash, check_correctness_hash
-from utils import json_string_with_bytes_to_dict, _create_payload
+from client.crypto_utils import hash, correctness_hash, check_correctness_hash
+from client.utils import json_string_with_bytes_to_dict, _create_payload
 
 URL_BASE = "https://localhost/api/"
 URL_PUBLISH = URL_BASE + "publish"

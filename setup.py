@@ -10,7 +10,7 @@ with open('LICENSE') as f:
     license = f.read()
 
 setup(
-    name='IoT Cloud',
+    name='iot-cloud-cli',
     version='0.1.0',
     description='Privacy friendly framework for IoT Cloud',
     long_description=readme,
@@ -18,6 +18,19 @@ setup(
     author_email='martin7.heinz@gmail.com',
     url='',
     license=license,
-    packages=find_packages(exclude=('tests', 'docs'))
+    packages=find_packages(include=('client', 'client.user', 'client.device')),
+    include_package_data=True,
+    install_requires=[
+        'Click',
+        'requests',
+        'cryptography',
+        'tinydb',
+        'paho-mqtt',
+        'passlib',
+        'scipy'
+    ],
+    entry_points='''
+        [console_scripts]
+        iot-cloud-cli=client.cli:cli
+    ''',
 )
-
