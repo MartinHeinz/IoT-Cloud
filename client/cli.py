@@ -2,8 +2,12 @@
 
 import click
 
-from .user import commands as user_cli
-from .device import commands as device_cli
+try:  # for packaged CLI (setup.py)
+    from client import user_cli
+    from client import device_cli
+except ImportError:  # for un-packaged CLI
+    from user import commands as user_cli
+    from device import commands as device_cli
 
 VERIFY_CERTS = True
 
@@ -33,8 +37,9 @@ cli(obj={})
 """
 NOTES:
 Install package:
-1. create venv
-2. activate venv
+1. create venv - `python3 -m venv <absolute-path>`
+2. activate venv - source <absolute-path>/bin/activate
+    - `which python` should now show _<absolute-path>/bin/python_
 3. `cd` into _IoT-Cloud_
 `pip install --editable .`
 
