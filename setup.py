@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 
-from setuptools import setup, find_packages
+from setuptools import setup
 
 
 with open('README.md') as f:
@@ -18,7 +18,7 @@ setup(
     author_email='martin7.heinz@gmail.com',
     url='',
     license=license,
-    packages=find_packages(include=('client', 'client.user', 'client.device')),
+    packages=['client', 'client.user', 'client.device'],
     include_package_data=True,
     install_requires=[
         'Click',
