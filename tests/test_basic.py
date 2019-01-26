@@ -7,14 +7,12 @@ from uuid import UUID
 
 import pytest
 from cryptography.fernet import Fernet
-from paho.mqtt.client import MQTTMessage
 from passlib.hash import bcrypt
 
 from app.consts import DEVICE_TYPE_ID_MISSING_ERROR_MSG, DEVICE_TYPE_ID_INCORRECT_ERROR_MSG, DEVICE_NAME_BI_MISSING_ERROR_MSG, DEVICE_NAME_MISSING_ERROR_MSG, \
     DATA_RANGE_MISSING_ERROR_MSG, DATA_OUT_OF_OUTPUT_RANGE_ERROR_MSG, CORRECTNESS_HASH_MISSING_ERROR_MSG, SOMETHING_WENT_WRONG_MSG
-from app.models.models import DeviceType, Device, DeviceData
+from app.models.models import DeviceType, Device
 from app.app_setup import client as mqtt_client
-from app.mqtt.utils import Payload
 from app.utils import is_valid_uuid
 from client.crypto_utils import encrypt, hash, correctness_hash, triangle_wave, sawtooth_wave, square_wave, sine_wave, generate, fake_tuple_to_hash, \
     encrypt_fake_tuple, instantiate_ope_cipher, int_from_bytes
@@ -24,30 +22,6 @@ from .conftest import db
 
 def test_mqtt_client(app_and_ctx):
     assert mqtt_client._ssl is True
-
-
-def test_mqtt_on_message(app_and_ctx):
-    msg = MQTTMessage(topic=b"not_save_data")
-    msg.payload = bytes(Payload(device_id=111111,
-                                device_data='test_data'))  # not present yet
-    from app.mqtt.mqtt import handle_on_message
-    app, ctx = app_and_ctx
-    with app.app_context():
-        device_data_count = db.session.query(DeviceData).count()
-
-        handle_on_message(None, None, msg, app, db)
-        assert device_data_count == db.session.query(DeviceData).count()  # 0 == 0
-        msg.topic = b"save_data"
-        assert device_data_count == db.session.query(DeviceData).count()  # 0 == 0
-        db.session.add(Device(id=111111, name=b"testingDevice", correctness_hash=correctness_hash("testingDevice")))
-        db.session.commit()
-        msg.payload = bytes(Payload(device_id=111111,
-                                    device_data='test_data',
-                                    added=1513008754,  # '2017-12-11 17:12:34'
-                                    num_data=840125,
-                                    correctness_hash='$2b$12$5s/6DQkc3Tkq.9dXQ9fK/usP1usuyQh1rpsh5dBCQee8UXdVI7.6e'))
-        handle_on_message(None, None, msg, app, db)
-        assert device_data_count + 1 == db.session.query(DeviceData).count()  # 0 + 1 == 1
 
 
 def test_index(client):

@@ -205,7 +205,7 @@ def init_integrity_data():
     }
 
 
-def increment_bounds(table, bound="upper_bound"):
+def increment_bounds(table, bound="upper_bound"):  # TODO check if lower_bound is smaller than upper_bound (can't remove what was not inserted yet)
     for k, v in table.items():
         table[k][bound] += 1
     return table

@@ -1,4 +1,7 @@
 from flask import current_app
+from sqlalchemy import and_
+
+from app.api.utils import is_number
 from app.models.models import Device, DeviceData, User
 from app.mqtt.utils import Payload
 from app.utils import bytes_to_json
@@ -19,38 +22,56 @@ def handle_on_message(client, userdata, msg, app, db):
 
     topic = msg.topic.split("/")
     if len(topic) == 2 and topic[1] == "server":  # TODO don't trust the device, use a token to authenticate device
-        try:
-            device_id = int(topic[0])
-        except ValueError:
-            print(f"Invalid device ID: {topic[0]}", flush=True)
-            return
-        payload = Payload(**msg.payload)
-        with app.app_context():
-            user = User.get_by_id(payload.user_id)
-            user_device = next((d for d in user.devices if d.device_id == device_id), None)
-            if user_device:
-                user_device.device_public_session_key = payload.device_public_key
-                db.session.add(user_device)
-                db.session.commit()
+        _save_device_pk(topic, msg, app, db)
+    elif len(topic) == 3 and topic[1] == "server":
+        if topic[2] in ["save_data", "remove_data"]:
+            if is_number(topic[0]):
+                _edit_device_data(int(topic[0]), topic[2], msg, app, db)
             else:
-                print(f"This User can't access device {device_id}", flush=True)
+                print(f"Invalid Device ID: {topic[0]}", flush=True)
 
-    elif msg.topic == "save_data":
-        with app.app_context():
-            device = db.session.query(Device).filter(Device.id == msg.payload["device_id"]).first()
-            print("Querying device with id: " + str(msg.payload["device_id"]), flush=True)
-            if device is not None:
-                db.session.add(DeviceData(
-                    data=str.encode(msg.payload["device_data"]),
-                    device=device,
-                    correctness_hash=msg.payload["correctness_hash"],
-                    num_data=msg.payload["num_data"],
-                    added=int(msg.payload["added"])
-                ))
-                db.session.commit()
-                print("Inserting device data for device: " + str(msg.payload["device_id"]) + " data: " + msg.payload["device_data"], flush=True)
+
+def _save_device_pk(topic, msg, app, db):
+    try:
+        device_id = int(topic[0])
+    except ValueError:
+        print(f"Invalid device ID: {topic[0]}", flush=True)
+        return
+    payload = Payload(**msg.payload)
+    with app.app_context():
+        user = User.get_by_id(payload.user_id)
+        user_device = next((d for d in user.devices if d.device_id == device_id), None)
+        if user_device:
+            user_device.device_public_session_key = payload.device_public_key
+            db.session.add(user_device)
+            db.session.commit()
+        else:
+            print(f"This User can't access device {device_id}", flush=True)
+
+
+def _edit_device_data(device_id, action, msg, app, db):
+    with app.app_context():
+        device = db.session.query(Device).filter(Device.id == device_id).first()
+        if device is not None:
+            if action == "save_data":
+                # noinspection PyArgumentList
+                db.session.add(DeviceData(  # TODO extract this to Model class
+                        tid=msg.payload["tid"],
+                        data=str.encode(msg.payload["data"]),
+                        device=device,
+                        correctness_hash=msg.payload["correctness_hash"],
+                        num_data=int(msg.payload["num_data"]),
+                        added=int(msg.payload["added"])
+                    ))
             else:
-                print("Device with id: " + str(msg.payload["device_id"]) + " doesn't exist.", flush=True)
+                db.session.query(DeviceData)\
+                    .filter(and_(
+                        DeviceData.tid == msg.payload["tid"],
+                        DeviceData.device_id == device_id,
+                    )).delete()  # TODO extract this to Model class
+            db.session.commit()
+        else:
+            print(f"Device with id: {device_id} doesn't exist.", flush=True)
 
 
 def handle_on_log(client, userdata, level, buf):
