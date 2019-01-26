@@ -1,8 +1,11 @@
 from timeit import default_timer as timer
 
 from pyope.ope import OPE
+
+from crypto_utils import instantiate_ope_cipher
+
 random_key = OPE.generate_key()
-cipher = OPE(random_key)
+cipher = instantiate_ope_cipher(random_key)
 
 ciphertexts = []
 num = 1000

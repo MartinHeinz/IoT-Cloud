@@ -230,6 +230,8 @@ def send_column_keys(device_id):
         "device:name": None,
         "device:status": None,
         "device_data:added": None,
+        "device_data:num_data": None,
+        "device_data:data": None,
         "scene:name": None,
         "scene:description": None
     }

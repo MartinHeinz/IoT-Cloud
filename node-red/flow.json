@@ -289,11 +289,181 @@
         "wires": []
     },
     {
+        "id": "5d83176.1b027e8",
+        "type": "inject",
+        "z": "f1dd4598.5b0fa8",
+        "name": "send_add_fake_tuple",
+        "topic": "23/1",
+        "payload": "1 upper_bound",
+        "payloadType": "str",
+        "repeat": "",
+        "crontab": "",
+        "once": false,
+        "onceDelay": 0.1,
+        "x": 160,
+        "y": 820,
+        "wires": [
+            [
+                "3e137960.a280e6"
+            ]
+        ]
+    },
+    {
+        "id": "3e137960.a280e6",
+        "type": "exec",
+        "z": "f1dd4598.5b0fa8",
+        "command": "python3 /home/martin/Projects/diplomovka/IoT-Cloud/client/cli.py --no-debug device get-fake-tuple",
+        "addpay": true,
+        "append": "",
+        "useSpawn": "false",
+        "timer": "5",
+        "oldrc": false,
+        "name": "Get Fake Tuple",
+        "x": 400,
+        "y": 820,
+        "wires": [
+            [
+                "92c7cc8.4780a3"
+            ],
+            [],
+            []
+        ]
+    },
+    {
+        "id": "bec9ef65.48434",
+        "type": "debug",
+        "z": "f1dd4598.5b0fa8",
+        "name": "Console Dump",
+        "active": true,
+        "tosidebar": true,
+        "console": false,
+        "tostatus": false,
+        "complete": "payload",
+        "x": 880,
+        "y": 780,
+        "wires": []
+    },
+    {
+        "id": "92c7cc8.4780a3",
+        "type": "json",
+        "z": "f1dd4598.5b0fa8",
+        "name": "",
+        "property": "payload",
+        "action": "",
+        "pretty": true,
+        "x": 630,
+        "y": 820,
+        "wires": [
+            [
+                "bec9ef65.48434",
+                "3cec3086.6022e"
+            ]
+        ]
+    },
+    {
+        "id": "3cec3086.6022e",
+        "type": "mqtt out",
+        "z": "f1dd4598.5b0fa8",
+        "name": "fake_tuple_send_add",
+        "topic": "23/1",
+        "qos": "",
+        "retain": "",
+        "broker": "mqtt-broker-tls",
+        "x": 900,
+        "y": 840,
+        "wires": []
+    },
+    {
+        "id": "42950daa.7d14f4",
+        "type": "inject",
+        "z": "f1dd4598.5b0fa8",
+        "name": "send_remove_fake_tuple",
+        "topic": "23/1",
+        "payload": "1 lower_bound",
+        "payloadType": "str",
+        "repeat": "",
+        "crontab": "",
+        "once": false,
+        "onceDelay": 0.1,
+        "x": 150,
+        "y": 980,
+        "wires": [
+            [
+                "cd2bb835.43c438"
+            ]
+        ]
+    },
+    {
+        "id": "cd2bb835.43c438",
+        "type": "exec",
+        "z": "f1dd4598.5b0fa8",
+        "command": "python3 /home/martin/Projects/diplomovka/IoT-Cloud/client/cli.py --no-debug device get-fake-tuple",
+        "addpay": true,
+        "append": "",
+        "useSpawn": "false",
+        "timer": "5",
+        "oldrc": false,
+        "name": "Get Fake Tuple",
+        "x": 400,
+        "y": 980,
+        "wires": [
+            [
+                "a6c9e861.fcf7d8"
+            ],
+            [],
+            []
+        ]
+    },
+    {
+        "id": "5b33fba9.bedfb4",
+        "type": "debug",
+        "z": "f1dd4598.5b0fa8",
+        "name": "Console Dump",
+        "active": true,
+        "tosidebar": true,
+        "console": false,
+        "tostatus": false,
+        "complete": "payload",
+        "x": 880,
+        "y": 940,
+        "wires": []
+    },
+    {
+        "id": "a6c9e861.fcf7d8",
+        "type": "json",
+        "z": "f1dd4598.5b0fa8",
+        "name": "",
+        "property": "payload",
+        "action": "",
+        "pretty": true,
+        "x": 630,
+        "y": 980,
+        "wires": [
+            [
+                "5b33fba9.bedfb4",
+                "ed29be21.ba7cb"
+            ]
+        ]
+    },
+    {
+        "id": "ed29be21.ba7cb",
+        "type": "mqtt out",
+        "z": "f1dd4598.5b0fa8",
+        "name": "fake_tuple_send_remove",
+        "topic": "23/1",
+        "qos": "",
+        "retain": "",
+        "broker": "mqtt-broker-tls",
+        "x": 910,
+        "y": 1000,
+        "wires": []
+    },
+    {
         "id": "mqtt-broker-tls",
         "type": "mqtt-broker",
         "z": "",
         "name": "Local MQTT Broker",
-        "broker": "172.21.0.3",
+        "broker": "172.21.0.2",
         "port": "8883",
         "tls": "ec6f7e8b.9cb98",
         "clientid": "",

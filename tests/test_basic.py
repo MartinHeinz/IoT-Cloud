@@ -2,9 +2,11 @@
 import base64
 import json
 import types
+from binascii import a2b_hex
 from uuid import UUID
 
 import pytest
+from cryptography.fernet import Fernet
 from paho.mqtt.client import MQTTMessage
 from passlib.hash import bcrypt
 
@@ -14,7 +16,8 @@ from app.models.models import DeviceType, Device, DeviceData
 from app.app_setup import client as mqtt_client
 from app.mqtt.utils import Payload
 from app.utils import is_valid_uuid
-from client.crypto_utils import encrypt, hash, correctness_hash, triangle_wave, sawtooth_wave, square_wave, sine_wave, generate, fake_tuple_to_hash
+from client.crypto_utils import encrypt, hash, correctness_hash, triangle_wave, sawtooth_wave, square_wave, sine_wave, generate, fake_tuple_to_hash, \
+    encrypt_fake_tuple, instantiate_ope_cipher, int_from_bytes
 
 from .conftest import db
 
@@ -343,20 +346,56 @@ def test_wave_func():
 
 
 def test_generate_fake_tuple_and_hash():
-    pairs = {
-        "name": triangle_wave(),
-        "data": sawtooth_wave(),
-        "other": square_wave(),
-        "another": sine_wave()
-    }
+    columns = {
+            "added": {
+                "function_name": "triangle_wave",
+                "lower_bound": 0,
+                "upper_bound": 0,
+                "is_numeric": True
+            },
+            "num_data": {
+                "function_name": "sawtooth_wave",
+                "lower_bound": 0,
+                "upper_bound": 0,
+                "is_numeric": True
+            },
+            "data": {
+                "function_name": "square_wave",
+                "lower_bound": 0,
+                "upper_bound": 0,
+                "is_numeric": False
+            },
+        }
 
-    d = generate(**pairs)
-    assert d["name"] == -1.0
-    assert d["data"] == -1.0
-    assert d["other"] == 1.0
-    assert d["another"] == 0.0
+    d = generate(columns)
+    assert d["added"] == -1000
+    assert d["num_data"] == -1000
+    assert d["data"] == 1000
 
     fake_tuple_hash = fake_tuple_to_hash(d)
-    assert bcrypt.verify("-1.0" + "-1.0" + "1.0" + "0.0" + "1", fake_tuple_hash)
+    assert bcrypt.verify("-1000" + "-1000" + "1000" + "1", fake_tuple_hash)
 
 
+def test_encrypt_fake_tuple():
+    fake_tuple = {
+        "tid": 1,
+        "added": -1000,
+        "num_data": -1000,
+        "data": 1000,
+    }
+
+    keys = {
+        "added": ["217b5c3430fd77e7a0191f04cbaf872be189d8cb203c54f7b083211e8e5f4f70", True],
+        "num_data": ["a70c6a23f6b0ef9163040f4cc02819c22d7e35de6469672d250519077b36fe4d", True],
+        "data": ["d011b0fa5a23b3c2efadb2e0fea094647ff7b03b9a93022aeae6c1edf3eb1871", False]
+    }
+
+    result = encrypt_fake_tuple(fake_tuple, keys)
+    cipher = Fernet(base64.urlsafe_b64encode(a2b_hex(keys["data"][0].encode())))
+    plaintext = cipher.decrypt(result["data"].encode())
+    assert int_from_bytes(plaintext) == 1000
+
+    cipher = instantiate_ope_cipher(a2b_hex(keys["num_data"][0].encode()))
+    plaintext = cipher.decrypt(result["num_data"])
+    assert plaintext == -1000
+    assert result["tid"] == 1

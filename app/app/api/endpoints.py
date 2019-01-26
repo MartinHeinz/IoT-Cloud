@@ -92,7 +92,7 @@ def get_device_by_name():
 
 @api.route('/data/get_time_range', methods=['POST'])
 @require_api_token()
-def get_data_by_time_range():
+def get_data_by_time_range():  # TODO This should not be named get_data_by_TIME_range
     lower_bound = request.args.get("lower", "")
     upper_bound = request.args.get("upper", "")
     user = User.get_by_access_token(request.args.get("access_token", ""))

@@ -17,7 +17,7 @@ from app.app_setup import db, create_app
 from app.cli import populate
 import client.user.commands as cmd
 import client.device.commands as device_cmd
-from crypto_utils import hash, check_correctness_hash
+from crypto_utils import hash, check_correctness_hash, instantiate_ope_cipher, int_from_bytes
 from utils import json_string_with_bytes_to_dict
 
 cmd.path = '/tmp/keystore.json'
@@ -103,11 +103,11 @@ def test_send_column_keys(runner, access_token, reset_tiny_db):
     table = tiny_db.table(name='device_keys')
     doc = table.get(Query().device_id == device_id)
     assert "action:name" in doc
-    assert len(doc) == 9
+    assert len(doc) == 11
     shared_key = a2b_hex(doc["device:name"].encode())
     fernet_key = Fernet(base64.urlsafe_b64encode(shared_key))
     assert isinstance(fernet_key, Fernet)
-    cipher = OPE(a2b_hex(doc["device_data:added"].encode()))
+    cipher = instantiate_ope_cipher(a2b_hex(doc["device_data:added"].encode()))
     assert isinstance(cipher, OPE)
 
 
@@ -124,7 +124,7 @@ def test_parse_msg(runner, reset_tiny_db):
 
 @pytest.mark.parametrize('reset_tiny_db', [device_cmd.path], indirect=True)
 def test_save_column_keys(runner, reset_tiny_db):
-    data = """{"action:name": "gAAAAABcRHibSiR3cHtaSUSk1ipKP_7csl3xTCd4J-JesU8GPlC2iwfblksE3kvuV3U2mAYqiYe3UuYw04JPbYDYaFePY-YTUAzie3OCRzwuMTE6tE9UBJtJ8wUNJSctZnrvSi0rcPzQ", "device_type:description": "gAAAAABcRHibvjQEIYiaSi9yXLm2VPbgPsmye1mKv9DYF9ktCixOf6Cq03dKc1-ZpxucfrKJXOyT7vyq17cfxyrN9k-Bj4pi3BV7M68fLTR__03lK32W8LOLkMLWdMvxcURU1W8gg91f", "device:name": "gAAAAABcRHib0mxfmRE3mg4ALX3XPjP7ZuVQ69NiRdebiNCE-40wZuzzNV1krKcnZeRZVWXwYf4xjYLNNygY-kbbgxltBWNJ5rLanpBIqTeoq8uI9up1bZ_vFFCiGPIjHTpYkMnF5XIN", "device:status": "gAAAAABcRHiboBSiAuKLxvSqS1yu4vOR8FlqGBOnzJSQ85e5UShmQ9avtLAXx_w9fKad2xILHWbi_uFywJML8ukoDGB7iiHkLT39iOnrUCAQHFyOdFERixgl-iFHMji-S1YfGKGwxRIU", "device_data:added": "gAAAAABcRHibuWXtMvF7XgSN7FR-cHyNl2eDb_HHPCuTjqtdMN2VxxZnSxGCjkoJxRNIGMcpBW-z4n1wynPoCCb1VanmH3EukMPwpf7Vwk9WytkNR9h51ApyGt1QEkaj_JF2A5jKu-vw", "scene:name": "gAAAAABcRHibVgsVHRls8IGj95TdFKraKbGfyf_TvDzjg0KV_vu-HawiISBzRaxwrFV_QHI5jA73CTM2dF4ePENaMe0QtIJljtqCBUSRhoQideCy0JL4hDAIJUzpGXFK5RMC2fJHUJ17", "scene:description": "gAAAAABcRHib1iH0Bs9sHff-dt7FY9XOUDzARN-mwaq7eI7iLYYwtmBcMkB3T5ChNnoNWhIRLnh_lQLmvCT_itBvjoIHydBVdIcTjzsyHcTMBUdlxPmohokOjunxdMSCY0B48-pYqzsn", "user_id": 1}"""
+    data = """{"device_data:data": "gAAAAABcRHiboBSiAuKLxvSqS1yu4vOR8FlqGBOnzJSQ85e5UShmQ9avtLAXx_w9fKad2xILHWbi_uFywJML8ukoDGB7iiHkLT39iOnrUCAQHFyOdFERixgl-iFHMji-S1YfGKGwxRIU", "device_data:num_data": "gAAAAABcRHibuWXtMvF7XgSN7FR-cHyNl2eDb_HHPCuTjqtdMN2VxxZnSxGCjkoJxRNIGMcpBW-z4n1wynPoCCb1VanmH3EukMPwpf7Vwk9WytkNR9h51ApyGt1QEkaj_JF2A5jKu-vw", "action:name": "gAAAAABcRHibSiR3cHtaSUSk1ipKP_7csl3xTCd4J-JesU8GPlC2iwfblksE3kvuV3U2mAYqiYe3UuYw04JPbYDYaFePY-YTUAzie3OCRzwuMTE6tE9UBJtJ8wUNJSctZnrvSi0rcPzQ", "device_type:description": "gAAAAABcRHibvjQEIYiaSi9yXLm2VPbgPsmye1mKv9DYF9ktCixOf6Cq03dKc1-ZpxucfrKJXOyT7vyq17cfxyrN9k-Bj4pi3BV7M68fLTR__03lK32W8LOLkMLWdMvxcURU1W8gg91f", "device:name": "gAAAAABcRHib0mxfmRE3mg4ALX3XPjP7ZuVQ69NiRdebiNCE-40wZuzzNV1krKcnZeRZVWXwYf4xjYLNNygY-kbbgxltBWNJ5rLanpBIqTeoq8uI9up1bZ_vFFCiGPIjHTpYkMnF5XIN", "device:status": "gAAAAABcRHiboBSiAuKLxvSqS1yu4vOR8FlqGBOnzJSQ85e5UShmQ9avtLAXx_w9fKad2xILHWbi_uFywJML8ukoDGB7iiHkLT39iOnrUCAQHFyOdFERixgl-iFHMji-S1YfGKGwxRIU", "device_data:added": "gAAAAABcRHibuWXtMvF7XgSN7FR-cHyNl2eDb_HHPCuTjqtdMN2VxxZnSxGCjkoJxRNIGMcpBW-z4n1wynPoCCb1VanmH3EukMPwpf7Vwk9WytkNR9h51ApyGt1QEkaj_JF2A5jKu-vw", "scene:name": "gAAAAABcRHibVgsVHRls8IGj95TdFKraKbGfyf_TvDzjg0KV_vu-HawiISBzRaxwrFV_QHI5jA73CTM2dF4ePENaMe0QtIJljtqCBUSRhoQideCy0JL4hDAIJUzpGXFK5RMC2fJHUJ17", "scene:description": "gAAAAABcRHib1iH0Bs9sHff-dt7FY9XOUDzARN-mwaq7eI7iLYYwtmBcMkB3T5ChNnoNWhIRLnh_lQLmvCT_itBvjoIHydBVdIcTjzsyHcTMBUdlxPmohokOjunxdMSCY0B48-pYqzsn", "user_id": 1}"""
 
     tiny_db = TinyDB(device_cmd.path)
     table = tiny_db.table(name='users')
@@ -135,11 +135,11 @@ def test_save_column_keys(runner, reset_tiny_db):
     table = tiny_db.table(name='users')
     doc = table.get(Query().id == 1)
     assert "action:name" in doc
-    assert len(doc) == 9
+    assert len(doc) == 11
     shared_key = a2b_hex(doc["device:status"].encode())
     fernet_key = Fernet(base64.urlsafe_b64encode(shared_key))
     assert isinstance(fernet_key, Fernet)
-    cipher = OPE(a2b_hex(doc["device_data:added"].encode()))
+    cipher = instantiate_ope_cipher(a2b_hex(doc["device_data:added"].encode()))
     assert isinstance(cipher, OPE)
 
 
@@ -358,3 +358,113 @@ def test_retrieve_device_public_key(runner, access_token, reset_tiny_db, setup_u
     doc = table.get(Query().device_id == device_id)
     assert "device_id" in doc and "shared_key" in doc
     assert "public_key" not in doc and "master_key" not in doc, "public_key and master_key should not be present anymore (Ephemeral keys need to be wiped)."
+
+
+def test_dict_to_payload():
+    kwargs = {
+        "key1": "value",
+        "key2": 1,
+        "another": "test",
+    }
+
+    result = device_cmd.dict_to_payload(**kwargs)
+
+    assert result == '{"key1": "value", "key2": 1, "another": "test"}'
+
+
+def test_increment_upper_bounds():
+    table = {
+        "device_data": {
+            "added": {
+                "function_name": "triangle_wave",
+                "lower_bound": 1,
+                "upper_bound": 1,
+                "is_numeric": True
+            },
+            "num_data": {
+                "function_name": "sawtooth_wave",
+                "lower_bound": 1,
+                "upper_bound": 25,
+                "is_numeric": True
+            },
+            "data": {
+                "function_name": "square_wave",
+                "lower_bound": 1,
+                "upper_bound": 43,
+                "is_numeric": False
+            },
+        }
+    }
+
+    result = device_cmd.increment_bounds(table["device_data"])
+    assert result["added"]["upper_bound"] == 2
+    assert result["num_data"]["upper_bound"] == 26
+    assert result["data"]["upper_bound"] == 44
+
+
+@pytest.mark.parametrize('reset_tiny_db', [device_cmd.path], indirect=True)
+def test_get_fake_tuple(runner, reset_tiny_db):
+    user_id = 1
+    data = {"id": user_id,
+            "shared_key": "aefe715635c3f35f7c58da3eb410453712aaf1f8fd635571aa5180236bb21acc",
+            "action:name": "a70c6a23f6b0ef9163040f4cc02819c22d7e35de6469672d250519077b36fe4d",
+            "device_type:description": "2c567c6fde8d29ee3c1ac15e74692089fdce507a43eb931be792ec3887968d33",
+            "device_data:added": "5b27b633b2ea8fd12617d36dc0e864b2e8c6e57e809662e88fe56d70d033429e",
+            "device_data:num_data": "ed1b6067e3dec82b4b61360c29eaeb785987e0c36bfdba454b9eca2d1622ecc2",
+            "device_data:data": "aefe715635c3f35f7c58da3eb410453712aaf1f8fd635571aa5180236bb21acc",
+            "scene:name": "7c2a6bb5e7021e30c7326bdb99003fd43b2b0770b0a4a07f7b3876634b11ff94",
+            "scene:description": "d011b0fa5a23b3c2efadb2e0fea094647ff7b03b9a93022aeae6c1edf3eb1871"}
+
+    tiny_db = TinyDB(device_cmd.path)
+    table = tiny_db.table(name='users')
+    table.insert(data)
+    result = runner.invoke(device_cmd.get_fake_tuple, [str(user_id), "upper_bound"])
+    tiny_db = TinyDB(device_cmd.path)
+    table = tiny_db.table(name='users')
+    doc = table.get(Query().id == user_id)
+    assert "integrity" in doc, "Integrity sub-document wasn't inserted."
+    assert all(val in doc["integrity"]["device_data"] for val in ["data", "num_data", "added"])
+
+    search_res = re.findall('\"(tid|data|num_data|added|correctness_hash)\": \"?([^:,\"]+)\"?', result.output)
+
+    assert len(search_res) == 5
+
+    column, ciphertext = next(pair for pair in search_res if pair[0] == "data")
+    key = a2b_hex(data[f"device_data:{column}"].encode())
+    fernet_key = Fernet(base64.urlsafe_b64encode(key))
+    plaintext = fernet_key.decrypt(ciphertext.encode())
+    assert int_from_bytes(plaintext) == 1000
+
+    result = runner.invoke(device_cmd.get_fake_tuple, [str(user_id), "upper_bound"])
+    search_res = re.findall('\"(tid|data|num_data|added|correctness_hash)\": \"?([^:,\"]+)\"?', result.output)
+
+    assert len(search_res) == 5
+
+    column, ciphertext = next(pair for pair in search_res if pair[0] == "num_data")
+    cipher = instantiate_ope_cipher(a2b_hex(data[f"device_data:{column}"].encode()))
+    plaintext = cipher.decrypt(int(ciphertext))
+    assert plaintext == -959
+
+    tiny_db = TinyDB(device_cmd.path)
+    table = tiny_db.table(name='users')
+    doc = table.get(Query().id == user_id)
+    assert doc["integrity"]["device_data"]["num_data"]["upper_bound"] == 2
+    assert doc["integrity"]["device_data"]["added"]["upper_bound"] == 2
+    assert doc["integrity"]["device_data"]["data"]["upper_bound"] == 2
+
+    result = runner.invoke(device_cmd.get_fake_tuple, [str(user_id), "lower_bound"])
+    search_res = re.findall('\"(tid|data|num_data|added|correctness_hash)\": \"?([^:,\"]+)\"?', result.output)
+
+    assert len(search_res) == 5
+
+    column, ciphertext = next(pair for pair in search_res if pair[0] == "num_data")
+    cipher = instantiate_ope_cipher(a2b_hex(data[f"device_data:{column}"].encode()))
+    plaintext = cipher.decrypt(int(ciphertext))
+    assert plaintext == -980
+
+    tiny_db = TinyDB(device_cmd.path)
+    table = tiny_db.table(name='users')
+    doc = table.get(Query().id == user_id)
+    assert doc["integrity"]["device_data"]["num_data"]["lower_bound"] == 2
+    assert doc["integrity"]["device_data"]["added"]["lower_bound"] == 2
+    assert doc["integrity"]["device_data"]["data"]["lower_bound"] == 2

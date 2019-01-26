@@ -98,6 +98,7 @@ class DeviceData(MixinAsDict, db.Model):
     __table_args__ = {'extend_existing': True}
 
     id = db.Column(db.Integer, primary_key=True)
+    tid = db.Column(db.Integer)
     added = db.Column(db.Integer)
     num_data = db.Column(db.Integer)
     data = db.Column(db.LargeBinary)
