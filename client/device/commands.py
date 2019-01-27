@@ -152,7 +152,7 @@ def get_fake_tuple(user_id, bound):
                 doc_key = f'{t}:{col}'
                 keys[col] = [doc[doc_key], doc["integrity"][t][col]["is_numeric"]]
 
-        encrypted_fake_tuple = encrypt_fake_tuple(fake_tuple, keys)
+        encrypted_fake_tuple = encrypt_fake_tuple(fake_tuple, keys)  # TODO IMPORTANT tuples should FIRST hashed and THEN encrypted
         fake_tuple_hash = fake_tuple_to_hash(encrypted_fake_tuple)
 
         row = {**encrypted_fake_tuple, "correctness_hash": fake_tuple_hash}
@@ -170,10 +170,40 @@ def get_fake_tuple(user_id, bound):
         click.echo(f"{repr(e)} at line: {line}")
 
 
+@device.command()
+@click.argument('data')
+def get_fake_tuple_info(data):
+    try:
+        data = json.loads(data)
+        if "request" in data and data["request"] == "fake_tuple_info":
+            db = TinyDB(path)
+            table = db.table(name='users')
+            doc = table.get(Query().id == int(data["user_id"]))
+            if doc is None:
+                raise Exception(f"No user with ID {data['user_id']}")
+
+            if "integrity" not in doc:
+                raise Exception(f"Integrity data not initialized.")
+
+            payload = "{\"device_data\": {"
+            for k, v in doc["integrity"]["device_data"].items():
+                payload += f'"{k}": {dict_to_payload(**v)}, '
+            payload = payload[:-2] + "}}"  # TODO encrypt payload with shared_key?
+
+            click.echo(payload)
+
+    except Exception as e:
+        _, _, exc_tb = sys.exc_info()
+        line = exc_tb.tb_lineno
+        click.echo(f"{repr(e)} at line: {line}")
+
+
 def dict_to_payload(**kwargs):
     result = "{"
     for col, val in kwargs.items():
-        if isinstance(val, int):
+        if isinstance(val, bool):
+            result += f'"{col}": {str(val).lower()}, '
+        elif isinstance(val, int):
             result += f'"{col}": {val}, '
         else:
             result += f'"{col}": "{val}", '

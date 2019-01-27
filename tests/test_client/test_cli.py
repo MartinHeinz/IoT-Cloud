@@ -6,9 +6,11 @@ import tempfile
 import warnings
 from binascii import a2b_hex
 from contextlib import redirect_stdout
+from unittest.mock import Mock
 
 import pytest
 from cryptography.fernet import Fernet
+from paho.mqtt.client import MQTTMessage
 from pyope.ope import OPE
 from sqlalchemy.exc import SADeprecationWarning
 from tinydb import TinyDB, where, Query
@@ -109,6 +111,24 @@ def test_send_column_keys(runner, access_token, reset_tiny_db):
     assert isinstance(fernet_key, Fernet)
     cipher = instantiate_ope_cipher(a2b_hex(doc["device_data:added"].encode()))
     assert isinstance(cipher, OPE)
+
+
+def test_get_fake_tuple_data():
+    device_id = 23
+    user_id = 1
+
+    msg = MQTTMessage(topic=b"%a/%a" % (device_id, user_id))
+    msg.payload = b'{"device_data": {"added": {'\
+                  b'"function_name": "triangle_wave",'\
+                  b'"lower_bound": 12,'\
+                  b'"upper_bound": 11,'\
+                  b'"is_numeric": true }}}'
+
+    assert cmd.fake_tuple_data is None
+    mqtt_client = Mock()
+    cmd._handle_on_message(mqtt_client, None, msg, device_id, user_id)
+    mqtt_client.disconnect.assert_called_once()
+    assert cmd.fake_tuple_data == {'device_data': {'added': {'function_name': 'triangle_wave', 'lower_bound': 12, 'upper_bound': 11, 'is_numeric': True}}}
 
 
 @pytest.mark.parametrize('reset_tiny_db', [device_cmd.path], indirect=True)
@@ -364,12 +384,12 @@ def test_dict_to_payload():
     kwargs = {
         "key1": "value",
         "key2": 1,
-        "another": "test",
+        "another": False,
     }
 
     result = device_cmd.dict_to_payload(**kwargs)
 
-    assert result == '{"key1": "value", "key2": 1, "another": "test"}'
+    assert result == '{"key1": "value", "key2": 1, "another": false}'
 
 
 def test_increment_upper_bounds():
@@ -468,3 +488,47 @@ def test_get_fake_tuple(runner, reset_tiny_db):
     assert doc["integrity"]["device_data"]["num_data"]["lower_bound"] == 2
     assert doc["integrity"]["device_data"]["added"]["lower_bound"] == 2
     assert doc["integrity"]["device_data"]["data"]["lower_bound"] == 2
+
+
+@pytest.mark.parametrize('reset_tiny_db', [device_cmd.path], indirect=True)
+def test_get_fake_tuple_info(runner, reset_tiny_db):
+    user_id = 1
+
+    payload_no_request = '{"user_id": 99}'
+    payload_wrong_user = '{"user_id": 99, "request": "fake_tuple_info"}'
+    payload = '{"user_id": 1, "request": "fake_tuple_info"}'
+
+    data = {"id": user_id, "integrity": {"device_data": {
+            "added": {"function_name": "triangle_wave",
+                      "lower_bound": 12,
+                      "upper_bound": 11,
+                      "is_numeric": True},
+            "num_data": {"function_name": "sawtooth_wave",
+                         "lower_bound": 12,
+                         "upper_bound": 11,
+                         "is_numeric": True},
+            "data": {"function_name": "square_wave",
+                     "lower_bound": 12,
+                     "upper_bound": 11,
+                     "is_numeric": False}}}}
+
+    result = runner.invoke(device_cmd.get_fake_tuple_info, [payload_no_request])
+    assert result.output == ""
+
+    with pytest.raises(Exception) as e:
+        runner.invoke(device_cmd.get_fake_tuple_info, [payload_wrong_user])
+        assert e.value.message == "No user with ID 99"
+
+    with pytest.raises(Exception) as e:
+        runner.invoke(device_cmd.get_fake_tuple_info, [payload])
+        assert e.value.message == "Integrity data not initialized."
+
+    tiny_db = TinyDB(device_cmd.path)
+    table = tiny_db.table(name='users')
+    table.insert(data)
+
+    result = runner.invoke(device_cmd.get_fake_tuple_info, [payload])
+
+    expected = '{"device_data": {"added": {"function_name": "triangle_wave", "lower_bound": 12, "upper_bound": 11, "is_numeric": true}, "num_data": {"function_name": "sawtooth_wave", "lower_bound": 12, "upper_bound": 11, "is_numeric": true}, "data": {"function_name": "square_wave", "lower_bound": 12, "upper_bound": 11, "is_numeric": false}}}'
+
+    assert expected in result.output
