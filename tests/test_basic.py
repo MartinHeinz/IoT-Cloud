@@ -10,7 +10,8 @@ from cryptography.fernet import Fernet
 from passlib.hash import bcrypt
 
 from app.consts import DEVICE_TYPE_ID_MISSING_ERROR_MSG, DEVICE_TYPE_ID_INCORRECT_ERROR_MSG, DEVICE_NAME_BI_MISSING_ERROR_MSG, DEVICE_NAME_MISSING_ERROR_MSG, \
-    DATA_RANGE_MISSING_ERROR_MSG, DATA_OUT_OF_OUTPUT_RANGE_ERROR_MSG, CORRECTNESS_HASH_MISSING_ERROR_MSG, SOMETHING_WENT_WRONG_MSG
+    DATA_RANGE_MISSING_ERROR_MSG, DATA_OUT_OF_OUTPUT_RANGE_ERROR_MSG, CORRECTNESS_HASH_MISSING_ERROR_MSG, SOMETHING_WENT_WRONG_MSG, DEVICE_ID_MISSING_ERROR_MSG, \
+    DEVICE_NAME_INVALID_ERROR_MSG
 from app.models.models import DeviceType, Device
 from app.app_setup import client as mqtt_client
 from app.utils import is_valid_uuid
@@ -297,6 +298,27 @@ def test_api_get_device_data_by_range_out_of_range(client, app_and_ctx, access_t
     assert response.status_code == 400
     json_data = json.loads(response.data.decode("utf-8"))
     assert json_data["error"] == DATA_OUT_OF_OUTPUT_RANGE_ERROR_MSG
+
+
+def test_api_get_device_data(client, app_and_ctx, access_token_two):
+    data = {"not-device_id": "non-empty", "access_token": access_token_two}
+    response = client.post('/api/data/get_device_data', query_string=data, follow_redirects=True)
+    assert response.status_code == 400
+    json_data = json.loads(response.data.decode("utf-8"))
+    assert json_data["error"] == DEVICE_ID_MISSING_ERROR_MSG
+
+    data = {"device_id": "not-a-number", "access_token": access_token_two}
+    response = client.post('/api/data/get_device_data', query_string=data, follow_redirects=True)
+    assert response.status_code == 400
+    json_data = json.loads(response.data.decode("utf-8"))
+    assert json_data["error"] == DEVICE_NAME_INVALID_ERROR_MSG
+
+    device_id = 45
+    data = {"device_id": str(device_id), "access_token": access_token_two}
+    response = client.post('/api/data/get_device_data', query_string=data, follow_redirects=True)
+    assert response.status_code == 200
+    json_data = json.loads(response.data.decode("utf-8"))
+    assert len(json_data["device_data"]) == 2
 
 
 def test_hash_bcrypt():

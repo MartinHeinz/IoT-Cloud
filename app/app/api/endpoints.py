@@ -8,7 +8,8 @@ from app.app_setup import client, db
 from app.auth.utils import require_api_token
 from app.consts import DEVICE_TYPE_ID_MISSING_ERROR_MSG, DEVICE_TYPE_ID_INCORRECT_ERROR_MSG, DEVICE_TYPE_DESC_MISSING_ERROR_MSG, \
     DEVICE_NAME_BI_MISSING_ERROR_MSG, DEVICE_NAME_MISSING_ERROR_MSG, DATA_RANGE_MISSING_ERROR_MSG, DATA_OUT_OF_OUTPUT_RANGE_ERROR_MSG, \
-    CORRECTNESS_HASH_MISSING_ERROR_MSG, DEVICE_ID_MISSING_ERROR_MSG, PUBLIC_KEY_MISSING_ERROR_MSG, UNAUTHORIZED_USER_ERROR_MSG, NO_PUBLIC_KEY_ERROR_MSG
+    CORRECTNESS_HASH_MISSING_ERROR_MSG, DEVICE_ID_MISSING_ERROR_MSG, PUBLIC_KEY_MISSING_ERROR_MSG, UNAUTHORIZED_USER_ERROR_MSG, NO_PUBLIC_KEY_ERROR_MSG, \
+    DEVICE_NAME_INVALID_ERROR_MSG
 from app.models.models import DeviceType, Device, DeviceData, UserDevice, User
 from app.mqtt.utils import Payload
 from app.utils import http_json_response, check_missing_request_argument, is_valid_uuid
@@ -126,6 +127,33 @@ def get_data_by_time_range():  # TODO This should not be named get_data_by_TIME_
                                                             DeviceData.device_id.in_(d.id for d in user.owned_devices))).all()
         else:
             return http_json_response(False, 400, **{"error": DATA_OUT_OF_OUTPUT_RANGE_ERROR_MSG})
+
+    result = []
+    for row in data:
+        result.append(row.as_dict())
+        result[-1]["data"] = result[-1]["data"].decode("utf-8")
+    return http_json_response(**{'device_data': result})
+
+
+@api.route('/data/get_device_data', methods=['POST'])
+@require_api_token()
+def get_device_data():
+    device_id = request.args.get("device_id", None)
+    access_token = request.args.get("access_token", "")
+
+    arg_check = check_missing_request_argument((device_id, DEVICE_ID_MISSING_ERROR_MSG))
+    if arg_check is not True:
+        return arg_check
+
+    if not is_number(device_id):
+        return http_json_response(False, 400, **{"error": DEVICE_NAME_INVALID_ERROR_MSG})
+
+    device_id = int(device_id)
+
+    if not User.can_use_device(access_token, device_id):
+        return http_json_response(False, 400, **{"error": UNAUTHORIZED_USER_ERROR_MSG})
+
+    data = db.session.query(DeviceData).filter(DeviceData.device_id == device_id)
 
     result = []
     for row in data:
