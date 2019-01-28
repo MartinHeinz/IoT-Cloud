@@ -17,6 +17,12 @@ services:
       TEST_DB_ATTR_AUTH_NAME: "attr_auth_testing"
       POSTGRES_DB: postgres
       PGPORT: 5430
+    networks:
+      - iot-cloud_test
 
 volumes:
   data: {}
+
+networks:
+  iot-cloud_test:
+    external: true
