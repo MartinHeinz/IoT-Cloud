@@ -266,7 +266,7 @@ fake_tuple_data = None
 @user.command()
 @click.argument('device_id')
 @click.option('--token', envvar='ACCESS_TOKEN')
-def get_device_data(device_id, token):
+def get_device_data(device_id, token):  # TODO right now it requires device to 1st use `get_fake_tuple` (`init_integrity_data`) before 1st call to this
     """
     Queries server for data of :param device_id device and then verifies the received data using
     integrity information from device (received using MQTT Broker) and correctness hash attribute
@@ -319,23 +319,39 @@ def _divide_fake_and_real_data(rows):
     raise NotImplementedError
 
 
-def get_encryption_keys(db_keys):
+def get_encryption_keys(device_id, db_keys):
     """
     Retrieves encryption (decryption) keys corresponding to :param db_keys from TinyDB file
+    :param device_id
     :param db_keys: list of TinyDB key names, e.g.: ["device_type:description", "action:name"]
     :return: dictionary of key, value pair of column name and encryption string, e.g.: {"action:name": "9dd1a57836a5...858372a8c0c42515", ...}
     """
-    raise NotImplementedError
+    db = TinyDB(path)
+    table = db.table(name='device_keys')
+    doc = table.get(Query().device_id == device_id)
+    result = []
+    for key in db_keys:
+        result.append(doc[key])
+    return result
 
 
-def get_col_encryption_type(col_name):
+def get_col_encryption_type(col_name, integrity_info):
     """
     Returns True or False based on whether the column is encrypted as number (OPE) or not (Fernet) - this
     is based on "is_numeric" attribute in TinyDB
+    :param integrity_info: {
+            'device_data': {
+                'added': {
+                    'function_name': 'triangle_wave',
+                    'lower_bound': 1,
+                    'upper_bound': 1,
+                    'is_numeric': True
+                    }}}
     :param col_name: e.g. "device_data:data"
     :return:
     """
-    raise NotImplementedError
+    table, col = col_name.split(":")
+    return integrity_info[table][col]["is_numeric"]
 
 
 def decrypt_row(row, keys):

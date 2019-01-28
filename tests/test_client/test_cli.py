@@ -133,6 +133,48 @@ def test_get_fake_tuple_data():
     assert cmd.fake_tuple_data == {'device_data': {'added': {'function_name': 'triangle_wave', 'lower_bound': 12, 'upper_bound': 11, 'is_numeric': True}}}
 
 
+@pytest.mark.parametrize('reset_tiny_db', [cmd.path], indirect=True)
+def test_get_encryption_keys(reset_tiny_db):
+    device_id = 23
+    data = {"device_id": device_id,
+            "shared_key": "aefe715635c3f35f7c58da3eb410453712aaf1f8fd635571aa5180236bb21acc",
+            "action:name": "a70c6a23f6b0ef9163040f4cc02819c22d7e35de6469672d250519077b36fe4d",
+            "device_type:description": "2c567c6fde8d29ee3c1ac15e74692089fdce507a43eb931be792ec3887968d33",
+            "device_data:added": "5b27b633b2ea8fd12617d36dc0e864b2e8c6e57e809662e88fe56d70d033429e",
+            "device_data:num_data": "ed1b6067e3dec82b4b61360c29eaeb785987e0c36bfdba454b9eca2d1622ecc2",
+            "device_data:data": "aefe715635c3f35f7c58da3eb410453712aaf1f8fd635571aa5180236bb21acc",
+            "scene:name": "7c2a6bb5e7021e30c7326bdb99003fd43b2b0770b0a4a07f7b3876634b11ff94",
+            "scene:description": "d011b0fa5a23b3c2efadb2e0fea094647ff7b03b9a93022aeae6c1edf3eb1871"}
+
+    tiny_db = TinyDB(cmd.path)
+    table = tiny_db.table(name='device_keys')
+    table.insert(data)
+    result = cmd.get_encryption_keys(device_id, ["device_data:added", "scene:name"])
+    assert data["device_data:added"] in result
+    assert data["scene:name"] in result
+
+
+def test_get_col_encryption_type():
+    col_name = "device_data:added"
+    integrity_info = {
+        'device_data': {
+            'added': {
+                'function_name': 'triangle_wave',
+                'lower_bound': 1,
+                'upper_bound': 1,
+                'is_numeric': True},
+            'data': {
+                'function_name': 'square_wave',
+                'lower_bound': 1,
+                'upper_bound': 1,
+                'is_numeric': False}}}
+
+    assert cmd.get_col_encryption_type(col_name, integrity_info)
+
+    col_name = "device_data:data"
+    assert not cmd.get_col_encryption_type(col_name, integrity_info)
+
+
 @pytest.mark.parametrize('reset_tiny_db', [device_cmd.path], indirect=True)
 def test_parse_msg(runner, reset_tiny_db):
     data = """{"ciphertext": "gAAAAABcOiilUJ_u1tRSQ-iIghG4DgPOfCjUXOL2_FZ0f2XcPHcp5rDMu1dQMvFZ_4VlPr-QjG79HNes-F6bDxcr7K03R0r-8bWEZaFcS3j-ri0C-sy33Fc=", "user_id": 1}"""
