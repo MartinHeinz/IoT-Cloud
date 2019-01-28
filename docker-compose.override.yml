@@ -16,11 +16,15 @@ services:
       TEST_DB_ATTR_AUTH_NAME: "attr_auth_testing"
       POSTGRES_DB: postgres
       PGPORT: 5432
+    networks:
+      - test
   web:
     container_name: iot_cloud_web
     working_dir: /app
     volumes:
       - ./app:/app
+    networks:
+      - test
 
     environment:
       - DOCKER_TLS_VERIFY=True
@@ -46,6 +50,8 @@ services:
     - ./mosquitto/data:/mosquitto/data
     - ./mosquitto/log:/mosquitto/log
     - ./mosquitto/certs:/mosquitto/certs
+    networks:
+    - test
   nginx:
     container_name: iot_cloud_nginx
     ports:
@@ -55,6 +61,8 @@ services:
     - ./webserver/ssl/:/etc/ssl/
     depends_on:
     - web
+    networks:
+    - test
   web_test:
     container_name: iot_cloud_web_test
     working_dir: /app
@@ -71,6 +79,12 @@ services:
     command: pytest ../tests --color=yes --log-level=ERROR --log-cli-format="%(asctime)s [%(levelname)8s] %(message)s (%(filename)s:%(lineno)s)" --log-cli-date-format="%Y-%m-%d %H:%M:%S" --junitxml=/tests/reports/test_report.xml --cov=/app --cov-report term --cov-report xml:/tests/reports/cov_report.xml -W ignore::DeprecationWarning -W ignore::passlib.exc.PasslibHashWarning
     depends_on:
       - db_test
+    networks:
+      - test
 
 volumes:
   data_test: {}
+
+networks:
+  test:
+    driver: bridge

@@ -2,6 +2,7 @@ import base64
 import io
 import os
 import re
+import subprocess
 import tempfile
 import warnings
 from binascii import a2b_hex
@@ -66,7 +67,8 @@ def test_populate(runner):
                       );''')
         tf.write("DROP TABLE public.action;")
         tf.flush()
-        result = runner.invoke(populate, ["--path", tf.name, "--db", "testing", "--host", "localhost"], input="postgres")
+        ip = subprocess.Popen("hostname -I | cut -d' ' -f1", shell=True, stdout=subprocess.PIPE).stdout.read().strip().decode()
+        result = runner.invoke(populate, ["--path", tf.name, "--db", "testing", "--host", ip], input="postgres")
     assert result.exit_code == 0
 
 
