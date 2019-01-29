@@ -16,6 +16,7 @@ from cryptography.hazmat.primitives.asymmetric.ec import EllipticCurvePublicKey,
 from cryptography.hazmat.primitives.serialization import load_pem_private_key, load_pem_public_key
 from paho.mqtt import client as paho
 from tinydb import TinyDB, where, Query
+from passlib.hash import bcrypt
 
 
 sys.stdout = open(os.devnull, 'w')
@@ -25,10 +26,10 @@ from app.utils import bytes_to_json
 sys.stdout = sys.__stdout__
 
 try:  # for packaged CLI (setup.py)
-    from client.crypto_utils import hash, correctness_hash, check_correctness_hash
+    from client.crypto_utils import hash, correctness_hash, check_correctness_hash, int_to_bytes, instantiate_ope_cipher, int_from_bytes
     from client.utils import json_string_with_bytes_to_dict, _create_payload
 except ImportError:  # for un-packaged CLI
-    from crypto_utils import hash, correctness_hash, check_correctness_hash
+    from crypto_utils import hash, correctness_hash, check_correctness_hash, instantiate_ope_cipher, int_from_bytes
     from utils import json_string_with_bytes_to_dict, _create_payload
 
 
@@ -277,13 +278,23 @@ def get_device_data(device_id, token):  # TODO right now it requires device to 1
 
     r = requests.post(URL_GET_DEVICE_DATA, params=data, verify=VERIFY_CERTS)
     content = r.content.decode('unicode-escape')
+    click.echo("Tu je response:")
+    click.echo(r.content)
     json_content = json_string_with_bytes_to_dict(content)
 
+    click.echo("Tu su data:")
+    click.echo(json_content["device_data"])
     _get_fake_tuple_data(user_id, int(device_id))
-    fake_tuples, rows = _divide_fake_and_real_data(json_content["device_data"])
-    verify_integrity_data(fake_tuple_data, fake_tuples)
+    click.echo("Tu su integrity info:")
+    click.echo(fake_tuple_data)
+    fake_tuples, rows = _divide_fake_and_real_data(json_content["device_data"], device_id, fake_tuple_data)
+    click.echo("Tu su fake_tuples:")
+    click.echo(fake_tuples)
+    click.echo("Tu su rows:")
+    click.echo(rows)
+    verify_integrity_data(generate_fake_tuples_in_range(fake_tuple_data), fake_tuples)
 
-    check_correctness_hash(rows, 'added', 'data', 'num_data')  # TODO add TID and update test and schema with correctness hashes that include TID
+    check_correctness_hash(rows, 'added', 'data', 'num_data')  # TODO add TID and update test and schema with correctness hashes that include TID (is_fake already uses TID)
     click.echo(json_content["device_data"])
     click.echo(fake_tuple_data)
 
@@ -312,11 +323,41 @@ def _get_fake_tuple_data(user_id, device_id):
     client.loop_forever()
 
 
-def _divide_fake_and_real_data(rows):
+def _divide_fake_and_real_data(rows, device_id, integrity_info):
     """ Split data into 2 lists based on 'fakeness'
     Decrypts each row and computes fake correctness hash, then tests (using bcrypt)
-    whether `correctness_hash` of row is 'same' as computed fake correctness hash """
-    raise NotImplementedError
+    whether `correctness_hash` of row is 'same' as computed fake correctness hash
+    :param device_id
+    :param rows: example: [{
+        'added': 37123,
+        'correctness_hash': '$2b$12$FSuBaNwezizWJcj47RxYJOpur2k49IJObfIPLDce5pKpRRZEASt6m',
+        'data': 'gAAAAABcUECMQMM0MjKknugGdI6YN81pLtmLUrcMsjHMBG87KpIJFWZF8n1DTVJX7VvnlVMMN4BNGdVROLeCD_I0XUs0IAK9AA==',
+        'device_id': 23,
+        'id': 1,
+        'num_data': -9199,
+        'tid': 3}, ...]
+    """
+    db_col_names = ["device_data:added", "device_data:data", "device_data:num_data"]
+    enc_keys = get_encryption_keys(device_id, db_col_names)
+    col_types = {col: get_col_encryption_type(col, integrity_info) for col in db_col_names}
+    key_type_pairs = {}
+    for k, v in enc_keys.items():
+        key_type_pairs[k.split(":")[1]] = [enc_keys[k], col_types[k]]
+
+    real, fake = [], []
+    for row in rows:
+        modified = row
+        modified.pop("id")
+        modified.pop("device_id")
+        row_correctness_hash = modified.pop("correctness_hash")
+        decrypted = decrypt_row(modified, key_type_pairs)
+        row_values = [decrypted["added"], decrypted["num_data"], decrypted["data"], decrypted["tid"]]
+        if is_fake(row_values, row_correctness_hash):
+            fake.append(decrypted)
+        else:
+            real.append(decrypted)
+
+    return fake, real
 
 
 def get_encryption_keys(device_id, db_keys):
@@ -329,9 +370,9 @@ def get_encryption_keys(device_id, db_keys):
     db = TinyDB(path)
     table = db.table(name='device_keys')
     doc = table.get(Query().device_id == device_id)
-    result = []
+    result = {}
     for key in db_keys:
-        result.append(doc[key])
+        result[key] = doc[key]
     return result
 
 
@@ -357,31 +398,59 @@ def get_col_encryption_type(col_name, integrity_info):
 def decrypt_row(row, keys):
     """
     :param row: example: {
-        "added": -1000,
-        "num_data": -1000,
-        "data": 1000,
+        "added": 36976,
+        "num_data": -9272,
+        "data": "gAAAAABcTyUFZrhQRLzLvwep7j0Vm2UFjS2ylZ7bjB2YRueDpX15tobA0oOSEWBYZ4LaCKRa_h7WyKMacAAt-982srPPOR_1Cw==",
         "tid": 1
     }
-    :param keys: example: {
-        "added": [ "217b5c3430fd77e7a0191f04cbaf872be189d8cb203c54f7b083211e8e5f4f70", True],
-        "num_data": [ "a70c6a23f6b0ef9163040f4cc02819c22d7e35de6469672d250519077b36fe4d", True],
-        "data": [ "d011b0fa5a23b3c2efadb2e0fea094647ff7b03b9a93022aeae6c1edf3eb1871", False]
+    :param keys: example:
+        "added": ["26751017213ff85f189bedc34d302acfdf1649d5e1bac653a9709171ad37b155", True],
+        "num_data": ["84964a963c097c550b41a085bbf1ad93ba5a1046aa5495d86d62f9623ab89cc6", True],
+        "data": ["1fac0f8fa2083fe32c21d081a46e455420f71c5f1f6959afb9f44623048e6875", False]
     }
     """
-    raise NotImplementedError
+    result = {}
+    for col, val in row.items():
+        if col != 'tid':
+            key = a2b_hex(keys[col][0].encode())
+            if not keys[col][1]:  # if key is for fernet (is_numeric is False) create Fernet token
+                cipher = Fernet(base64.urlsafe_b64encode(key))
+                click.echo(val)
+                result[col] = int_from_bytes(cipher.decrypt(val.encode()))
+            else:  # if key is for OPE (is_numeric is True) create OPE cipher
+                cipher = instantiate_ope_cipher(key)
+                result[col] = cipher.decrypt(val)
+        else:
+            result[col] = val
+    return result
 
 
-def is_fake(row):
+def is_fake(row_values, row_correctness_hash):
     """
     Check whether row is fake tuple based on "correctness_hash" attribute in row and computed hash
     from other attributes in row.
-    :param row: dict with keys as column names and values as values from server DB
+    :param row_correctness_hash
+    :param row_values: dict with keys as column names and values as values from server DB (decrypted using `decrypt_row`)
+        example: [-959, 1000, -980, 1]
     :return: bool, based on correctness hash check
     """
-    raise NotImplementedError
+    secret = ''.join(map(str, row_values)) + "1"
+    return bcrypt.verify(secret, row_correctness_hash)
 
 
-def verify_integrity_data(fake_tuple_info, fake_rows):
+def verify_integrity_data(expected_tuples, present_rows):
+    """
+    :param expected_tuples: list of dicts with keys as column names and values as values from server DB
+        (generated fake tuples, that should be present in DB)
+    :param present_rows: list of dicts with keys as column names and values as values from server DB
+        (queried tuples)
+    :return: False if any of the rows does not satisfy 'fakeness' check of if there less/more fake
+    rows than there should be
+    """
+    return expected_tuples == present_rows
+
+
+def generate_fake_tuples_in_range(fake_tuple_info):
     """
     Generates all fake tuples in <"lower_bound", "upper_bound"> range and verifies them againts :param fake_rows.
     :param fake_tuple_info: example: {
@@ -389,13 +458,29 @@ def verify_integrity_data(fake_tuple_info, fake_rows):
                         "function_name": "triangle_wave",
                         "lower_bound": 5,
                         "upper_bound": 11,
-                        "is_numeric": true
+                        "is_numeric": True
                     }
-    :param fake_rows: list of dicts with keys as column names and values as values from server DB
-    :return: False if any of the rows does not satisfy 'fakeness' check of if there less/more fake
-    rows than there should be
+    :return: list of dicts (each dict contains single tuple with keys as column names and values)
     """
-    raise NotImplementedError
+    try:
+        from client.device.commands import GENERATING_FUNCTIONS
+    except ImportError:
+        from device.commands import GENERATING_FUNCTIONS
+    fake_tuple_col_values = {}
+    fake_tuples = []
+    lb, ub = 0, 0
+    for col, val in fake_tuple_info.items():
+        lb = fake_tuple_info[col]["lower_bound"]
+        ub = fake_tuple_info[col]["upper_bound"] + 1
+        # fake_tuple_col_values[col] = list(GENERATING_FUNCTIONS[val["function_name"]]())[lb:ub]
+        func_list = list(GENERATING_FUNCTIONS[val["function_name"]]())
+        fake_tuple_col_values[col] = func_list[lb:ub]
+    for no, i in enumerate(range(lb, ub)):
+        fake_tuples.append({"added": fake_tuple_col_values["added"][no],
+                            "num_data": fake_tuple_col_values["num_data"][no],
+                            "data": fake_tuple_col_values["data"][no],
+                            "tid": i})
+    return fake_tuples
 
 
 def _setup_client(user_id):
