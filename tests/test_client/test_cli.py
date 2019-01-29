@@ -134,6 +134,61 @@ def test_get_fake_tuple_data():
 
 
 @pytest.mark.parametrize('reset_tiny_db', [cmd.path], indirect=True)
+def test_divide_fake_and_real_data(reset_tiny_db):
+    device_id = 23
+    rows = [{
+        'added': 37123,
+        'correctness_hash': '$2b$12$/Nu2HO8qBORrmJG.D9isAuRQ0VzbKLb5CXeFxvBfusbpihDBj5BgS',
+        'data': 'gAAAAABcUECMQMM0MjKknugGdI6YN81pLtmLUrcMsjHMBG87KpIJFWZF8n1DTVJX7VvnlVMMN4BNGdVROLeCD_I0XUs0IAK9AA==',
+        'device_id': 23,
+        'id': 1,
+        'num_data': -9199,
+        'tid': 3}, {
+        'added': 37210,
+        'correctness_hash': '$2b$12$dH64lof/JNEYHcjZEPP3XOEVoBew4/5I0bTgGfBD4dyOIZs5ZR47y',
+        'data': 'gAAAAABcUFF86-MNlnooVpCGwy27-BJFfkGmOc9GP9iEH4JkOBF7N9BCMu0CJAmNJyJ4l-b-4Vsz7wAOFLabPMqYZFAF5_VDGA==',
+        'device_id': 23,
+        'id': 2,
+        'num_data': -9152,
+        'tid': 4},
+        {'added': 37284,
+         'correctness_hash': '$2b$12$m2bC.H.pdG6tbNTyEyXPeezMpyhqGj0RH5Ud2UVw.gIO/9rEupNqe',
+         'data': 'gAAAAABcUFx6zLc0gwX2-gkoHiXEEYjJh_OCuqmb9wPdh4RDkXtRYS05raFaDs2PBVBd38wiUvWZppMC4M6UpalTUwHdLyMHew==',
+         'device_id': 23,
+         'id': 6,
+         'num_data': -9100,
+         'tid': 5}]
+
+    data = {"device_id": device_id,
+            "shared_key": "aefe715635c3f35f7c58da3eb410453712aaf1f8fd635571aa5180236bb21acc",
+            "action:name": "a70c6a23f6b0ef9163040f4cc02819c22d7e35de6469672d250519077b36fe4d",
+            "device_type:description": "2c567c6fde8d29ee3c1ac15e74692089fdce507a43eb931be792ec3887968d33",
+            "device_data:added": "26751017213ff85f189bedc34d302acfdf1649d5e1bac653a9709171ad37b155",
+            "device_data:num_data": "84964a963c097c550b41a085bbf1ad93ba5a1046aa5495d86d62f9623ab89cc6",
+            "device_data:data": "1fac0f8fa2083fe32c21d081a46e455420f71c5f1f6959afb9f44623048e6875",
+            "scene:name": "7c2a6bb5e7021e30c7326bdb99003fd43b2b0770b0a4a07f7b3876634b11ff94",
+            "scene:description": "d011b0fa5a23b3c2efadb2e0fea094647ff7b03b9a93022aeae6c1edf3eb1871"}
+
+    integrity_info = {'device_data': {
+        'added': {'function_name': 'triangle_wave', 'lower_bound': 1, 'upper_bound': 4, 'is_numeric': True},
+        'num_data': {'function_name': 'sawtooth_wave', 'lower_bound': 1, 'upper_bound': 4, 'is_numeric': True},
+        'data': {'function_name': 'square_wave', 'lower_bound': 1, 'upper_bound': 4, 'is_numeric': False}
+    }}
+
+    tiny_db = TinyDB(cmd.path)
+    table = tiny_db.table(name='device_keys')
+    table.insert(data)
+
+    fake, real = cmd._divide_fake_and_real_data(rows, device_id, integrity_info)
+    assert len(fake) == 2
+    assert len(real) == 1
+    assert real[0]["tid"] == 5
+    assert "added" in real[0] and "data" in real[0] and "num_data" in real[0] and "tid" in real[0]
+    assert "correctness_hash" not in real[0] and "device_id" not in real[0] and "id" not in real[0]
+    assert real[0]["tid"] == 5
+
+
+@pytest.mark.parametrize('reset_tiny_db', [cmd.path], indirect=True)
 def test_get_encryption_keys(reset_tiny_db):
     device_id = 23
     data = {"device_id": device_id,
@@ -150,8 +205,10 @@ def test_get_encryption_keys(reset_tiny_db):
     table = tiny_db.table(name='device_keys')
     table.insert(data)
     result = cmd.get_encryption_keys(device_id, ["device_data:added", "scene:name"])
-    assert data["device_data:added"] in result
-    assert data["scene:name"] in result
+    assert result == {
+        "device_data:added": "5b27b633b2ea8fd12617d36dc0e864b2e8c6e57e809662e88fe56d70d033429e",
+        "scene:name": "7c2a6bb5e7021e30c7326bdb99003fd43b2b0770b0a4a07f7b3876634b11ff94"
+    }
 
 
 def test_get_col_encryption_type():
@@ -173,6 +230,52 @@ def test_get_col_encryption_type():
 
     col_name = "device_data:data"
     assert not cmd.get_col_encryption_type(col_name, integrity_info)
+
+
+def test_decrypt_row():
+    row = {
+        "added": 36976,
+        "num_data": -9272,
+        "data": "gAAAAABcTyUFZrhQRLzLvwep7j0Vm2UFjS2ylZ7bjB2YRueDpX15tobA0oOSEWBYZ4LaCKRa_h7WyKMacAAt-982srPPOR_1Cw==",
+        "tid": 1
+    }
+
+    keys = {
+        "added": ["26751017213ff85f189bedc34d302acfdf1649d5e1bac653a9709171ad37b155", True],
+        "num_data": ["84964a963c097c550b41a085bbf1ad93ba5a1046aa5495d86d62f9623ab89cc6", True],
+        "data": ["1fac0f8fa2083fe32c21d081a46e455420f71c5f1f6959afb9f44623048e6875", False]
+    }
+
+    expected = {
+        "added": -959,
+        "num_data": -980,
+        "data": 1000,
+        "tid": 1
+    }
+
+    result = cmd.decrypt_row(row, keys)
+    assert expected == result
+
+
+def test_is_fake():
+    row_values = [-959, 1000, -980]
+    row_correctness_hash ="$2b$12$LsO05IDQESAGI03fo582VO5FIem/6ZtL6v03KfNtjHq9oV5KDRNgq"
+    assert cmd.is_fake(row_values, row_correctness_hash)
+
+    row_correctness_hash ="$2b$12$sLZlIHA0JLUudsKc3yUz1.tsRfqLcMjaLv4aczxCzrFlcs7Kjao0G"
+    assert not cmd.is_fake(row_values, row_correctness_hash)
+
+
+def test_generate_fake_tuples_in_range():
+    fake_tuple_info = {
+        "added": {"function_name": "triangle_wave", "lower_bound": 2, "upper_bound": 5, "is_numeric": True},
+        "num_data": {"function_name": "sawtooth_wave", "lower_bound": 2, "upper_bound": 5, "is_numeric": True},
+        "data": {"function_name": "square_wave", "lower_bound": 2, "upper_bound": 5, "is_numeric": False}}
+    fake_tuples = cmd.generate_fake_tuples_in_range(fake_tuple_info)
+
+    assert len(fake_tuples) == 4
+    assert "added" in fake_tuples[0] and "num_data" in fake_tuples[0] and "data" in fake_tuples[0] and "tid" in fake_tuples[0]
+    assert fake_tuples[0] == {'added': -919, 'num_data': -959, 'data': 1000, "tid": 2}
 
 
 @pytest.mark.parametrize('reset_tiny_db', [device_cmd.path], indirect=True)
