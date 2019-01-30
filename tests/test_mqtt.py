@@ -7,6 +7,8 @@ from app.app_setup import db
 from app.models.models import UserDevice, DeviceData
 from app.mqtt.utils import Payload
 
+from client.crypto_utils import hash
+
 
 def test_payload_init():
     p = Payload(device_id=111111,
@@ -99,8 +101,9 @@ def test_mqtt_handle_on_message_receive_pk_user_doesnt_have_this_device(app_and_
 
 def test_mqtt_handle_on_message_save_device_data(app_and_ctx, capsys):
     device_id = 9999  # not present
+    tid_bi = hash("8", "23")
     topic = b"%a/server/save_data" % device_id
-    payload = b"{'added': 6987, 'num_data': 31164, 'data': 'gAAAAABcTFAz9Wr5ZsnMcVYbQiXlnZCvT36MfDatZNyLwDpm_ixbzkZhM1NA4w7MN2p3CW3gyTA8gYtuKtDTomhulszvLTFfPA==', 'tid': 8, 'correctness_hash': '$2b$12$9hxKg4pjXbm0kpbItQTd2uMICAGn2ntRw1qQskHIL/7tLa3ISIlmO'}"
+    payload = b"{'added': 6987, 'num_data': 31164, 'data': 'gAAAAABcTFAz9Wr5ZsnMcVYbQiXlnZCvT36MfDatZNyLwDpm_ixbzkZhM1NA4w7MN2p3CW3gyTA8gYtuKtDTomhulszvLTFfPA==', 'tid': 'encrypted_tid(8)', 'tid_bi': '$2b$12$23xxxxxxxxxxxxxxxxxxxuLHznKMxjdogfckEGo6U8J.idwkqiHaO', 'correctness_hash': '$2b$12$9hxKg4pjXbm0kpbItQTd2uMICAGn2ntRw1qQskHIL/7tLa3ISIlmO'}"
     msg = MQTTMessage(topic=topic)
     msg.payload = payload
     from app.mqtt.mqtt import handle_on_message
@@ -110,7 +113,7 @@ def test_mqtt_handle_on_message_save_device_data(app_and_ctx, capsys):
         captured = capsys.readouterr()
         assert f"Device with id: {device_id} doesn't exist." in captured.out
         device_data = db.session.query(DeviceData).filter(and_(
-                            DeviceData.tid == 8,
+                            DeviceData.tid_bi == tid_bi,
                             DeviceData.device_id == device_id,
                         )).first()
         assert device_data is None
@@ -122,7 +125,7 @@ def test_mqtt_handle_on_message_save_device_data(app_and_ctx, capsys):
         handle_on_message(None, None, msg, app, db)
 
         device_data = db.session.query(DeviceData).filter(and_(
-            DeviceData.tid == 8,
+            DeviceData.tid_bi == tid_bi,
             DeviceData.device_id == device_id,
         )).first()
         assert device_data is not None
@@ -132,15 +135,16 @@ def test_mqtt_handle_on_message_save_device_data(app_and_ctx, capsys):
 
 def test_mqtt_handle_on_message_delete_device_data(app_and_ctx, capsys):
     device_id = 23
+    tid_bi = hash("8", "23")
     topic = b"%a/server/remove_data" % device_id
-    payload = b"{'added': 6987, 'num_data': 31164, 'data': 'gAAAAABcTFAz9Wr5ZsnMcVYbQiXlnZCvT36MfDatZNyLwDpm_ixbzkZhM1NA4w7MN2p3CW3gyTA8gYtuKtDTomhulszvLTFfPA==', 'tid': 8, 'correctness_hash': '$2b$12$9hxKg4pjXbm0kpbItQTd2uMICAGn2ntRw1qQskHIL/7tLa3ISIlmO'}"
+    payload = b"{'added': 6987, 'num_data': 31164, 'data': 'gAAAAABcTFAz9Wr5ZsnMcVYbQiXlnZCvT36MfDatZNyLwDpm_ixbzkZhM1NA4w7MN2p3CW3gyTA8gYtuKtDTomhulszvLTFfPA==', 'tid': 'encrypted_tid(8)', 'tid_bi': '$2b$12$23xxxxxxxxxxxxxxxxxxxuLHznKMxjdogfckEGo6U8J.idwkqiHaO', 'correctness_hash': '$2b$12$9hxKg4pjXbm0kpbItQTd2uMICAGn2ntRw1qQskHIL/7tLa3ISIlmO'}"
     msg = MQTTMessage(topic=topic)
     msg.payload = payload
     from app.mqtt.mqtt import handle_on_message
     app, ctx = app_and_ctx
     with app.app_context():
         device_data = db.session.query(DeviceData).filter(and_(
-            DeviceData.tid == 8,
+            DeviceData.tid_bi == tid_bi,
             DeviceData.device_id == device_id,
         )).first()  # should be already present from previous test
         assert device_data is not None, "Previous test probably failed to insert data."
@@ -148,7 +152,7 @@ def test_mqtt_handle_on_message_delete_device_data(app_and_ctx, capsys):
         handle_on_message(None, None, msg, app, db)
 
         device_data = db.session.query(DeviceData).filter(and_(
-            DeviceData.tid == 8,
+            DeviceData.tid_bi == tid_bi,
             DeviceData.device_id == device_id,
         )).first()
         assert device_data is None, "Data was not removed."

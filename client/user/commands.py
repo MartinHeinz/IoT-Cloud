@@ -132,7 +132,7 @@ def get_devices(device_name, user_id, token):
 @click.option('--lower', required=False)
 @click.option('--upper', required=False)
 @click.option('--token', envvar='ACCESS_TOKEN')
-def get_device_data_by_time_range(lower=None, upper=None, token=""):  # TODO add decryption based on stored keys
+def get_device_data_by_time_range(lower=None, upper=None, token=""):
     if lower is not None and upper is not None:
         data = {"lower": int(lower), "upper": int(upper), "access_token": token}
     elif lower is not None and upper is None:
@@ -144,7 +144,10 @@ def get_device_data_by_time_range(lower=None, upper=None, token=""):  # TODO add
     r = requests.post(URL_GET_DEVICE_DATA_BY_RANGE, params=data, verify=VERIFY_CERTS)
     content = r.content.decode('unicode-escape')
     json_content = json_string_with_bytes_to_dict(content)
-    check_correctness_hash(json_content["device_data"], 'added', 'data', 'num_data')  # TODO add TID and update test and schema with correctness hashes that include TID
+
+    # TODO update schema (device_data table), then
+    # TODO decrypt here - retrieve keys from keystore, decrypt each row, feed list of decrypted row into next line
+    check_correctness_hash(json_content["device_data"], 'added', 'data', 'num_data', 'tid')
     click.echo(content)
 
 
@@ -242,6 +245,7 @@ def send_column_keys(device_id):
         "device_data:added": None,
         "device_data:num_data": None,
         "device_data:data": None,
+        "device_data:tid": None,
         "scene:name": None,
         "scene:description": None
     }
@@ -294,7 +298,7 @@ def get_device_data(device_id, token):  # TODO right now it requires device to 1
     click.echo(rows)
     verify_integrity_data(generate_fake_tuples_in_range(fake_tuple_data), fake_tuples)
 
-    check_correctness_hash(rows, 'added', 'data', 'num_data')  # TODO add TID and update test and schema with correctness hashes that include TID (is_fake already uses TID)
+    check_correctness_hash(rows, 'added', 'data', 'num_data', 'tid')  # TODO add TID and update test and schema with correctness hashes that include TID (is_fake already uses TID)
     click.echo(json_content["device_data"])
     click.echo(fake_tuple_data)
 
@@ -337,7 +341,7 @@ def _divide_fake_and_real_data(rows, device_id, integrity_info):
         'num_data': -9199,
         'tid': 3}, ...]
     """
-    db_col_names = ["device_data:added", "device_data:data", "device_data:num_data"]
+    db_col_names = ["device_data:added", "device_data:data", "device_data:tid", "device_data:num_data"]
     enc_keys = get_encryption_keys(device_id, db_col_names)
     col_types = {col: get_col_encryption_type(col, integrity_info) for col in db_col_names}
     key_type_pairs = {}
@@ -411,17 +415,14 @@ def decrypt_row(row, keys):
     """
     result = {}
     for col, val in row.items():
-        if col != 'tid':
-            key = a2b_hex(keys[col][0].encode())
-            if not keys[col][1]:  # if key is for fernet (is_numeric is False) create Fernet token
-                cipher = Fernet(base64.urlsafe_b64encode(key))
-                click.echo(val)
-                result[col] = int_from_bytes(cipher.decrypt(val.encode()))
-            else:  # if key is for OPE (is_numeric is True) create OPE cipher
-                cipher = instantiate_ope_cipher(key)
-                result[col] = cipher.decrypt(val)
-        else:
-            result[col] = val
+        key = a2b_hex(keys[col][0].encode())
+        if not keys[col][1]:  # if key is for fernet (is_numeric is False) create Fernet token
+            cipher = Fernet(base64.urlsafe_b64encode(key))
+            click.echo(val)
+            result[col] = int_from_bytes(cipher.decrypt(val.encode()))
+        else:  # if key is for OPE (is_numeric is True) create OPE cipher
+            cipher = instantiate_ope_cipher(key)
+            result[col] = cipher.decrypt(val)
     return result
 
 
@@ -479,7 +480,7 @@ def generate_fake_tuples_in_range(fake_tuple_info):
         fake_tuples.append({"added": fake_tuple_col_values["added"][no],
                             "num_data": fake_tuple_col_values["num_data"][no],
                             "data": fake_tuple_col_values["data"][no],
-                            "tid": i})
+                            "tid": fake_tuple_col_values["tid"][no]})
     return fake_tuples
 
 

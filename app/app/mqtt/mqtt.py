@@ -56,7 +56,8 @@ def _edit_device_data(device_id, action, msg, app, db):
             if action == "save_data":
                 # noinspection PyArgumentList
                 db.session.add(DeviceData(  # TODO extract this to Model class
-                        tid=msg.payload["tid"],
+                        tid=str.encode(msg.payload["tid"]),
+                        tid_bi=msg.payload["tid_bi"],
                         data=str.encode(msg.payload["data"]),
                         device=device,
                         correctness_hash=msg.payload["correctness_hash"],
@@ -66,7 +67,7 @@ def _edit_device_data(device_id, action, msg, app, db):
             else:
                 db.session.query(DeviceData)\
                     .filter(and_(
-                        DeviceData.tid == msg.payload["tid"],
+                        DeviceData.tid_bi == msg.payload["tid_bi"],
                         DeviceData.device_id == device_id,
                     )).delete()  # TODO extract this to Model class
             db.session.commit()

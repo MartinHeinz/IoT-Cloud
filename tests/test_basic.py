@@ -383,7 +383,8 @@ def test_encrypt_fake_tuple():
     keys = {
         "added": ["217b5c3430fd77e7a0191f04cbaf872be189d8cb203c54f7b083211e8e5f4f70", True],
         "num_data": ["a70c6a23f6b0ef9163040f4cc02819c22d7e35de6469672d250519077b36fe4d", True],
-        "data": ["d011b0fa5a23b3c2efadb2e0fea094647ff7b03b9a93022aeae6c1edf3eb1871", False]
+        "data": ["d011b0fa5a23b3c2efadb2e0fea094647ff7b03b9a93022aeae6c1edf3eb1871", False],
+        "tid": ["d011b0fa5a23b3c2efadb2e0fea094647ff7b03b9a93022aeae6c1edf3eb1871", False]
     }
 
     result = encrypt_fake_tuple(fake_tuple, keys)
@@ -394,4 +395,8 @@ def test_encrypt_fake_tuple():
     cipher = instantiate_ope_cipher(a2b_hex(keys["num_data"][0].encode()))
     plaintext = cipher.decrypt(result["num_data"])
     assert plaintext == -1000
-    assert result["tid"] == 1
+
+    result = encrypt_fake_tuple(fake_tuple, keys)
+    cipher = Fernet(base64.urlsafe_b64encode(a2b_hex(keys["tid"][0].encode())))
+    plaintext = cipher.decrypt(result["tid"].encode())
+    assert int_from_bytes(plaintext) == 1

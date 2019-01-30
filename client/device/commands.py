@@ -14,9 +14,10 @@ from cryptography.hazmat.primitives.serialization import load_pem_public_key
 from tinydb import TinyDB, Query
 
 try:  # for packaged CLI (setup.py)
-    from client.crypto_utils import triangle_wave, sawtooth_wave, square_wave, sine_wave, generate, fake_tuple_to_hash, encrypt_fake_tuple
+    from client.crypto_utils import triangle_wave, sawtooth_wave, square_wave, sine_wave, generate, fake_tuple_to_hash, \
+    encrypt_fake_tuple, index_function, hash
 except ImportError:  # for un-packaged CLI
-    from crypto_utils import triangle_wave, sawtooth_wave, square_wave, sine_wave, generate, fake_tuple_to_hash, encrypt_fake_tuple
+    from crypto_utils import triangle_wave, sawtooth_wave, square_wave, sine_wave, generate, fake_tuple_to_hash, encrypt_fake_tuple, index_function, hash
 
 dir_path = os.path.dirname(os.path.realpath(__file__))
 path = f'{dir_path}/data.json'
@@ -26,6 +27,7 @@ GENERATING_FUNCTIONS = {
     "sawtooth_wave": sawtooth_wave,
     "square_wave": square_wave,
     "sine_wave": sine_wave,
+    "index_function": index_function,
 }
 
 
@@ -142,9 +144,7 @@ def get_fake_tuple(user_id, bound):
             else:  # If it does exist increment upper bounds
                 doc["integrity"]["device_data"] = increment_bounds(doc["integrity"]["device_data"])
 
-        cols = doc["integrity"]["device_data"]
-        tid = max(cols[val][bound] for val in cols)
-        fake_tuple = {**generate(doc["integrity"]["device_data"], bound=bound), "tid": tid}  # TODO make it work for whole tables not specific one
+        fake_tuple = {**generate(doc["integrity"]["device_data"], bound=bound)}  # TODO make it work for whole tables not specific one
 
         keys = {}
         for t in doc["integrity"]:
@@ -152,10 +152,9 @@ def get_fake_tuple(user_id, bound):
                 doc_key = f'{t}:{col}'
                 keys[col] = [doc[doc_key], doc["integrity"][t][col]["is_numeric"]]
 
-        encrypted_fake_tuple = encrypt_fake_tuple(fake_tuple, keys)  # TODO IMPORTANT tuples should FIRST hashed and THEN encrypted
-        fake_tuple_hash = fake_tuple_to_hash(encrypted_fake_tuple)
-
-        row = {**encrypted_fake_tuple, "correctness_hash": fake_tuple_hash}
+        fake_tuple_hash = fake_tuple_to_hash(fake_tuple)
+        encrypted_fake_tuple = encrypt_fake_tuple(fake_tuple, keys)
+        row = {**encrypted_fake_tuple, "correctness_hash": fake_tuple_hash, "tid_bi": hash(str(fake_tuple["tid"]), get_self_id())}
 
         if bound == "lower_bound":
             doc["integrity"]["device_data"] = increment_bounds(doc["integrity"]["device_data"], bound=bound)
@@ -168,6 +167,13 @@ def get_fake_tuple(user_id, bound):
         _, _, exc_tb = sys.exc_info()
         line = exc_tb.tb_lineno
         click.echo(f"{repr(e)} at line: {line}")
+
+
+def get_self_id():
+    db = TinyDB(path)
+    table = db.table(name='device')
+    device_id = table.all()[0]["id"]
+    return device_id
 
 
 @device.command()
@@ -227,6 +233,12 @@ def init_integrity_data():
             },
             "data": {
                 "function_name": "square_wave",
+                "lower_bound": 1,
+                "upper_bound": 1,
+                "is_numeric": False
+            },
+            "tid": {
+                "function_name": "index_function",
                 "lower_bound": 1,
                 "upper_bound": 1,
                 "is_numeric": False
