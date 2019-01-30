@@ -127,6 +127,10 @@ def sine_wave():
     yield from (int(round(x, 4)*1000) for x in sine.tolist())
 
 
+def index_function():
+    yield from range(1, 500)
+
+
 def generate(columns, bound="upper_bound"):
     """
     :param bound: whether to use lower or upper bound
@@ -170,16 +174,13 @@ def encrypt_fake_tuple(fake_tuple, keys):
     """
     result = {}
     for col, val in fake_tuple.items():
-        if col != 'tid':
-            key = a2b_hex(keys[col][0].encode())
-            if not keys[col][1]:  # if key is for fernet (is_numeric is False) create Fernet token
-                cipher = Fernet(base64.urlsafe_b64encode(key))
-                result[col] = cipher.encrypt(int_to_bytes(val)).decode()
-            else:  # if key is for OPE (is_numeric is True) create OPE cipher
-                cipher = instantiate_ope_cipher(key)
-                result[col] = cipher.encrypt(val)
-        else:
-            result[col] = val
+        key = a2b_hex(keys[col][0].encode())
+        if not keys[col][1]:  # if key is for fernet (is_numeric is False) create Fernet token
+            cipher = Fernet(base64.urlsafe_b64encode(key))
+            result[col] = cipher.encrypt(int_to_bytes(val)).decode()
+        else:  # if key is for OPE (is_numeric is True) create OPE cipher
+            cipher = instantiate_ope_cipher(key)
+            result[col] = cipher.encrypt(val)
     return result
 
 

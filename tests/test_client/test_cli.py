@@ -107,7 +107,7 @@ def test_send_column_keys(runner, access_token, reset_tiny_db):
     table = tiny_db.table(name='device_keys')
     doc = table.get(Query().device_id == device_id)
     assert "action:name" in doc
-    assert len(doc) == 11
+    assert len(doc) == 12
     shared_key = a2b_hex(doc["device:name"].encode())
     fernet_key = Fernet(base64.urlsafe_b64encode(shared_key))
     assert isinstance(fernet_key, Fernet)
@@ -143,21 +143,22 @@ def test_divide_fake_and_real_data(reset_tiny_db):
         'device_id': 23,
         'id': 1,
         'num_data': -9199,
-        'tid': 3}, {
+        'tid': 'gAAAAABcUXeth_Vfe7YNqYys6uMeVeRcmidXH7_eMm_sO7XI_0PedsRWI8fnHARqCF_TjGnJ0g0CI-6pmVnzhZjwc73CjcT-Yg=='},  # 3
+        {
         'added': 37210,
         'correctness_hash': '$2b$12$dH64lof/JNEYHcjZEPP3XOEVoBew4/5I0bTgGfBD4dyOIZs5ZR47y',
         'data': 'gAAAAABcUFF86-MNlnooVpCGwy27-BJFfkGmOc9GP9iEH4JkOBF7N9BCMu0CJAmNJyJ4l-b-4Vsz7wAOFLabPMqYZFAF5_VDGA==',
         'device_id': 23,
         'id': 2,
         'num_data': -9152,
-        'tid': 4},
+        'tid': 'gAAAAABcUXfoo-E4W_Dntelk1oN5ooawmM3LPMWtm915nfo99yE_bYDPwPJV0AAGhCRhNHyqY0xZn1ROvglWdKhrJRvcqy_vjA=='},  # 4
         {'added': 37284,
          'correctness_hash': '$2b$12$m2bC.H.pdG6tbNTyEyXPeezMpyhqGj0RH5Ud2UVw.gIO/9rEupNqe',
          'data': 'gAAAAABcUFx6zLc0gwX2-gkoHiXEEYjJh_OCuqmb9wPdh4RDkXtRYS05raFaDs2PBVBd38wiUvWZppMC4M6UpalTUwHdLyMHew==',
          'device_id': 23,
          'id': 6,
          'num_data': -9100,
-         'tid': 5}]
+         'tid': 'gAAAAABcUXgTSBOvQ5ceYwiPP-_SnHEgFz57DWDxJUmsBwXrHYzlZcHI3ekDD1xTZjefJsKJGzkQh8XaGcEpcFrsVQJa3G5rIQ=='}]  # 5
 
     data = {"device_id": device_id,
             "shared_key": "aefe715635c3f35f7c58da3eb410453712aaf1f8fd635571aa5180236bb21acc",
@@ -166,12 +167,14 @@ def test_divide_fake_and_real_data(reset_tiny_db):
             "device_data:added": "26751017213ff85f189bedc34d302acfdf1649d5e1bac653a9709171ad37b155",
             "device_data:num_data": "84964a963c097c550b41a085bbf1ad93ba5a1046aa5495d86d62f9623ab89cc6",
             "device_data:data": "1fac0f8fa2083fe32c21d081a46e455420f71c5f1f6959afb9f44623048e6875",
+            "device_data:tid": "1fac0f8fa2083fe32c21d081a46e455420f71c5f1f6959afb9f44623048e6875",
             "scene:name": "7c2a6bb5e7021e30c7326bdb99003fd43b2b0770b0a4a07f7b3876634b11ff94",
             "scene:description": "d011b0fa5a23b3c2efadb2e0fea094647ff7b03b9a93022aeae6c1edf3eb1871"}
 
     integrity_info = {'device_data': {
         'added': {'function_name': 'triangle_wave', 'lower_bound': 1, 'upper_bound': 4, 'is_numeric': True},
         'num_data': {'function_name': 'sawtooth_wave', 'lower_bound': 1, 'upper_bound': 4, 'is_numeric': True},
+        'tid': {'function_name': 'square_wave', 'lower_bound': 1, 'upper_bound': 4, 'is_numeric': False},
         'data': {'function_name': 'square_wave', 'lower_bound': 1, 'upper_bound': 4, 'is_numeric': False}
     }}
 
@@ -185,7 +188,6 @@ def test_divide_fake_and_real_data(reset_tiny_db):
     assert real[0]["tid"] == 5
     assert "added" in real[0] and "data" in real[0] and "num_data" in real[0] and "tid" in real[0]
     assert "correctness_hash" not in real[0] and "device_id" not in real[0] and "id" not in real[0]
-    assert real[0]["tid"] == 5
 
 
 @pytest.mark.parametrize('reset_tiny_db', [cmd.path], indirect=True)
@@ -237,12 +239,13 @@ def test_decrypt_row():
         "added": 36976,
         "num_data": -9272,
         "data": "gAAAAABcTyUFZrhQRLzLvwep7j0Vm2UFjS2ylZ7bjB2YRueDpX15tobA0oOSEWBYZ4LaCKRa_h7WyKMacAAt-982srPPOR_1Cw==",
-        "tid": 1
+        "tid": 'gAAAAABcUXs69KFpDmgtI7BLx8LkYAymt58d5bX-NJHXZ2nT1GRdgjO4tLf8U0x4fTz29YMxuKlazQj0mOXV9Dp2hzuijtLkpA=='
     }
 
     keys = {
         "added": ["26751017213ff85f189bedc34d302acfdf1649d5e1bac653a9709171ad37b155", True],
         "num_data": ["84964a963c097c550b41a085bbf1ad93ba5a1046aa5495d86d62f9623ab89cc6", True],
+        "tid": ["1fac0f8fa2083fe32c21d081a46e455420f71c5f1f6959afb9f44623048e6875", False],
         "data": ["1fac0f8fa2083fe32c21d081a46e455420f71c5f1f6959afb9f44623048e6875", False]
     }
 
@@ -258,11 +261,11 @@ def test_decrypt_row():
 
 
 def test_is_fake():
-    row_values = [-959, 1000, -980]
-    row_correctness_hash ="$2b$12$LsO05IDQESAGI03fo582VO5FIem/6ZtL6v03KfNtjHq9oV5KDRNgq"
+    row_values = [-959, 1000, -980, 1]
+    row_correctness_hash = '$2b$12$p6bfP/Nl15D0m.xejbTUuei.qYEsDJYd6mKjuKBST5iZwZkvgeX3G'
     assert cmd.is_fake(row_values, row_correctness_hash)
 
-    row_correctness_hash ="$2b$12$sLZlIHA0JLUudsKc3yUz1.tsRfqLcMjaLv4aczxCzrFlcs7Kjao0G"
+    row_correctness_hash = '$2b$12$7RnvQxSG1USqFj73rrFq6uIae/CZh7cLxNAwTZwoWa.Zk04PxipNW'
     assert not cmd.is_fake(row_values, row_correctness_hash)
 
 
@@ -270,12 +273,14 @@ def test_generate_fake_tuples_in_range():
     fake_tuple_info = {
         "added": {"function_name": "triangle_wave", "lower_bound": 2, "upper_bound": 5, "is_numeric": True},
         "num_data": {"function_name": "sawtooth_wave", "lower_bound": 2, "upper_bound": 5, "is_numeric": True},
-        "data": {"function_name": "square_wave", "lower_bound": 2, "upper_bound": 5, "is_numeric": False}}
+        "data": {"function_name": "square_wave", "lower_bound": 2, "upper_bound": 5, "is_numeric": False},
+        "tid": {"function_name": "index_function", "lower_bound": 2, "upper_bound": 5, "is_numeric": False},
+    }
     fake_tuples = cmd.generate_fake_tuples_in_range(fake_tuple_info)
 
     assert len(fake_tuples) == 4
     assert "added" in fake_tuples[0] and "num_data" in fake_tuples[0] and "data" in fake_tuples[0] and "tid" in fake_tuples[0]
-    assert fake_tuples[0] == {'added': -919, 'num_data': -959, 'data': 1000, "tid": 2}
+    assert fake_tuples[0] == {'added': -919, 'num_data': -959, 'data': 1000, "tid": 3}
 
 
 @pytest.mark.parametrize('reset_tiny_db', [device_cmd.path], indirect=True)
@@ -572,6 +577,7 @@ def test_increment_upper_bounds():
 @pytest.mark.parametrize('reset_tiny_db', [device_cmd.path], indirect=True)
 def test_get_fake_tuple(runner, reset_tiny_db):
     user_id = 1
+    device_id_doc = {"id": "23"}
     data = {"id": user_id,
             "shared_key": "aefe715635c3f35f7c58da3eb410453712aaf1f8fd635571aa5180236bb21acc",
             "action:name": "a70c6a23f6b0ef9163040f4cc02819c22d7e35de6469672d250519077b36fe4d",
@@ -579,12 +585,15 @@ def test_get_fake_tuple(runner, reset_tiny_db):
             "device_data:added": "5b27b633b2ea8fd12617d36dc0e864b2e8c6e57e809662e88fe56d70d033429e",
             "device_data:num_data": "ed1b6067e3dec82b4b61360c29eaeb785987e0c36bfdba454b9eca2d1622ecc2",
             "device_data:data": "aefe715635c3f35f7c58da3eb410453712aaf1f8fd635571aa5180236bb21acc",
+            "device_data:tid": "aefe715635c3f35f7c58da3eb410453712aaf1f8fd635571aa5180236bb21acc",
             "scene:name": "7c2a6bb5e7021e30c7326bdb99003fd43b2b0770b0a4a07f7b3876634b11ff94",
             "scene:description": "d011b0fa5a23b3c2efadb2e0fea094647ff7b03b9a93022aeae6c1edf3eb1871"}
 
     tiny_db = TinyDB(device_cmd.path)
     table = tiny_db.table(name='users')
     table.insert(data)
+    table = tiny_db.table(name='device')
+    table.insert(device_id_doc)
     result = runner.invoke(device_cmd.get_fake_tuple, [str(user_id), "upper_bound"])
     tiny_db = TinyDB(device_cmd.path)
     table = tiny_db.table(name='users')
@@ -618,6 +627,7 @@ def test_get_fake_tuple(runner, reset_tiny_db):
     assert doc["integrity"]["device_data"]["num_data"]["upper_bound"] == 2
     assert doc["integrity"]["device_data"]["added"]["upper_bound"] == 2
     assert doc["integrity"]["device_data"]["data"]["upper_bound"] == 2
+    assert doc["integrity"]["device_data"]["tid"]["upper_bound"] == 2
 
     result = runner.invoke(device_cmd.get_fake_tuple, [str(user_id), "lower_bound"])
     search_res = re.findall('\"(tid|data|num_data|added|correctness_hash)\": \"?([^:,\"]+)\"?', result.output)
@@ -635,6 +645,16 @@ def test_get_fake_tuple(runner, reset_tiny_db):
     assert doc["integrity"]["device_data"]["num_data"]["lower_bound"] == 2
     assert doc["integrity"]["device_data"]["added"]["lower_bound"] == 2
     assert doc["integrity"]["device_data"]["data"]["lower_bound"] == 2
+    assert doc["integrity"]["device_data"]["tid"]["lower_bound"] == 2
+
+
+@pytest.mark.parametrize('reset_tiny_db', [device_cmd.path], indirect=True)
+def test_get_self_id(reset_tiny_db):
+    tiny_db = TinyDB(device_cmd.path)
+    device_id_doc = {"id": "23"}
+    table = tiny_db.table(name='device')
+    table.insert(device_id_doc)
+    assert device_cmd.get_self_id() == "23"
 
 
 @pytest.mark.parametrize('reset_tiny_db', [device_cmd.path], indirect=True)

@@ -98,14 +98,16 @@ class DeviceData(MixinAsDict, db.Model):
     __table_args__ = {'extend_existing': True}
 
     id = db.Column(db.Integer, primary_key=True)
-    tid = db.Column(db.Integer)
+    tid = db.Column(db.LargeBinary)
     added = db.Column(db.Integer)
     num_data = db.Column(db.Integer)
     data = db.Column(db.LargeBinary)
     device_id = db.Column(db.Integer, db.ForeignKey('device.id'))
     device = relationship("Device", back_populates="data")
 
-    correctness_hash = db.Column(db.String(200), nullable=False)  # correctness_hash(str(985734000), b'\\001'.decode("utf-8"), str(66988873))
+    tid_bi = db.Column(db.String(200), unique=False, nullable=True)  # Blind index for .tid
+
+    correctness_hash = db.Column(db.String(200), nullable=False)  # correctness_hash(str(985734000), b'\\001'.decode("utf-8"), str(66988873), str(tid))
 
 
 class Action(db.Model):
