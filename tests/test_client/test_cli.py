@@ -137,37 +137,44 @@ def test_get_fake_tuple_data():
 def test_divide_fake_and_real_data(reset_tiny_db):
     device_id = 23
     rows = [{
-        'added': 37123,
-        'correctness_hash': '$2b$12$/Nu2HO8qBORrmJG.D9isAuRQ0VzbKLb5CXeFxvBfusbpihDBj5BgS',
-        'data': 'gAAAAABcUECMQMM0MjKknugGdI6YN81pLtmLUrcMsjHMBG87KpIJFWZF8n1DTVJX7VvnlVMMN4BNGdVROLeCD_I0XUs0IAK9AA==',
-        'device_id': 23,
-        'id': 1,
-        'num_data': -9199,
-        'tid': 'gAAAAABcUXeth_Vfe7YNqYys6uMeVeRcmidXH7_eMm_sO7XI_0PedsRWI8fnHARqCF_TjGnJ0g0CI-6pmVnzhZjwc73CjcT-Yg=='},  # 3
-        {
-        'added': 37210,
-        'correctness_hash': '$2b$12$dH64lof/JNEYHcjZEPP3XOEVoBew4/5I0bTgGfBD4dyOIZs5ZR47y',
-        'data': 'gAAAAABcUFF86-MNlnooVpCGwy27-BJFfkGmOc9GP9iEH4JkOBF7N9BCMu0CJAmNJyJ4l-b-4Vsz7wAOFLabPMqYZFAF5_VDGA==',
-        'device_id': 23,
-        'id': 2,
-        'num_data': -9152,
-        'tid': 'gAAAAABcUXfoo-E4W_Dntelk1oN5ooawmM3LPMWtm915nfo99yE_bYDPwPJV0AAGhCRhNHyqY0xZn1ROvglWdKhrJRvcqy_vjA=='},  # 4
-        {'added': 37284,
-         'correctness_hash': '$2b$12$m2bC.H.pdG6tbNTyEyXPeezMpyhqGj0RH5Ud2UVw.gIO/9rEupNqe',
-         'data': 'gAAAAABcUFx6zLc0gwX2-gkoHiXEEYjJh_OCuqmb9wPdh4RDkXtRYS05raFaDs2PBVBd38wiUvWZppMC4M6UpalTUwHdLyMHew==',
-         'device_id': 23,
-         'id': 6,
-         'num_data': -9100,
-         'tid': 'gAAAAABcUXgTSBOvQ5ceYwiPP-_SnHEgFz57DWDxJUmsBwXrHYzlZcHI3ekDD1xTZjefJsKJGzkQh8XaGcEpcFrsVQJa3G5rIQ=='}]  # 5
+      "added": 2116572382,
+      "correctness_hash": "$2b$12$GxqMXIMKiEtrOF9YVL2TO.S7vf7Jc4RP8MXgL9d0kgIJfthUQjxM6",
+      "data": "gAAAAABcUvNYE3fPNwjf2yVvpjzYDiXn2Nx_Yjrp2vXQEu5jBWoQUZUY1VdPZqdw4xU_WqmNHR28Jm742aXvZxqWycGOUOWHJQ==",
+      "device_id": 23,
+      "id": 6,
+      "num_data": 464064,
+      "tid": "gAAAAABcUvNYaVEWRG5vxlvTBgj0TVP9icLDThlR5sxYlfPOP8eNoFcWkCoPNyGK5mFuS9Ia2WQ_gEFsdiKpG4cnPsg2uYSTvA==",
+      "tid_bi": "$2b$12$23xxxxxxxxxxxxxxxxxxxuN5X.DMkHilBYQSsUWodebAG.asbqKNa"
+    },
+    {
+      "added": 2244032082,
+      "correctness_hash": '$2b$12$IG7lSJbUlJ2xxPlWvHwWN.gowMe/Xqg/lxmueyqlaBI4TCHE.BxU2',  # Fake
+      "data": "gAAAAABcUvNYjVUDLeMntE0dyztMI1tv0zvHzNMgPZhr302ozcsXXTSKMLtudy8arSyYHiwk7Gyg_gSc5FN2-zWTooe0UNBV9g==",
+      "device_id": 23,
+      "id": 8,
+      "num_data": 466263,
+      "tid": "gAAAAABcUvNYvD4xkZ7pHxIBtpEWka8UVdCxmvR-O886BC06ILrqWqtT59ZKVgz7k8-TtIstlYzubq1ZZp_prquskFw5ZWNVSQ==",
+      "tid_bi": "$2b$12$23xxxxxxxxxxxxxxxxxxxu.ZfhXcDxDatkjrxC5f7I1S9D0G9uMI."
+    },
+    {
+      "added": 2328638717,
+      "correctness_hash": '$2b$12$eWHqbmbvv.Egj/4Jy3.msOdnZ0vz.iaMRdgHJ5d9/Ymmczjr7wbcK',  # Fake
+      "data": "gAAAAABcUvNYI5KEn0rbmD_8rORWcHHpvVGrvk1mpgPdagaPjxTFVu3LzQITjiZLIQtP6uHgmQax515HL-8oTwUQA7ewIjv8CA==",
+      "device_id": 23,
+      "id": 4,
+      "num_data": 471232,
+      "tid": "gAAAAABcUvNYhiqIYBpG848jbgdwY92eW2HUGSwjAP4NL9rAcSCTmeU2noYgDnlpy7XzLDu4Ly4UaGMjBqUeNlpryV_BEYbcug==",
+      "tid_bi": "$2b$12$23xxxxxxxxxxxxxxxxxxxuSfVK9H/a.JO/whZHvsU1Q39d26XzS/6"
+    }]
 
-    data = {"device_id": device_id,
+    data = {"device_id": str(device_id),
             "shared_key": "aefe715635c3f35f7c58da3eb410453712aaf1f8fd635571aa5180236bb21acc",
             "action:name": "a70c6a23f6b0ef9163040f4cc02819c22d7e35de6469672d250519077b36fe4d",
             "device_type:description": "2c567c6fde8d29ee3c1ac15e74692089fdce507a43eb931be792ec3887968d33",
-            "device_data:added": "26751017213ff85f189bedc34d302acfdf1649d5e1bac653a9709171ad37b155",
-            "device_data:num_data": "84964a963c097c550b41a085bbf1ad93ba5a1046aa5495d86d62f9623ab89cc6",
-            "device_data:data": "1fac0f8fa2083fe32c21d081a46e455420f71c5f1f6959afb9f44623048e6875",
-            "device_data:tid": "1fac0f8fa2083fe32c21d081a46e455420f71c5f1f6959afb9f44623048e6875",
+            "device_data:added": "8dabfaf75c380f03e95f55760af02dc84026654cf2019d6da44cc69f600ba8f7",
+            "device_data:num_data": "3130d649f90006ef90f5c28fd486a6e748ffc35bad4981799708a411f7acaa60",
+            "device_data:data": "af785b829c4502286f5abec3403b43324971acfdb22fd80007216e8fa1abbf2e",
+            "device_data:tid": "9692e6525c19e6fa37978626606534015cd120816a28b501bebec142d86002b2",
             "scene:name": "7c2a6bb5e7021e30c7326bdb99003fd43b2b0770b0a4a07f7b3876634b11ff94",
             "scene:description": "d011b0fa5a23b3c2efadb2e0fea094647ff7b03b9a93022aeae6c1edf3eb1871"}
 
@@ -185,15 +192,15 @@ def test_divide_fake_and_real_data(reset_tiny_db):
     fake, real = cmd._divide_fake_and_real_data(rows, device_id, integrity_info)
     assert len(fake) == 2
     assert len(real) == 1
-    assert real[0]["tid"] == 5
-    assert "added" in real[0] and "data" in real[0] and "num_data" in real[0] and "tid" in real[0]
-    assert "correctness_hash" not in real[0] and "device_id" not in real[0] and "id" not in real[0]
+    assert real[0]["tid"] == b'1'
+    assert "added" in real[0] and "data" in real[0] and "num_data" in real[0] and "tid" in real[0] and "correctness_hash" in real[0]
+    assert "device_id" not in real[0] and "id" not in real[0] and "tid_bi" not in real[0]
 
 
 @pytest.mark.parametrize('reset_tiny_db', [cmd.path], indirect=True)
 def test_get_encryption_keys(reset_tiny_db):
     device_id = 23
-    data = {"device_id": device_id,
+    data = {"device_id": str(device_id),
             "shared_key": "aefe715635c3f35f7c58da3eb410453712aaf1f8fd635571aa5180236bb21acc",
             "action:name": "a70c6a23f6b0ef9163040f4cc02819c22d7e35de6469672d250519077b36fe4d",
             "device_type:description": "2c567c6fde8d29ee3c1ac15e74692089fdce507a43eb931be792ec3887968d33",
@@ -236,24 +243,24 @@ def test_get_col_encryption_type():
 
 def test_decrypt_row():
     row = {
-        "added": 36976,
-        "num_data": -9272,
-        "data": "gAAAAABcTyUFZrhQRLzLvwep7j0Vm2UFjS2ylZ7bjB2YRueDpX15tobA0oOSEWBYZ4LaCKRa_h7WyKMacAAt-982srPPOR_1Cw==",
-        "tid": 'gAAAAABcUXs69KFpDmgtI7BLx8LkYAymt58d5bX-NJHXZ2nT1GRdgjO4tLf8U0x4fTz29YMxuKlazQj0mOXV9Dp2hzuijtLkpA=='
+      "added": 2116572382,
+      "data": "gAAAAABcUvNYE3fPNwjf2yVvpjzYDiXn2Nx_Yjrp2vXQEu5jBWoQUZUY1VdPZqdw4xU_WqmNHR28Jm742aXvZxqWycGOUOWHJQ==",
+      "num_data": 464064,
+      "tid": "gAAAAABcUvNYaVEWRG5vxlvTBgj0TVP9icLDThlR5sxYlfPOP8eNoFcWkCoPNyGK5mFuS9Ia2WQ_gEFsdiKpG4cnPsg2uYSTvA==",
     }
 
     keys = {
-        "added": ["26751017213ff85f189bedc34d302acfdf1649d5e1bac653a9709171ad37b155", True],
-        "num_data": ["84964a963c097c550b41a085bbf1ad93ba5a1046aa5495d86d62f9623ab89cc6", True],
-        "tid": ["1fac0f8fa2083fe32c21d081a46e455420f71c5f1f6959afb9f44623048e6875", False],
-        "data": ["1fac0f8fa2083fe32c21d081a46e455420f71c5f1f6959afb9f44623048e6875", False]
+        "added": ["8dabfaf75c380f03e95f55760af02dc84026654cf2019d6da44cc69f600ba8f7", True],
+        "num_data": ["3130d649f90006ef90f5c28fd486a6e748ffc35bad4981799708a411f7acaa60", True],
+        "tid": ["9692e6525c19e6fa37978626606534015cd120816a28b501bebec142d86002b2", False],
+        "data": ["af785b829c4502286f5abec3403b43324971acfdb22fd80007216e8fa1abbf2e", False]
     }
 
     expected = {
-        "added": -959,
-        "num_data": -980,
-        "data": 1000,
-        "tid": 1
+        "added": 985734000,
+        "num_data": 1000,
+        "data": b"test1",
+        "tid": b"1"
     }
 
     result = cmd.decrypt_row(row, keys)
@@ -329,10 +336,24 @@ def test_create_device(runner, access_token):
     assert "\"id\": " in result.output
 
 
-def test_get_device(runner, client, access_token):
+@pytest.mark.parametrize('reset_tiny_db', [cmd.path], indirect=True)
+def test_get_device(runner, client, access_token, reset_tiny_db):
     device_name = "my_raspberry"
     user_id = "1"
     device_name_bi = hash(device_name, user_id)
+
+    data = {"device_id": "23",
+            "shared_key": "aefe715635c3f35f7c58da3eb410453712aaf1f8fd635571aa5180236bb21acc",
+            "device:name": "ae89ebdb00d48b6e2aca3218213888aff3af9915831b9cdde8f82b709fd8802e",
+            "device_type:description": "2c567c6fde8d29ee3c1ac15e74692089fdce507a43eb931be792ec3887968d33",
+            "device_data:added": "8dabfaf75c380f03e95f55760af02dc84026654cf2019d6da44cc69f600ba8f7",
+            "device_data:num_data": "3130d649f90006ef90f5c28fd486a6e748ffc35bad4981799708a411f7acaa60",
+            "device_data:data": "af785b829c4502286f5abec3403b43324971acfdb22fd80007216e8fa1abbf2e",
+            "device_data:tid": "9692e6525c19e6fa37978626606534015cd120816a28b501bebec142d86002b2"}
+
+    tiny_db = TinyDB(cmd.path)
+    table = tiny_db.table(name='device_keys')
+    table.insert(data)
 
     result = runner.invoke(cmd.get_devices, [device_name, user_id, '--token', access_token])
     assert device_name_bi in result.output
@@ -342,23 +363,23 @@ def test_get_device(runner, client, access_token):
 def test_get_device_data_by_time_range(runner, client, access_token):
     result = runner.invoke(cmd.get_device_data_by_time_range, ['--token', access_token])
     json_output = json_string_with_bytes_to_dict(result.output)
+    assert "failed correctness hash test!" not in result.output
     assert len(json_output["device_data"]) == 4
-    assert "failed correctness hash test!" not in result.output
 
-    result = runner.invoke(cmd.get_device_data_by_time_range, ["--lower", 129952183, '--token', access_token])
+    result = runner.invoke(cmd.get_device_data_by_time_range, ["--lower", 467297, '--token', access_token])
     json_output = json_string_with_bytes_to_dict(result.output)
+    assert "failed correctness hash test!" not in result.output
     assert len(json_output["device_data"]) == 2
-    assert "failed correctness hash test!" not in result.output
 
-    result = runner.invoke(cmd.get_device_data_by_time_range, ["--lower", 129952183, "--upper", 262690267, '--token', access_token])
+    result = runner.invoke(cmd.get_device_data_by_time_range, ["--lower", 467297, "--upper", 469439, '--token', access_token])
     json_output = json_string_with_bytes_to_dict(result.output)
+    assert "failed correctness hash test!" not in result.output
     assert len(json_output["device_data"]) == 1
-    assert "failed correctness hash test!" not in result.output
 
-    result = runner.invoke(cmd.get_device_data_by_time_range, ["--upper", 163081415, '--token', access_token])
+    result = runner.invoke(cmd.get_device_data_by_time_range, ["--upper", 467717, '--token', access_token])
     json_output = json_string_with_bytes_to_dict(result.output)
-    assert len(json_output["device_data"]) == 2
     assert "failed correctness hash test!" not in result.output
+    assert len(json_output["device_data"]) == 2
 
 
 @pytest.mark.parametrize('reset_tiny_db', [cmd.path], indirect=True)
@@ -518,7 +539,7 @@ def test_retrieve_device_public_key(runner, access_token, reset_tiny_db, setup_u
     assert "\"success\": false" in result.output
 
     table.insert({
-        "device_id": device_id,
+        "device_id": str(device_id),
         "public_key": "-----BEGIN PUBLIC KEY-----\nMHYwEAYHKoZIzj0CAQYFK4EEACIDYgAEP1oBLtMBa94A6IxKINUkIaOJRYShIsr+\nxu7H3ObkRljibL139knm8XXCTXG5jG/IIJvBdsDmTiHwPznZ0KRN9oIAc+CUqIeU\nUkEPQ87XAYqS2WTgg8vTPOml/htk3QbN\n-----END PUBLIC KEY-----\n",
         "private_key": "-----BEGIN EC PRIVATE KEY-----\nMIGkAgEBBDA9Nyrj4U915ZY6H//GY9o7WwchqnxqrUt8aIh64hfM9141yQa5qnTz\nTJCsZRcZSPSgBwYFK4EEACKhZANiAAQ/WgEu0wFr3gDojEog1SQho4lFhKEiyv7G\n7sfc5uRGWOJsvXf2SebxdcJNcbmMb8ggm8F2wOZOIfA/OdnQpE32ggBz4JSoh5RS\nQQ9DztcBipLZZOCDy9M86aX+G2TdBs0=\n-----END EC PRIVATE KEY-----\n"
     })

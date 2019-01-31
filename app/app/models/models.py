@@ -99,8 +99,8 @@ class DeviceData(MixinAsDict, db.Model):
 
     id = db.Column(db.Integer, primary_key=True)
     tid = db.Column(db.LargeBinary)
-    added = db.Column(db.Integer)
-    num_data = db.Column(db.Integer)
+    added = db.Column(db.BigInteger)
+    num_data = db.Column(db.BigInteger)
     data = db.Column(db.LargeBinary)
     device_id = db.Column(db.Integer, db.ForeignKey('device.id'))
     device = relationship("Device", back_populates="data")
