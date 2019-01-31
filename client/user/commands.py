@@ -124,6 +124,18 @@ def get_devices(device_name, user_id, token):
     data = {"name_bi": device_name_bi, "access_token": token}
     r = requests.post(URL_GET_DEVICE, params=data, verify=VERIFY_CERTS)
     content = json.loads(r.content.decode('unicode-escape'))
+
+    db = TinyDB(path)
+    table = db.table(name='device_keys')
+
+    for device in content["devices"]:
+        ciphertext = device["name"].encode()
+        doc = table.get(Query().device_id == str(device["id"]))
+        key = a2b_hex(doc["device:name"].encode())
+        cipher = Fernet(base64.urlsafe_b64encode(key))
+        plaintext = cipher.decrypt(ciphertext)
+        device["name"] = plaintext.decode()
+
     check_correctness_hash(content["devices"], "name")
     click.echo(content["devices"])
 
@@ -132,7 +144,7 @@ def get_devices(device_name, user_id, token):
 @click.option('--lower', required=False)
 @click.option('--upper', required=False)
 @click.option('--token', envvar='ACCESS_TOKEN')
-def get_device_data_by_time_range(lower=None, upper=None, token=""):
+def get_device_data_by_time_range(lower=None, upper=None, token=""):  # TODO specify device_id (specify device), add integrity check
     if lower is not None and upper is not None:
         data = {"lower": int(lower), "upper": int(upper), "access_token": token}
     elif lower is not None and upper is None:
@@ -140,14 +152,14 @@ def get_device_data_by_time_range(lower=None, upper=None, token=""):
     elif lower is None and upper is not None:
         data = {"upper": int(upper), "access_token": token}
     else:
-        data = {"lower": 0, "upper": 2147483647, "access_token": token}
+        data = {"lower": -100000000000, "upper": 100000000000, "access_token": token}
     r = requests.post(URL_GET_DEVICE_DATA_BY_RANGE, params=data, verify=VERIFY_CERTS)
     content = r.content.decode('unicode-escape')
     json_content = json_string_with_bytes_to_dict(content)
 
-    # TODO update schema (device_data table), then
-    # TODO decrypt here - retrieve keys from keystore, decrypt each row, feed list of decrypted row into next line
-    check_correctness_hash(json_content["device_data"], 'added', 'data', 'num_data', 'tid')
+    # TODO do same thing as in `get_device_data`
+    if json_content["device_data"]["success"]:
+        check_correctness_hash(json_content["device_data"], 'added', 'data', 'num_data', 'tid')
     click.echo(content)
 
 
@@ -353,12 +365,15 @@ def _divide_fake_and_real_data(rows, device_id, integrity_info):
         modified = row
         modified.pop("id")
         modified.pop("device_id")
+        modified.pop("tid_bi")
         row_correctness_hash = modified.pop("correctness_hash")
         decrypted = decrypt_row(modified, key_type_pairs)
-        row_values = [decrypted["added"], decrypted["num_data"], decrypted["data"], decrypted["tid"]]
+        row_values = [decrypted["added"], decrypted["data"].decode("utf-8"), decrypted["num_data"], decrypted["tid"].decode("utf-8")]
         if is_fake(row_values, row_correctness_hash):
+            decrypted["correctness_hash"] = row_correctness_hash
             fake.append(decrypted)
         else:
+            decrypted["correctness_hash"] = row_correctness_hash
             real.append(decrypted)
 
     return fake, real
@@ -373,7 +388,7 @@ def get_encryption_keys(device_id, db_keys):
     """
     db = TinyDB(path)
     table = db.table(name='device_keys')
-    doc = table.get(Query().device_id == device_id)
+    doc = table.get(Query().device_id == str(device_id))
     result = {}
     for key in db_keys:
         result[key] = doc[key]
@@ -419,7 +434,7 @@ def decrypt_row(row, keys):
         if not keys[col][1]:  # if key is for fernet (is_numeric is False) create Fernet token
             cipher = Fernet(base64.urlsafe_b64encode(key))
             click.echo(val)
-            result[col] = int_from_bytes(cipher.decrypt(val.encode()))
+            result[col] = cipher.decrypt(val.encode())
         else:  # if key is for OPE (is_numeric is True) create OPE cipher
             cipher = instantiate_ope_cipher(key)
             result[col] = cipher.decrypt(val)

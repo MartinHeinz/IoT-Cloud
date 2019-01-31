@@ -245,7 +245,7 @@ def test_api_get_device_data_by_range_non_numeric_bound(client, app_and_ctx, acc
 
 
 def test_api_get_device_data_by_range_with_only_lower_bound(client, app_and_ctx, access_token):
-    data = {"lower": "163081415", "access_token": access_token}  # 2500
+    data = {"lower": "467297", "access_token": access_token}  # 2500
     response = client.post('/api/data/get_time_range', query_string=data, follow_redirects=True)
     assert response.status_code == 200
     json_data = json.loads(response.data.decode("utf-8"))
@@ -253,7 +253,7 @@ def test_api_get_device_data_by_range_with_only_lower_bound(client, app_and_ctx,
 
 
 def test_api_get_device_data_by_range_with_only_upper_bound(client, app_and_ctx, access_token):
-    data = {"upper": "228366930", "access_token": access_token}  # 3500
+    data = {"upper": "469439", "access_token": access_token}  # 3500
     response = client.post('/api/data/get_time_range', query_string=data, follow_redirects=True)
     assert response.status_code == 200
     json_data = json.loads(response.data.decode("utf-8"))
@@ -262,8 +262,8 @@ def test_api_get_device_data_by_range_with_only_upper_bound(client, app_and_ctx,
 
 def test_api_get_device_data_by_range_with_both_bounds(client, app_and_ctx, access_token):
     data = {
-        "lower": "110284915",  # 1700
-        "upper": "262690267",  # 4000
+        "lower": "465606",  # 1700
+        "upper": "470477",  # 4000
         "access_token": access_token
         }
     response = client.post('/api/data/get_time_range', query_string=data, follow_redirects=True)
@@ -272,8 +272,8 @@ def test_api_get_device_data_by_range_with_both_bounds(client, app_and_ctx, acce
     assert len(json_data["device_data"]) == 2
 
     data = {
-        "lower": "329390554",  # 5000
-        "upper": "787663574",  # 12000
+        "lower": "472693",  # 5000
+        "upper": "487525",  # 12000
         "access_token": access_token
     }
     response = client.post('/api/data/get_time_range', query_string=data, follow_redirects=True)
@@ -283,17 +283,18 @@ def test_api_get_device_data_by_range_with_both_bounds(client, app_and_ctx, acce
 
 
 def test_api_get_device_data_by_range_out_of_range(client, app_and_ctx, access_token):
-    data = {"upper": "2147483648", "access_token": access_token}  # (2^31-1) + 1
+    cipher_range = instantiate_ope_cipher(b"").in_range
+    data = {"upper": str(cipher_range.end + 1), "access_token": access_token}
     response = client.post('/api/data/get_time_range', query_string=data, follow_redirects=True)
     assert response.status_code == 400
     json_data = json.loads(response.data.decode("utf-8"))
     assert json_data["error"] == DATA_OUT_OF_OUTPUT_RANGE_ERROR_MSG
-    data = {"lower": "-1", "access_token": access_token}  # -1
+    data = {"lower": str(cipher_range.start - 1), "access_token": access_token}  # -1
     response = client.post('/api/data/get_time_range', query_string=data, follow_redirects=True)
     assert response.status_code == 400
     json_data = json.loads(response.data.decode("utf-8"))
     assert json_data["error"] == DATA_OUT_OF_OUTPUT_RANGE_ERROR_MSG
-    data = {"lower": "1", "upper": "2147483648", "access_token": access_token}  # lower OK, upper not OK
+    data = {"lower": "1", "upper": str(cipher_range.end + 1), "access_token": access_token}  # lower OK, upper not OK
     response = client.post('/api/data/get_time_range', query_string=data, follow_redirects=True)
     assert response.status_code == 400
     json_data = json.loads(response.data.decode("utf-8"))

@@ -62,6 +62,7 @@ def create_device():
     finally:
         if dt is None:
             return http_json_response(False, 400, **{"error": DEVICE_TYPE_ID_INCORRECT_ERROR_MSG})
+    # noinspection PyArgumentList
     dv = Device(device_type_id=device_type_id,
                 device_type=dt,
                 owner=user,
@@ -108,21 +109,21 @@ def get_data_by_time_range():  # TODO This should not be named get_data_by_TIME_
 
     data = []
     if isinstance(lower_bound, int) and isinstance(upper_bound, int):
-        if 0 <= lower_bound < upper_bound <= 2147483647:
+        if -100000000000 <= lower_bound < upper_bound <= 100000000000:
             data = db.session.query(DeviceData).filter(and_(DeviceData.num_data > lower_bound,
                                                             DeviceData.num_data < upper_bound,
                                                             DeviceData.device_id.in_(d.id for d in user.owned_devices))).all()
         else:
             return http_json_response(False, 400, **{"error": DATA_OUT_OF_OUTPUT_RANGE_ERROR_MSG})
     elif not isinstance(upper_bound, int) and isinstance(lower_bound, int):
-        if 0 <= lower_bound <= 2147483647:
+        if -100000000000 <= lower_bound <= 100000000000:
             data = db.session.query(DeviceData).filter(and_(DeviceData.num_data > lower_bound,
                                                             DeviceData.device_id.in_(d.id for d in user.owned_devices))).all()
         else:
             return http_json_response(False, 400, **{"error": DATA_OUT_OF_OUTPUT_RANGE_ERROR_MSG})
 
     elif not isinstance(lower_bound, int) and isinstance(upper_bound, int):
-        if 0 <= upper_bound <= 2147483647:
+        if -100000000000 <= upper_bound <= 100000000000:
             data = db.session.query(DeviceData).filter(and_(DeviceData.num_data < upper_bound,
                                                             DeviceData.device_id.in_(d.id for d in user.owned_devices))).all()
         else:
@@ -130,8 +131,11 @@ def get_data_by_time_range():  # TODO This should not be named get_data_by_TIME_
 
     result = []
     for row in data:
-        result.append(row.as_dict())
-        result[-1]["data"] = result[-1]["data"].decode("utf-8")
+        r = row.as_dict()
+        for k, v in r.items():
+            if isinstance(v, bytes):
+                r[k] = v.decode()
+        result.append(r)
     return http_json_response(**{'device_data': result})
 
 
@@ -157,8 +161,12 @@ def get_device_data():
 
     result = []
     for row in data:
-        result.append(row.as_dict())
-        result[-1]["data"] = result[-1]["data"].decode("utf-8")
+        r = row.as_dict()
+        for k, v in r.items():
+            if isinstance(v, bytes):
+                r[k] = v.decode()
+        result.append(r)
+
     return http_json_response(**{'device_data': result})
 
 

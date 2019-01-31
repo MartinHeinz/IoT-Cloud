@@ -189,7 +189,7 @@ def fake_tuple_to_hash(pairs):
 
 
 def instantiate_ope_cipher(key):
-    return OPE(key, in_range=ValueRange(-1000000000, 1000000000), out_range=ValueRange(-2147483648, 2147483647))
+    return OPE(key, in_range=ValueRange(-100000000000, 100000000000), out_range=ValueRange(-214748364800, 214748364700))
 
 
 def int_to_bytes(x):
