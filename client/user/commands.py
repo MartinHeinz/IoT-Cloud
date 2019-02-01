@@ -1,4 +1,5 @@
 import base64
+import copy
 import json
 import os
 import re
@@ -38,7 +39,7 @@ URL_PUBLISH = URL_BASE + "publish"
 URL_CREATE_DEVICE_TYPE = URL_BASE + "device_type/create"
 URL_CREATE_DEVICE = URL_BASE + "device/create"
 URL_GET_DEVICE = URL_BASE + "device/get"
-URL_GET_DEVICE_DATA_BY_RANGE = URL_BASE + "data/get_time_range"
+URL_GET_DEVICE_DATA_BY_RANGE = URL_BASE + "data/get_by_num_range"
 URL_GET_DEVICE_DATA = URL_BASE + "data/get_device_data"
 URL_START_KEY_EXCHANGE = URL_BASE + "exchange_session_keys"
 URL_RECEIVE_PUBLIC_KEY = URL_BASE + "retrieve_public_key"
@@ -52,6 +53,7 @@ AA_URL_DECRYPT = AA_URL_BASE + "decrypt"
 
 dir_path = os.path.dirname(os.path.realpath(__file__))
 path = f'{dir_path}/keystore.json'
+fake_tuple_data = None
 
 
 @click.group()
@@ -141,26 +143,53 @@ def get_devices(device_name, user_id, token):
 
 
 @user.command()
+@click.argument('device_id')
 @click.option('--lower', required=False)
 @click.option('--upper', required=False)
 @click.option('--token', envvar='ACCESS_TOKEN')
-def get_device_data_by_time_range(lower=None, upper=None, token=""):  # TODO specify device_id (specify device), add integrity check
+def get_device_data_by_num_range(device_id, lower=None, upper=None, token=""):
+    user_id = 1
     if lower is not None and upper is not None:
-        data = {"lower": int(lower), "upper": int(upper), "access_token": token}
+        data = {"lower": int(lower), "upper": int(upper), "access_token": token, "device_id": device_id}
     elif lower is not None and upper is None:
-        data = {"lower": int(lower), "access_token": token}
+        upper = 214748364700  # 100000000000
+        data = {"lower": int(lower), "access_token": token, "device_id": device_id}
     elif lower is None and upper is not None:
-        data = {"upper": int(upper), "access_token": token}
+        lower = -214748364800  # -100000000000
+        data = {"upper": int(upper), "access_token": token, "device_id": device_id}
     else:
-        data = {"lower": -100000000000, "upper": 100000000000, "access_token": token}
+        lower = -214748364800  # -100000000000
+        upper = 214748364700  # 100000000000
+        data = {"lower": lower, "upper": upper, "access_token": token, "device_id": device_id}
     r = requests.post(URL_GET_DEVICE_DATA_BY_RANGE, params=data, verify=VERIFY_CERTS)
     content = r.content.decode('unicode-escape')
     json_content = json_string_with_bytes_to_dict(content)
+    _get_fake_tuple_data(user_id, int(device_id))
 
-    # TODO do same thing as in `get_device_data`
-    if json_content["device_data"]["success"]:
-        check_correctness_hash(json_content["device_data"], 'added', 'data', 'num_data', 'tid')
-    click.echo(content)
+    fake_tuples, rows = _divide_fake_and_real_data(json_content["device_data"], str(device_id), fake_tuple_data)
+    generated_tuples = generate_fake_tuples_in_range(fake_tuple_data["device_data"])
+    expected_fake_rows = slice_by_range(device_id, generated_tuples, int(lower), int(upper), "device_data:num_data")
+    verify_integrity_data(expected_fake_rows, fake_tuples)
+
+    if json_content["success"]:
+        check_correctness_hash(rows, 'added', 'data', 'num_data', 'tid')
+    click.echo('{"device_data":' + str(rows).replace("'", '"') + '}')
+
+
+def slice_by_range(device_id, all_tuples, lower, upper, key_name):
+    db = TinyDB(path)
+    table = db.table(name='device_keys')
+    doc = table.get(Query().device_id == str(device_id))
+    key = a2b_hex(doc[key_name].encode())
+    cipher = instantiate_ope_cipher(key)
+    plaintext_lower = cipher.decrypt(lower)
+    plaintext_upper = cipher.decrypt(upper)
+    result = []
+    for row in all_tuples:
+        if plaintext_lower <= row[key_name.split(":")[1]] <= plaintext_upper:
+            result.append(row)
+
+    return result
 
 
 @user.command()
@@ -277,9 +306,6 @@ def send_column_keys(device_id):
     click.echo(f"RC and MID = {ret}")
 
 
-fake_tuple_data = None
-
-
 @user.command()
 @click.argument('device_id')
 @click.option('--token', envvar='ACCESS_TOKEN')
@@ -294,25 +320,14 @@ def get_device_data(device_id, token):  # TODO right now it requires device to 1
 
     r = requests.post(URL_GET_DEVICE_DATA, params=data, verify=VERIFY_CERTS)
     content = r.content.decode('unicode-escape')
-    click.echo("Tu je response:")
-    click.echo(r.content)
     json_content = json_string_with_bytes_to_dict(content)
-
-    click.echo("Tu su data:")
-    click.echo(json_content["device_data"])
     _get_fake_tuple_data(user_id, int(device_id))
-    click.echo("Tu su integrity info:")
-    click.echo(fake_tuple_data)
-    fake_tuples, rows = _divide_fake_and_real_data(json_content["device_data"], device_id, fake_tuple_data)
-    click.echo("Tu su fake_tuples:")
-    click.echo(fake_tuples)
-    click.echo("Tu su rows:")
-    click.echo(rows)
-    verify_integrity_data(generate_fake_tuples_in_range(fake_tuple_data), fake_tuples)
 
-    check_correctness_hash(rows, 'added', 'data', 'num_data', 'tid')  # TODO add TID and update test and schema with correctness hashes that include TID (is_fake already uses TID)
-    click.echo(json_content["device_data"])
-    click.echo(fake_tuple_data)
+    fake_tuples, rows = _divide_fake_and_real_data(json_content["device_data"], device_id, fake_tuple_data)
+
+    verify_integrity_data(generate_fake_tuples_in_range(fake_tuple_data["device_data"]), fake_tuples)
+    check_correctness_hash(rows, 'added', 'data', 'num_data', 'tid')
+    click.echo(rows)
 
 
 def _handle_on_message(mqtt_client, userdata, msg, device_id, user_id):
@@ -368,7 +383,7 @@ def _divide_fake_and_real_data(rows, device_id, integrity_info):
         modified.pop("tid_bi")
         row_correctness_hash = modified.pop("correctness_hash")
         decrypted = decrypt_row(modified, key_type_pairs)
-        row_values = [decrypted["added"], decrypted["data"].decode("utf-8"), decrypted["num_data"], decrypted["tid"].decode("utf-8")]
+        row_values = [decrypted["added"], decrypted["data"], decrypted["num_data"], decrypted["tid"]]
         if is_fake(row_values, row_correctness_hash):
             decrypted["correctness_hash"] = row_correctness_hash
             fake.append(decrypted)
@@ -433,8 +448,7 @@ def decrypt_row(row, keys):
         key = a2b_hex(keys[col][0].encode())
         if not keys[col][1]:  # if key is for fernet (is_numeric is False) create Fernet token
             cipher = Fernet(base64.urlsafe_b64encode(key))
-            click.echo(val)
-            result[col] = cipher.decrypt(val.encode())
+            result[col] = cipher.decrypt(val.encode()).decode()
         else:  # if key is for OPE (is_numeric is True) create OPE cipher
             cipher = instantiate_ope_cipher(key)
             result[col] = cipher.decrypt(val)
@@ -463,7 +477,14 @@ def verify_integrity_data(expected_tuples, present_rows):
     :return: False if any of the rows does not satisfy 'fakeness' check of if there less/more fake
     rows than there should be
     """
-    return expected_tuples == present_rows
+    modified = copy.deepcopy(present_rows)
+    for i, row in enumerate(modified):
+        modified[i].pop("correctness_hash")
+
+    if expected_tuples == modified:
+        click.echo("Data Integrity satisfied.")
+    else:
+        click.echo("Data Integrity NOT satisfied.")
 
 
 def generate_fake_tuples_in_range(fake_tuple_info):
@@ -488,14 +509,13 @@ def generate_fake_tuples_in_range(fake_tuple_info):
     for col, val in fake_tuple_info.items():
         lb = fake_tuple_info[col]["lower_bound"]
         ub = fake_tuple_info[col]["upper_bound"] + 1
-        # fake_tuple_col_values[col] = list(GENERATING_FUNCTIONS[val["function_name"]]())[lb:ub]
         func_list = list(GENERATING_FUNCTIONS[val["function_name"]]())
         fake_tuple_col_values[col] = func_list[lb:ub]
     for no, i in enumerate(range(lb, ub)):
         fake_tuples.append({"added": fake_tuple_col_values["added"][no],
                             "num_data": fake_tuple_col_values["num_data"][no],
-                            "data": fake_tuple_col_values["data"][no],
-                            "tid": fake_tuple_col_values["tid"][no]})
+                            "data": str(fake_tuple_col_values["data"][no]),
+                            "tid": str(fake_tuple_col_values["tid"][no])})
     return fake_tuples
 
 

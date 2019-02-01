@@ -144,7 +144,7 @@ def get_fake_tuple(user_id, bound):
             else:  # If it does exist increment upper bounds
                 doc["integrity"]["device_data"] = increment_bounds(doc["integrity"]["device_data"])
 
-        fake_tuple = {**generate(doc["integrity"]["device_data"], bound=bound)}  # TODO make it work for whole tables not specific one
+        fake_tuple = {**generate(doc["integrity"]["device_data"], bound=bound)}
 
         keys = {}
         for t in doc["integrity"]:
@@ -152,7 +152,7 @@ def get_fake_tuple(user_id, bound):
                 doc_key = f'{t}:{col}'
                 keys[col] = [doc[doc_key], doc["integrity"][t][col]["is_numeric"]]
 
-        fake_tuple_hash = fake_tuple_to_hash(fake_tuple)
+        fake_tuple_hash = fake_tuple_to_hash([fake_tuple["added"], fake_tuple["data"], fake_tuple["num_data"], fake_tuple["tid"]])
         encrypted_fake_tuple = encrypt_fake_tuple(fake_tuple, keys)
         row = {**encrypted_fake_tuple, "correctness_hash": fake_tuple_hash, "tid_bi": hash(str(fake_tuple["tid"]), get_self_id())}
 

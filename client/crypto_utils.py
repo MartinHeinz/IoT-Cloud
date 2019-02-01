@@ -177,15 +177,15 @@ def encrypt_fake_tuple(fake_tuple, keys):
         key = a2b_hex(keys[col][0].encode())
         if not keys[col][1]:  # if key is for fernet (is_numeric is False) create Fernet token
             cipher = Fernet(base64.urlsafe_b64encode(key))
-            result[col] = cipher.encrypt(int_to_bytes(val)).decode()
+            result[col] = cipher.encrypt(bytes(str(val), "utf-8")).decode()
         else:  # if key is for OPE (is_numeric is True) create OPE cipher
             cipher = instantiate_ope_cipher(key)
             result[col] = cipher.encrypt(val)
     return result
 
 
-def fake_tuple_to_hash(pairs):
-    return correctness_hash(*pairs.values(), fake=True)
+def fake_tuple_to_hash(values):
+    return correctness_hash(*values, fake=True)
 
 
 def instantiate_ope_cipher(key):

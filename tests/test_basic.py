@@ -16,7 +16,7 @@ from app.models.models import DeviceType, Device
 from app.app_setup import client as mqtt_client
 from app.utils import is_valid_uuid
 from client.crypto_utils import encrypt, hash, correctness_hash, triangle_wave, sawtooth_wave, square_wave, sine_wave, generate, fake_tuple_to_hash, \
-    encrypt_fake_tuple, instantiate_ope_cipher, int_from_bytes
+    encrypt_fake_tuple, instantiate_ope_cipher
 
 from .conftest import db
 
@@ -228,33 +228,41 @@ def test_api_get_device_by_name_foreign_device_hash(client, app_and_ctx, access_
     assert len(json_data["devices"]) == 0
 
 
-def test_api_get_device_data_by_range_missing_bounds(client, app_and_ctx, access_token):
+def test_api_get_device_data_by_range_missing_device_id(client, app_and_ctx, access_token):
     data = {"not-upper-or-lower": "non-empty", "access_token": access_token}
-    response = client.post('/api/data/get_time_range', query_string=data, follow_redirects=True)
+    response = client.post('/api/data/get_by_num_range', query_string=data, follow_redirects=True)
+    assert response.status_code == 400
+    json_data = json.loads(response.data.decode("utf-8"))
+    assert (json_data["error"]) == DEVICE_ID_MISSING_ERROR_MSG
+
+
+def test_api_get_device_data_by_range_missing_bounds(client, app_and_ctx, access_token):
+    data = {"not-upper-or-lower": "non-empty", "access_token": access_token, "device_id": 23}
+    response = client.post('/api/data/get_by_num_range', query_string=data, follow_redirects=True)
     assert response.status_code == 400
     json_data = json.loads(response.data.decode("utf-8"))
     assert (json_data["error"]) == DATA_RANGE_MISSING_ERROR_MSG
 
 
 def test_api_get_device_data_by_range_non_numeric_bound(client, app_and_ctx, access_token):
-    data = {"lower": "non-numeric", "access_token": access_token}
-    response = client.post('/api/data/get_time_range', query_string=data, follow_redirects=True)
+    data = {"lower": "non-numeric", "access_token": access_token, "device_id": 23}
+    response = client.post('/api/data/get_by_num_range', query_string=data, follow_redirects=True)
     assert response.status_code == 400
     json_data = json.loads(response.data.decode("utf-8"))
     assert (json_data["error"]) == DATA_RANGE_MISSING_ERROR_MSG
 
 
 def test_api_get_device_data_by_range_with_only_lower_bound(client, app_and_ctx, access_token):
-    data = {"lower": "467297", "access_token": access_token}  # 2500
-    response = client.post('/api/data/get_time_range', query_string=data, follow_redirects=True)
+    data = {"lower": "467297", "access_token": access_token, "device_id": 23}  # 2500
+    response = client.post('/api/data/get_by_num_range', query_string=data, follow_redirects=True)
     assert response.status_code == 200
     json_data = json.loads(response.data.decode("utf-8"))
     assert len(json_data["device_data"]) == 2
 
 
 def test_api_get_device_data_by_range_with_only_upper_bound(client, app_and_ctx, access_token):
-    data = {"upper": "469439", "access_token": access_token}  # 3500
-    response = client.post('/api/data/get_time_range', query_string=data, follow_redirects=True)
+    data = {"upper": "469439", "access_token": access_token, "device_id": 23}  # 3500
+    response = client.post('/api/data/get_by_num_range', query_string=data, follow_redirects=True)
     assert response.status_code == 200
     json_data = json.loads(response.data.decode("utf-8"))
     assert len(json_data["device_data"]) == 3
@@ -264,9 +272,10 @@ def test_api_get_device_data_by_range_with_both_bounds(client, app_and_ctx, acce
     data = {
         "lower": "465606",  # 1700
         "upper": "470477",  # 4000
-        "access_token": access_token
+        "access_token": access_token,
+        "device_id": 23
         }
-    response = client.post('/api/data/get_time_range', query_string=data, follow_redirects=True)
+    response = client.post('/api/data/get_by_num_range', query_string=data, follow_redirects=True)
     assert response.status_code == 200
     json_data = json.loads(response.data.decode("utf-8"))
     assert len(json_data["device_data"]) == 2
@@ -274,28 +283,29 @@ def test_api_get_device_data_by_range_with_both_bounds(client, app_and_ctx, acce
     data = {
         "lower": "472693",  # 5000
         "upper": "487525",  # 12000
-        "access_token": access_token
+        "access_token": access_token,
+        "device_id": 23
     }
-    response = client.post('/api/data/get_time_range', query_string=data, follow_redirects=True)
+    response = client.post('/api/data/get_by_num_range', query_string=data, follow_redirects=True)
     assert response.status_code == 200
     json_data = json.loads(response.data.decode("utf-8"))
     assert len(json_data["device_data"]) == 0
 
 
 def test_api_get_device_data_by_range_out_of_range(client, app_and_ctx, access_token):
-    cipher_range = instantiate_ope_cipher(b"").in_range
-    data = {"upper": str(cipher_range.end + 1), "access_token": access_token}
-    response = client.post('/api/data/get_time_range', query_string=data, follow_redirects=True)
+    cipher_range = instantiate_ope_cipher(b"").out_range
+    data = {"upper": str(cipher_range.end + 1), "access_token": access_token, "device_id": 23}
+    response = client.post('/api/data/get_by_num_range', query_string=data, follow_redirects=True)
     assert response.status_code == 400
     json_data = json.loads(response.data.decode("utf-8"))
     assert json_data["error"] == DATA_OUT_OF_OUTPUT_RANGE_ERROR_MSG
-    data = {"lower": str(cipher_range.start - 1), "access_token": access_token}  # -1
-    response = client.post('/api/data/get_time_range', query_string=data, follow_redirects=True)
+    data = {"lower": str(cipher_range.start - 1), "access_token": access_token, "device_id": 23}  # -1
+    response = client.post('/api/data/get_by_num_range', query_string=data, follow_redirects=True)
     assert response.status_code == 400
     json_data = json.loads(response.data.decode("utf-8"))
     assert json_data["error"] == DATA_OUT_OF_OUTPUT_RANGE_ERROR_MSG
-    data = {"lower": "1", "upper": str(cipher_range.end + 1), "access_token": access_token}  # lower OK, upper not OK
-    response = client.post('/api/data/get_time_range', query_string=data, follow_redirects=True)
+    data = {"lower": "1", "upper": str(cipher_range.end + 1), "access_token": access_token, "device_id": 23}  # lower OK, upper not OK
+    response = client.post('/api/data/get_by_num_range', query_string=data, follow_redirects=True)
     assert response.status_code == 400
     json_data = json.loads(response.data.decode("utf-8"))
     assert json_data["error"] == DATA_OUT_OF_OUTPUT_RANGE_ERROR_MSG
@@ -362,15 +372,22 @@ def test_generate_fake_tuple_and_hash():
                 "upper_bound": 0,
                 "is_numeric": False
             },
+            "tid": {
+                "function_name": "index_function",
+                "lower_bound": 0,
+                "upper_bound": 0,
+                "is_numeric": False
+            }
         }
 
     d = generate(columns)
     assert d["added"] == -1000
     assert d["num_data"] == -1000
     assert d["data"] == 1000
+    assert d["tid"] == 1
 
-    fake_tuple_hash = fake_tuple_to_hash(d)
-    assert bcrypt.verify("-1000" + "-1000" + "1000" + "1", fake_tuple_hash)
+    fake_tuple_hash = fake_tuple_to_hash(d.values())
+    assert bcrypt.verify("-1000" + "-1000" + "1000" + "1" + "1", fake_tuple_hash)
 
 
 def test_encrypt_fake_tuple():
@@ -391,7 +408,7 @@ def test_encrypt_fake_tuple():
     result = encrypt_fake_tuple(fake_tuple, keys)
     cipher = Fernet(base64.urlsafe_b64encode(a2b_hex(keys["data"][0].encode())))
     plaintext = cipher.decrypt(result["data"].encode())
-    assert int_from_bytes(plaintext) == 1000
+    assert plaintext.decode() == '1000'
 
     cipher = instantiate_ope_cipher(a2b_hex(keys["num_data"][0].encode()))
     plaintext = cipher.decrypt(result["num_data"])
@@ -400,4 +417,4 @@ def test_encrypt_fake_tuple():
     result = encrypt_fake_tuple(fake_tuple, keys)
     cipher = Fernet(base64.urlsafe_b64encode(a2b_hex(keys["tid"][0].encode())))
     plaintext = cipher.decrypt(result["tid"].encode())
-    assert int_from_bytes(plaintext) == 1
+    assert plaintext.decode() == '1'
