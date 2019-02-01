@@ -31,7 +31,7 @@ INSERT INTO public.user_device (user_id, device_id, device_public_session_key, a
 INSERT INTO public.user_device (user_id, device_id, device_public_session_key, added) VALUES (2, 37, NULL, NULL);
 
 SELECT pg_catalog.setval('public.action_id_seq', 6, true);
-SELECT pg_catalog.setval('public.device_data_id_seq', 1, false);
+SELECT pg_catalog.setval('public.device_data_id_seq', 26, false);
 SELECT pg_catalog.setval('public.device_id_seq', 1, false);
 SELECT pg_catalog.setval('public.device_type_id_seq', 1, false);
 SELECT pg_catalog.setval('public.scene_id_seq', 1, false);

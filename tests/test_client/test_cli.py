@@ -7,6 +7,7 @@ import tempfile
 import warnings
 from binascii import a2b_hex
 from contextlib import redirect_stdout
+from unittest import mock
 from unittest.mock import Mock
 
 import pytest
@@ -115,6 +116,46 @@ def test_send_column_keys(runner, access_token, reset_tiny_db):
     assert isinstance(cipher, OPE)
 
 
+@pytest.mark.parametrize('reset_tiny_db', [cmd.path], indirect=True)
+def test_get_device_data(runner, access_token, app_and_ctx, reset_tiny_db):
+    device_id = 23
+    r = Mock()
+    r.content = b'{\n  "device_data": [\n    {\n      "added": 2116572382, \n      "correctness_hash": "$2b$12$GxqMXIMKiEtrOF9YVL2TO.S7vf7Jc4RP8MXgL9d0kgIJfthUQjxM6", \n      "data": "gAAAAABcUvNYE3fPNwjf2yVvpjzYDiXn2Nx_Yjrp2vXQEu5jBWoQUZUY1VdPZqdw4xU_WqmNHR28Jm742aXvZxqWycGOUOWHJQ==", \n      "device_id": 23, \n      "id": 6, \n      "num_data": 464064, \n      "tid": "gAAAAABcUvNYaVEWRG5vxlvTBgj0TVP9icLDThlR5sxYlfPOP8eNoFcWkCoPNyGK5mFuS9Ia2WQ_gEFsdiKpG4cnPsg2uYSTvA==", \n      "tid_bi": "$2b$12$23xxxxxxxxxxxxxxxxxxxuN5X.DMkHilBYQSsUWodebAG.asbqKNa"\n    }, \n    {\n      "added": 2244032082, \n      "correctness_hash": "$2b$12$panqbBvEIAG4/7ct77LyieP017hCkKeZ6cubdQo4fcJpHOoA6UbPO", \n      "data": "gAAAAABcUvNYjVUDLeMntE0dyztMI1tv0zvHzNMgPZhr302ozcsXXTSKMLtudy8arSyYHiwk7Gyg_gSc5FN2-zWTooe0UNBV9g==", \n      "device_id": 23, \n      "id": 8, \n      "num_data": 466263, \n      "tid": "gAAAAABcUvNYvD4xkZ7pHxIBtpEWka8UVdCxmvR-O886BC06ILrqWqtT59ZKVgz7k8-TtIstlYzubq1ZZp_prquskFw5ZWNVSQ==", \n      "tid_bi": "$2b$12$23xxxxxxxxxxxxxxxxxxxu.ZfhXcDxDatkjrxC5f7I1S9D0G9uMI."\n    }, \n    {\n      "added": 2328638717, \n      "correctness_hash": "$2b$12$CwcoYDiksZSEIvQpwWE8KurDopFpaofsfYW7Y67Ifonv.a7ZDe0SW", \n      "data": "gAAAAABcUvNYI5KEn0rbmD_8rORWcHHpvVGrvk1mpgPdagaPjxTFVu3LzQITjiZLIQtP6uHgmQax515HL-8oTwUQA7ewIjv8CA==", \n      "device_id": 23, \n      "id": 4, \n      "num_data": 471232, \n      "tid": "gAAAAABcUvNYhiqIYBpG848jbgdwY92eW2HUGSwjAP4NL9rAcSCTmeU2noYgDnlpy7XzLDu4Ly4UaGMjBqUeNlpryV_BEYbcug==", \n      "tid_bi": "$2b$12$23xxxxxxxxxxxxxxxxxxxuSfVK9H/a.JO/whZHvsU1Q39d26XzS/6"\n    }, \n    {\n      "added": 2893046721, \n      "correctness_hash": "$2b$12$wvleRl6BZXh59slt2gPoyuEgKzmPCo.lZheLo2gYlVeQEk016oUMq", \n      "data": "gAAAAABcUvNY45bp9Q8D_rS2xTcM241zTXMIWSM4vqtkmG1_phcP_qpCG5Ncw6vBKpgjVywNvZJMLOruBVumOq745jtxOqlDEA==", \n      "device_id": 23, \n      "id": 12, \n      "num_data": 468360, \n      "tid": "gAAAAABcUvNY8h6dQrIaMAYm-9Mp2-ykEqOxc3BII_N_u8a6g1rP4JZRqjeAqGPivYAQFMC1Wkq0y2xyBv612yFVBGFBVXs3_Q==", \n      "tid_bi": "$2b$12$23xxxxxxxxxxxxxxxxxxxupooniyevX3UXhzktSF2tYwePP7PnQ6C"\n    }, \n    {\n      "added": -262258, \n      "correctness_hash": "$2b$12$06Scc4tIoGiCKsnYnQnTruIHPMWSG1xzUBeVG66G.kNgWLMi0za/W", \n      "data": "gAAAAABcVAyxgzeyy5pV2rG_GMca09tHlg1Hkg-Tc7HSsZaP-zRTiPXS8O5S0uWVxkfIlNiJuqh8dLGletISgyAwVKfxn3CrGQ==", \n      "device_id": 23, \n      "id": 26, \n      "num_data": 459731, \n      "tid": "gAAAAABcVAyxVbuRTSaOe9TU7ye3_2uJ6Yp9PKJz0ASCjKKb9MKGXvAJVK71i7KV4LNWgBYrGEJXLko3iSOK7uIbvBrZeCZxLQ==", \n      "tid_bi": "$2b$12$23xxxxxxxxxxxxxxxxxxxu.ZfhXcDxDatkjrxC5f7I1S9D0G9uMI."\n    }\n  ], \n  "success": true\n}\n'
+    cmd.fake_tuple_data = {'device_data': {'added': {'function_name': 'triangle_wave', 'lower_bound': 1, 'upper_bound': 1, 'is_numeric': True}, 'num_data': {'function_name': 'sawtooth_wave', 'lower_bound': 1, 'upper_bound': 1, 'is_numeric': True}, 'data': {'function_name': 'square_wave', 'lower_bound': 1, 'upper_bound': 1, 'is_numeric': False}, 'tid': {'function_name': 'index_function', 'lower_bound': 1, 'upper_bound': 1, 'is_numeric': False}}}
+    data = {"device_id": str(device_id),
+            "shared_key": "aefe715635c3f35f7c58da3eb410453712aaf1f8fd635571aa5180236bb21acc",
+            "action:name": "a70c6a23f6b0ef9163040f4cc02819c22d7e35de6469672d250519077b36fe4d",
+            "device_type:description": "2c567c6fde8d29ee3c1ac15e74692089fdce507a43eb931be792ec3887968d33",
+            "device_data:added": "8dabfaf75c380f03e95f55760af02dc84026654cf2019d6da44cc69f600ba8f7",
+            "device_data:num_data": "3130d649f90006ef90f5c28fd486a6e748ffc35bad4981799708a411f7acaa60",
+            "device_data:data": "af785b829c4502286f5abec3403b43324971acfdb22fd80007216e8fa1abbf2e",
+            "device_data:tid": "9692e6525c19e6fa37978626606534015cd120816a28b501bebec142d86002b2",
+            "scene:name": "7c2a6bb5e7021e30c7326bdb99003fd43b2b0770b0a4a07f7b3876634b11ff94",
+            "scene:description": "d011b0fa5a23b3c2efadb2e0fea094647ff7b03b9a93022aeae6c1edf3eb1871"}
+
+    tiny_db = TinyDB(cmd.path)
+    table = tiny_db.table(name='device_keys')
+    table.insert(data)
+    app, ctx = app_and_ctx
+    with app.app_context():
+        with mock.patch('requests.post', return_value=r):
+            with mock.patch('client.user.commands._get_fake_tuple_data') as _get_fake_tuple_data:
+                result = runner.invoke(cmd.get_device_data, [str(device_id), '--token', access_token])
+                assert "Data Integrity satisfied." in result.output
+                assert "failed correctness hash test!" not in result.output
+
+                r.content = b'{\n  "device_data": [\n    {\n      "added": 2116572382, \n      "correctness_hash": "$2b$12$GeqMXIMKiE6rOF9YVL2TO.S7vf7Jc4RP8MXgL9d0kgIJfthUQjxM6", \n      "data": "gAAAAABcUvNYE3fPNwjf2yVvpjzYDiXn2Nx_Yjrp2vXQEu5jBWoQUZUY1VdPZqdw4xU_WqmNHR28Jm742aXvZxqWycGOUOWHJQ==", \n      "device_id": 23, \n      "id": 6, \n      "num_data": 464064, \n      "tid": "gAAAAABcUvNYaVEWRG5vxlvTBgj0TVP9icLDThlR5sxYlfPOP8eNoFcWkCoPNyGK5mFuS9Ia2WQ_gEFsdiKpG4cnPsg2uYSTvA==", \n      "tid_bi": "$2b$12$23xxxxxxxxxxxxxxxxxxxuN5X.DMkHilBYQSsUWodebAG.asbqKNa"\n    }, \n    {\n      "added": 2244032082, \n      "correctness_hash": "$2b$12$panqbBvEIAG4/7ct77LyieP017hCkKeZ6cubdQo4fcJpHOoA6UbPO", \n      "data": "gAAAAABcUvNYjVUDLeMntE0dyztMI1tv0zvHzNMgPZhr302ozcsXXTSKMLtudy8arSyYHiwk7Gyg_gSc5FN2-zWTooe0UNBV9g==", \n      "device_id": 23, \n      "id": 8, \n      "num_data": 466263, \n      "tid": "gAAAAABcUvNYvD4xkZ7pHxIBtpEWka8UVdCxmvR-O886BC06ILrqWqtT59ZKVgz7k8-TtIstlYzubq1ZZp_prquskFw5ZWNVSQ==", \n      "tid_bi": "$2b$12$23xxxxxxxxxxxxxxxxxxxu.ZfhXcDxDatkjrxC5f7I1S9D0G9uMI."\n    }, \n    {\n      "added": 2328638717, \n      "correctness_hash": "$2b$12$CwcoYDiksZSEIvQpwWE8KurDopFpaofsfYW7Y67Ifonv.a7ZDe0SW", \n      "data": "gAAAAABcUvNYI5KEn0rbmD_8rORWcHHpvVGrvk1mpgPdagaPjxTFVu3LzQITjiZLIQtP6uHgmQax515HL-8oTwUQA7ewIjv8CA==", \n      "device_id": 23, \n      "id": 4, \n      "num_data": 471232, \n      "tid": "gAAAAABcUvNYhiqIYBpG848jbgdwY92eW2HUGSwjAP4NL9rAcSCTmeU2noYgDnlpy7XzLDu4Ly4UaGMjBqUeNlpryV_BEYbcug==", \n      "tid_bi": "$2b$12$23xxxxxxxxxxxxxxxxxxxuSfVK9H/a.JO/whZHvsU1Q39d26XzS/6"\n    }, \n    {\n      "added": 2893046721, \n      "correctness_hash": "$2b$12$wvleRl6BZXh59slt2gPoyuEgKzmPCo.lZheLo2gYlVeQEk016oUMq", \n      "data": "gAAAAABcUvNY45bp9Q8D_rS2xTcM241zTXMIWSM4vqtkmG1_phcP_qpCG5Ncw6vBKpgjVywNvZJMLOruBVumOq745jtxOqlDEA==", \n      "device_id": 23, \n      "id": 12, \n      "num_data": 468360, \n      "tid": "gAAAAABcUvNY8h6dQrIaMAYm-9Mp2-ykEqOxc3BII_N_u8a6g1rP4JZRqjeAqGPivYAQFMC1Wkq0y2xyBv612yFVBGFBVXs3_Q==", \n      "tid_bi": "$2b$12$23xxxxxxxxxxxxxxxxxxxupooniyevX3UXhzktSF2tYwePP7PnQ6C"\n    }, \n    {\n      "added": -262258, \n      "correctness_hash": "$2b$12$06Scc4tIoGiCKsnYnQnTruIHPMWSG1xzUBeVG66G.kNgWLMi0za/W", \n      "data": "gAAAAABcVAyxgzeyy5pV2rG_GMca09tHlg1Hkg-Tc7HSsZaP-zRTiPXS8O5S0uWVxkfIlNiJuqh8dLGletISgyAwVKfxn3CrGQ==", \n      "device_id": 23, \n      "id": 26, \n      "num_data": 459731, \n      "tid": "gAAAAABcVAyxVbuRTSaOe9TU7ye3_2uJ6Yp9PKJz0ASCjKKb9MKGXvAJVK71i7KV4LNWgBYrGEJXLko3iSOK7uIbvBrZeCZxLQ==", \n      "tid_bi": "$2b$12$23xxxxxxxxxxxxxxxxxxxu.ZfhXcDxDatkjrxC5f7I1S9D0G9uMI."\n    }\n  ], \n  "success": true\n}\n'
+                cmd.fake_tuple_data = {'device_data': {'added': {'function_name': 'triangle_wave', 'lower_bound': 1, 'upper_bound': 2, 'is_numeric': True},
+                                                       'num_data': {'function_name': 'sawtooth_wave', 'lower_bound': 1, 'upper_bound': 2, 'is_numeric': True},
+                                                       'data': {'function_name': 'square_wave', 'lower_bound': 1, 'upper_bound': 2, 'is_numeric': False},
+                                                       'tid': {'function_name': 'index_function', 'lower_bound': 1, 'upper_bound': 2, 'is_numeric': False}}}
+
+                result = runner.invoke(cmd.get_device_data, [str(device_id), '--token', access_token])
+                assert "Data Integrity NOT satisfied." in result.output
+                assert "failed correctness hash test!" in result.output
+    cmd.fake_tuple_data = None
+
+
 def test_get_fake_tuple_data():
     device_id = 23
     user_id = 1
@@ -192,7 +233,7 @@ def test_divide_fake_and_real_data(reset_tiny_db):
     fake, real = cmd._divide_fake_and_real_data(rows, device_id, integrity_info)
     assert len(fake) == 2
     assert len(real) == 1
-    assert real[0]["tid"] == b'1'
+    assert real[0]["tid"] == '1'
     assert "added" in real[0] and "data" in real[0] and "num_data" in real[0] and "tid" in real[0] and "correctness_hash" in real[0]
     assert "device_id" not in real[0] and "id" not in real[0] and "tid_bi" not in real[0]
 
@@ -259,8 +300,8 @@ def test_decrypt_row():
     expected = {
         "added": 985734000,
         "num_data": 1000,
-        "data": b"test1",
-        "tid": b"1"
+        "data": "test1",
+        "tid": "1"
     }
 
     result = cmd.decrypt_row(row, keys)
@@ -287,7 +328,7 @@ def test_generate_fake_tuples_in_range():
 
     assert len(fake_tuples) == 4
     assert "added" in fake_tuples[0] and "num_data" in fake_tuples[0] and "data" in fake_tuples[0] and "tid" in fake_tuples[0]
-    assert fake_tuples[0] == {'added': -919, 'num_data': -959, 'data': 1000, "tid": 3}
+    assert fake_tuples[0] == {'added': -919, 'num_data': -959, 'data': "1000", "tid": "3"}
 
 
 @pytest.mark.parametrize('reset_tiny_db', [device_cmd.path], indirect=True)
@@ -360,26 +401,86 @@ def test_get_device(runner, client, access_token, reset_tiny_db):
     assert "failed correctness hash test!" not in result.output
 
 
-def test_get_device_data_by_time_range(runner, client, access_token):
-    result = runner.invoke(cmd.get_device_data_by_time_range, ['--token', access_token])
-    json_output = json_string_with_bytes_to_dict(result.output)
-    assert "failed correctness hash test!" not in result.output
-    assert len(json_output["device_data"]) == 4
+@pytest.mark.parametrize('reset_tiny_db', [cmd.path], indirect=True)
+def test_get_device_data_by_num_range(runner, client, access_token, reset_tiny_db):
+    device_id = "23"
+    message_fail = "Data Integrity NOT satisfied."
+    message_success = "Data Integrity satisfied."
+    r = Mock()
+    r.content = b'{\n  "device_data": [\n    {\n      "added": 2116572382, \n      "correctness_hash": "$2b$12$GxqMXIMKiEtrOF9YVL2TO.S7vf7Jc4RP8MXgL9d0kgIJfthUQjxM6", \n      "data": "gAAAAABcUvNYE3fPNwjf2yVvpjzYDiXn2Nx_Yjrp2vXQEu5jBWoQUZUY1VdPZqdw4xU_WqmNHR28Jm742aXvZxqWycGOUOWHJQ==", \n      "device_id": 23, \n      "id": 6, \n      "num_data": 464064, \n      "tid": "gAAAAABcUvNYaVEWRG5vxlvTBgj0TVP9icLDThlR5sxYlfPOP8eNoFcWkCoPNyGK5mFuS9Ia2WQ_gEFsdiKpG4cnPsg2uYSTvA==", \n      "tid_bi": "$2b$12$23xxxxxxxxxxxxxxxxxxxuN5X.DMkHilBYQSsUWodebAG.asbqKNa"\n    }, \n    {\n      "added": -262258, \n      "correctness_hash": "$2b$12$WwnNuG0K6/F.TnHUF4TsgOHX1xs1W1Y9TiR2nOEhhaeSaXWI7boqu", \n      "data": "gAAAAABcVC9yMWlcTwDZfvoJ_9VsJYqZF_x4iRQ1SrFlFOA6Qda1vBIbT9v1rtRk-qIdpKFVR6oNFT4tFdPzDKRvPbRQrVZFxQ==", \n      "device_id": 23, \n      "id": 26, \n      "num_data": 459731, \n      "tid": "gAAAAABcVC9y-Abn8uvuN1lGCW7qvdGY2IHfsrl3zCIOP7FDa01oDvBy-vc3gRbuNdA2Elrko2Kahqdg5oagdGkVF6VnO02msw==", \n      "tid_bi": "$2b$12$23xxxxxxxxxxxxxxxxxxxu.ZfhXcDxDatkjrxC5f7I1S9D0G9uMI."\n    }\n  ], \n  "success": true\n}\n'
+    cmd.fake_tuple_data = {'device_data': {'added': {'function_name': 'triangle_wave', 'lower_bound': 1, 'upper_bound': 1, 'is_numeric': True},
+                                           'num_data': {'function_name': 'sawtooth_wave', 'lower_bound': 1, 'upper_bound': 1, 'is_numeric': True},
+                                           'data': {'function_name': 'square_wave', 'lower_bound': 1, 'upper_bound': 1, 'is_numeric': False},
+                                           'tid': {'function_name': 'index_function', 'lower_bound': 1, 'upper_bound': 1, 'is_numeric': False}}}
+    data = {"device_id": device_id,
+            "shared_key": "aefe715635c3f35f7c58da3eb410453712aaf1f8fd635571aa5180236bb21acc",
+            "device:name": "ae89ebdb00d48b6e2aca3218213888aff3af9915831b9cdde8f82b709fd8802e",
+            "device_type:description": "2c567c6fde8d29ee3c1ac15e74692089fdce507a43eb931be792ec3887968d33",
+            "device_data:added": "8dabfaf75c380f03e95f55760af02dc84026654cf2019d6da44cc69f600ba8f7",
+            "device_data:num_data": "3130d649f90006ef90f5c28fd486a6e748ffc35bad4981799708a411f7acaa60",
+            "device_data:data": "af785b829c4502286f5abec3403b43324971acfdb22fd80007216e8fa1abbf2e",
+            "device_data:tid": "9692e6525c19e6fa37978626606534015cd120816a28b501bebec142d86002b2"}
 
-    result = runner.invoke(cmd.get_device_data_by_time_range, ["--lower", 467297, '--token', access_token])
-    json_output = json_string_with_bytes_to_dict(result.output)
-    assert "failed correctness hash test!" not in result.output
-    assert len(json_output["device_data"]) == 2
+    tiny_db = TinyDB(cmd.path)
+    table = tiny_db.table(name='device_keys')
+    table.insert(data)
+    with mock.patch('client.user.commands._get_fake_tuple_data') as _get_fake_tuple_data:
+        result = runner.invoke(cmd.get_device_data_by_num_range, [device_id, '--token', access_token])
+        assert "failed correctness hash test!" not in result.output
+        assert message_fail in result.output
+        json_output = json_string_with_bytes_to_dict(result.output.split(message_fail)[1])
+        assert len(json_output["device_data"]) == 4
 
-    result = runner.invoke(cmd.get_device_data_by_time_range, ["--lower", 467297, "--upper", 469439, '--token', access_token])
-    json_output = json_string_with_bytes_to_dict(result.output)
-    assert "failed correctness hash test!" not in result.output
-    assert len(json_output["device_data"]) == 1
+        result = runner.invoke(cmd.get_device_data_by_num_range, [device_id, "--lower", 467297, '--token', access_token])
+        assert "failed correctness hash test!" not in result.output
+        assert message_success in result.output
+        json_output = json_string_with_bytes_to_dict(result.output.split(message_success)[1])
+        assert len(json_output["device_data"]) == 2
 
-    result = runner.invoke(cmd.get_device_data_by_time_range, ["--upper", 467717, '--token', access_token])
-    json_output = json_string_with_bytes_to_dict(result.output)
-    assert "failed correctness hash test!" not in result.output
-    assert len(json_output["device_data"]) == 2
+        result = runner.invoke(cmd.get_device_data_by_num_range, [device_id, "--lower", 467297, "--upper", 469439, '--token', access_token])
+        assert "failed correctness hash test!" not in result.output
+        assert message_success in result.output
+        json_output = json_string_with_bytes_to_dict(result.output.split(message_success)[1])
+        assert len(json_output["device_data"]) == 1
+
+        result = runner.invoke(cmd.get_device_data_by_num_range, [device_id, "--upper", 467717, '--token', access_token])
+        assert "failed correctness hash test!" not in result.output
+        assert message_fail in result.output
+        json_output = json_string_with_bytes_to_dict(result.output.split(message_fail)[1])
+        assert len(json_output["device_data"]) == 2
+
+        with mock.patch('requests.post', return_value=r):
+            result = runner.invoke(cmd.get_device_data_by_num_range, [device_id, "--lower", 459679, "--upper", 465192, '--token', access_token])
+            assert "failed correctness hash test!" not in result.output
+            assert message_success in result.output
+            json_output = json_string_with_bytes_to_dict(result.output.split(message_success)[1])
+            assert len(json_output["device_data"]) == 1
+
+            r.content = b'{\n  "device_data": [\n    {\n      "added": 2116572382, \n      "correctness_hash": "$2b$12$GxqMX2MKiEtrOF9YVL2TO.S7vf7Jc4RP8MXgL9d0kgIJfthUQjxM6", \n      "data": "gAAAAABcUvNYE3fPNwjf2yVvpjzYDiXn2Nx_Yjrp2vXQEu5jBWoQUZUY1VdPZqdw4xU_WqmNHR28Jm742aXvZxqWycGOUOWHJQ==", \n      "device_id": 23, \n      "id": 6, \n      "num_data": 464064, \n      "tid": "gAAAAABcUvNYaVEWRG5vxlvTBgj0TVP9icLDThlR5sxYlfPOP8eNoFcWkCoPNyGK5mFuS9Ia2WQ_gEFsdiKpG4cnPsg2uYSTvA==", \n      "tid_bi": "$2b$12$23xxxxxxxxxxxxxxxxxxxuN5X.DMkHilBYQSsUWodebAG.asbqKNa"\n    }, \n    {\n      "added": -262258, \n      "correctness_hash": "$2b$12$WwnNuG0K6/F.TnHUF4TsgOHX1xs1W1Y9TiR2nOEhhaeSaXWI7boqu", \n      "data": "gAAAAABcVC9yMWlcTwDZfvoJ_9VsJYqZF_x4iRQ1SrFlFOA6Qda1vBIbT9v1rtRk-qIdpKFVR6oNFT4tFdPzDKRvPbRQrVZFxQ==", \n      "device_id": 23, \n      "id": 26, \n      "num_data": 459731, \n      "tid": "gAAAAABcVC9y-Abn8uvuN1lGCW7qvdGY2IHfsrl3zCIOP7FDa01oDvBy-vc3gRbuNdA2Elrko2Kahqdg5oagdGkVF6VnO02msw==", \n      "tid_bi": "$2b$12$23xxxxxxxxxxxxxxxxxxxu.ZfhXcDxDatkjrxC5f7I1S9D0G9uMI."\n    }\n  ], \n  "success": true\n}\n'
+            result = runner.invoke(cmd.get_device_data_by_num_range, [device_id, "--lower", 459679, "--upper", 465192, '--token', access_token])
+            assert "failed correctness hash test!" in result.output
+
+    cmd.fake_tuple_data = None
+
+@pytest.mark.parametrize('reset_tiny_db', [cmd.path], indirect=True)
+def test_slice_by_range(reset_tiny_db):
+    device_id = 23
+    data = {"device_id": str(device_id),
+            "shared_key": "aefe715635c3f35f7c58da3eb410453712aaf1f8fd635571aa5180236bb21acc",
+            "device:name": "ae89ebdb00d48b6e2aca3218213888aff3af9915831b9cdde8f82b709fd8802e",
+            "device_type:description": "2c567c6fde8d29ee3c1ac15e74692089fdce507a43eb931be792ec3887968d33",
+            "device_data:added": "8dabfaf75c380f03e95f55760af02dc84026654cf2019d6da44cc69f600ba8f7",
+            "device_data:num_data": "3130d649f90006ef90f5c28fd486a6e748ffc35bad4981799708a411f7acaa60",
+            "device_data:data": "af785b829c4502286f5abec3403b43324971acfdb22fd80007216e8fa1abbf2e",
+            "device_data:tid": "9692e6525c19e6fa37978626606534015cd120816a28b501bebec142d86002b2"}
+
+    tiny_db = TinyDB(cmd.path)
+    table = tiny_db.table(name='device_keys')
+    table.insert(data)
+    lower = 459679  # -1000
+    upper = 465192  # 1000
+    result = cmd.slice_by_range(device_id, [{'added': -959, 'num_data': -980, 'data': '1000', 'tid': '2'}, {'added': -959, 'num_data': 1700, 'data': '1000', 'tid': '2'}], lower, upper, "device_data:num_data")
+    assert result == [{'added': -959, 'num_data': -980, 'data': '1000', 'tid': '2'}]
 
 
 @pytest.mark.parametrize('reset_tiny_db', [cmd.path], indirect=True)
@@ -630,7 +731,7 @@ def test_get_fake_tuple(runner, reset_tiny_db):
     key = a2b_hex(data[f"device_data:{column}"].encode())
     fernet_key = Fernet(base64.urlsafe_b64encode(key))
     plaintext = fernet_key.decrypt(ciphertext.encode())
-    assert int_from_bytes(plaintext) == 1000
+    assert plaintext.decode() == "1000"
 
     result = runner.invoke(device_cmd.get_fake_tuple, [str(user_id), "upper_bound"])
     search_res = re.findall('\"(tid|data|num_data|added|correctness_hash)\": \"?([^:,\"]+)\"?', result.output)
