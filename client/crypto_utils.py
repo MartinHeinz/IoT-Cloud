@@ -1,5 +1,5 @@
 import base64
-from binascii import a2b_hex
+from binascii import a2b_hex, b2a_hex
 
 import click
 from cryptography.fernet import Fernet
@@ -174,12 +174,11 @@ def encrypt_fake_tuple(fake_tuple, keys):
     """
     result = {}
     for col, val in fake_tuple.items():
-        key = a2b_hex(keys[col][0].encode())
         if not keys[col][1]:  # if key is for fernet (is_numeric is False) create Fernet token
-            cipher = Fernet(base64.urlsafe_b64encode(key))
+            cipher = hex_to_fernet(keys[col][0])
             result[col] = cipher.encrypt(bytes(str(val), "utf-8")).decode()
         else:  # if key is for OPE (is_numeric is True) create OPE cipher
-            cipher = instantiate_ope_cipher(key)
+            cipher = hex_to_ope(keys[col][0])
             result[col] = cipher.encrypt(val)
     return result
 
@@ -198,3 +197,33 @@ def int_to_bytes(x):
 
 def int_from_bytes(xbytes):
     return int.from_bytes(xbytes, 'big', signed=True)
+
+
+def hex_to_key(h):
+    return a2b_hex(h.encode())
+
+
+def key_to_hex(k):
+    return b2a_hex(k).decode()
+
+
+def hex_to_fernet(h):
+    k = hex_to_key(h)
+    return Fernet(base64.urlsafe_b64encode(k))
+
+
+def hex_to_ope(h):
+    k = hex_to_key(h)
+    return instantiate_ope_cipher(k)
+
+
+def decrypt_using_fernet_hex(h, ciphertext):
+    fernet_key = hex_to_fernet(h)
+    plaintext = fernet_key.decrypt(ciphertext.encode())
+    return plaintext
+
+
+def decrypt_using_ope_hex(h, ciphertext):
+    cipher = hex_to_ope(h)
+    plaintext = cipher.decrypt(int(ciphertext))
+    return plaintext

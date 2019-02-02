@@ -2,11 +2,9 @@
 import base64
 import json
 import types
-from binascii import a2b_hex
 from uuid import UUID
 
 import pytest
-from cryptography.fernet import Fernet
 from passlib.hash import bcrypt
 
 from app.consts import DEVICE_TYPE_ID_MISSING_ERROR_MSG, DEVICE_TYPE_ID_INCORRECT_ERROR_MSG, DEVICE_NAME_BI_MISSING_ERROR_MSG, DEVICE_NAME_MISSING_ERROR_MSG, \
@@ -16,7 +14,7 @@ from app.models.models import DeviceType, Device
 from app.app_setup import client as mqtt_client
 from app.utils import is_valid_uuid
 from client.crypto_utils import encrypt, hash, correctness_hash, triangle_wave, sawtooth_wave, square_wave, sine_wave, generate, fake_tuple_to_hash, \
-    encrypt_fake_tuple, instantiate_ope_cipher
+    encrypt_fake_tuple, instantiate_ope_cipher, decrypt_using_fernet_hex, decrypt_using_ope_hex
 
 from .conftest import db
 
@@ -406,15 +404,12 @@ def test_encrypt_fake_tuple():
     }
 
     result = encrypt_fake_tuple(fake_tuple, keys)
-    cipher = Fernet(base64.urlsafe_b64encode(a2b_hex(keys["data"][0].encode())))
-    plaintext = cipher.decrypt(result["data"].encode())
+    plaintext = decrypt_using_fernet_hex(keys["data"][0], result["data"])
     assert plaintext.decode() == '1000'
 
-    cipher = instantiate_ope_cipher(a2b_hex(keys["num_data"][0].encode()))
-    plaintext = cipher.decrypt(result["num_data"])
+    plaintext = decrypt_using_ope_hex(keys["num_data"][0], result["num_data"])
     assert plaintext == -1000
 
     result = encrypt_fake_tuple(fake_tuple, keys)
-    cipher = Fernet(base64.urlsafe_b64encode(a2b_hex(keys["tid"][0].encode())))
-    plaintext = cipher.decrypt(result["tid"].encode())
+    plaintext = decrypt_using_fernet_hex(keys["tid"][0], result["tid"])
     assert plaintext.decode() == '1'

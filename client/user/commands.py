@@ -1,22 +1,20 @@
-import base64
 import copy
 import json
 import os
 import re
 import ssl
 import sys
-from binascii import b2a_hex, a2b_hex
+from json import JSONDecodeError
 
 import click
 import requests
-from cryptography.fernet import Fernet
 from cryptography.hazmat.backends import default_backend
 from cryptography.hazmat.primitives import serialization
 from cryptography.hazmat.primitives.asymmetric import ec
 from cryptography.hazmat.primitives.asymmetric.ec import EllipticCurvePublicKey, EllipticCurvePrivateKey
 from cryptography.hazmat.primitives.serialization import load_pem_private_key, load_pem_public_key
 from paho.mqtt import client as paho
-from tinydb import TinyDB, where, Query
+from tinydb import where, Query
 from passlib.hash import bcrypt
 
 
@@ -27,11 +25,12 @@ from app.utils import bytes_to_json
 sys.stdout = sys.__stdout__
 
 try:  # for packaged CLI (setup.py)
-    from client.crypto_utils import hash, correctness_hash, check_correctness_hash, int_to_bytes, instantiate_ope_cipher, int_from_bytes
-    from client.utils import json_string_with_bytes_to_dict, _create_payload
+    from client.crypto_utils import hash, correctness_hash, check_correctness_hash, int_to_bytes, instantiate_ope_cipher, int_from_bytes, hex_to_key, key_to_hex, \
+    hex_to_fernet, hex_to_ope, decrypt_using_fernet_hex, decrypt_using_ope_hex
+    from client.utils import json_string_with_bytes_to_dict, _create_payload, search_tinydb_doc, get_tinydb_table
 except ImportError:  # for un-packaged CLI
-    from crypto_utils import hash, correctness_hash, check_correctness_hash, instantiate_ope_cipher, int_from_bytes
-    from utils import json_string_with_bytes_to_dict, _create_payload
+    from crypto_utils import hash, correctness_hash, check_correctness_hash, instantiate_ope_cipher, int_from_bytes, hex_to_key, key_to_hex, hex_to_fernet, hex_to_ope, decrypt_using_fernet_hex, decrypt_using_ope_hex
+    from utils import json_string_with_bytes_to_dict, _create_payload, search_tinydb_doc, get_tinydb_table
 
 
 URL_BASE = "https://localhost/api/"
@@ -68,12 +67,11 @@ def user(ctx):
 
 
 @user.command()
+@click.argument('user_id')
 @click.argument('device_id')
 @click.argument('data')
-def send_message(device_id, data):
-    db = TinyDB(path)
-    table = db.table(name='device_keys')
-    doc = table.get(Query().device_id == device_id)
+def send_message(user_id, device_id, data):
+    doc = search_tinydb_doc(path, 'device_keys', Query().device_id == device_id)
 
     if not doc:
         with click.Context(send_key_to_device) as ctx:
@@ -81,14 +79,13 @@ def send_message(device_id, data):
             click.echo(get_attr_auth_keys.get_help(ctx))
             return
 
-    shared_key = a2b_hex(doc["shared_key"].encode())
-    fernet_key = Fernet(base64.urlsafe_b64encode(shared_key))
+    fernet_key = hex_to_fernet(doc["shared_key"])
     token = fernet_key.encrypt(data.encode())
 
-    client = _setup_client("user_id")  # TODO replace with actual user_id
+    client = _setup_client(user_id)
 
-    payload = _create_payload(1, {"ciphertext": token.decode()})
-    ret = client.publish(f"1/{device_id}", payload)  # TODO replace with actual user_id, change payload to json and parse it as JSON on device end
+    payload = _create_payload(user_id, {"ciphertext": token.decode()})
+    ret = client.publish(f"{user_id}/{device_id}", payload)  # TODO change payload to json and parse it as JSON on device end
     click.echo(f"RC and MID = {ret}")
 
 
@@ -127,15 +124,12 @@ def get_devices(device_name, user_id, token):
     r = requests.post(URL_GET_DEVICE, params=data, verify=VERIFY_CERTS)
     content = json.loads(r.content.decode('unicode-escape'))
 
-    db = TinyDB(path)
-    table = db.table(name='device_keys')
+    table = get_tinydb_table(path, 'device_keys')
 
     for device in content["devices"]:
-        ciphertext = device["name"].encode()
+        ciphertext = device["name"]
         doc = table.get(Query().device_id == str(device["id"]))
-        key = a2b_hex(doc["device:name"].encode())
-        cipher = Fernet(base64.urlsafe_b64encode(key))
-        plaintext = cipher.decrypt(ciphertext)
+        plaintext = decrypt_using_fernet_hex(doc["device:name"], ciphertext)
         device["name"] = plaintext.decode()
 
     check_correctness_hash(content["devices"], "name")
@@ -177,13 +171,9 @@ def get_device_data_by_num_range(device_id, lower=None, upper=None, token=""):
 
 
 def slice_by_range(device_id, all_tuples, lower, upper, key_name):
-    db = TinyDB(path)
-    table = db.table(name='device_keys')
-    doc = table.get(Query().device_id == str(device_id))
-    key = a2b_hex(doc[key_name].encode())
-    cipher = instantiate_ope_cipher(key)
-    plaintext_lower = cipher.decrypt(lower)
-    plaintext_upper = cipher.decrypt(upper)
+    doc = search_tinydb_doc(path, 'device_keys', Query().device_id == str(device_id))
+    plaintext_lower = decrypt_using_ope_hex(doc[key_name], lower)
+    plaintext_upper = decrypt_using_ope_hex(doc[key_name], upper)
     result = []
     for row in all_tuples:
         if plaintext_lower <= row[key_name.split(":")[1]] <= plaintext_upper:
@@ -208,8 +198,7 @@ def send_key_to_device(device_id, token):
         format=serialization.PrivateFormat.TraditionalOpenSSL,
         encryption_algorithm=serialization.NoEncryption()
     ).decode()
-    db = TinyDB(path)
-    table = db.table(name='device_keys')
+    table = get_tinydb_table(path, 'device_keys')
     table.upsert({
         'device_id': device_id,
         'public_key': public_pem,
@@ -233,8 +222,8 @@ def retrieve_device_public_key(device_id, token):
         "access_token": token,
         "device_id": device_id
     }
-    db = TinyDB(path)
-    table = db.table(name='device_keys')
+
+    table = get_tinydb_table(path, 'device_keys')
     doc = table.get(Query().device_id == device_id)
 
     if not doc:
@@ -257,16 +246,16 @@ def retrieve_device_public_key(device_id, token):
     assert isinstance(device_public_key, EllipticCurvePublicKey), "Loading public key failed! - private_key is not instance of EllipticCurvePublicKey"
     shared_key = private_key.exchange(ec.ECDH(), device_public_key)
 
-    key = b2a_hex(shared_key[:32]).decode()  # NOTE: retrieve key as `a2b_hex(key.encode())`
+    key = key_to_hex(shared_key[:32])  # NOTE: retrieve key as `key_to_hex(key)`
     table.remove(Query().device_id == device_id)
     table.insert({'device_id': device_id, 'shared_key': key})
 
 
 @user.command()
+@click.argument('user_id')
 @click.argument('device_id')
-def send_column_keys(device_id):
-    db = TinyDB(path)
-    table = db.table(name='device_keys')
+def send_column_keys(user_id, device_id):
+    table = get_tinydb_table(path, 'device_keys')
     doc = table.get(Query().device_id == device_id)
 
     if not doc:
@@ -275,8 +264,7 @@ def send_column_keys(device_id):
             click.echo(get_attr_auth_keys.get_help(ctx))
             return
 
-    shared_key = a2b_hex(doc["shared_key"].encode())
-    fernet_key = Fernet(base64.urlsafe_b64encode(shared_key))
+    fernet_key = hex_to_fernet(doc["shared_key"])
 
     keys = {
         "action:name": None,
@@ -294,28 +282,29 @@ def send_column_keys(device_id):
     payload_keys = {}
     for k in keys:
         random_bytes = os.urandom(32)
-        keys[k] = b2a_hex(random_bytes).decode()  # NOTE: retrieve key as `a2b_hex(key.encode())`
+        keys[k] = key_to_hex(random_bytes)  # NOTE: retrieve key as `key_to_hex(key)`
         payload_keys[k] = fernet_key.encrypt(random_bytes).decode()
 
     doc = {**doc, **keys}
     table.update(doc)
 
-    client = _setup_client("user_id")  # TODO replace with actual user_id
-    payload = _create_payload(1, payload_keys)
-    ret = client.publish(f"1/{device_id}", payload)  # TODO replace with actual user_id
+    client = _setup_client(user_id)
+    payload = _create_payload(user_id, payload_keys)
+    ret = client.publish(f"{user_id}/{device_id}", payload)
     click.echo(f"RC and MID = {ret}")
 
 
 @user.command()
+@click.argument('user_id')
 @click.argument('device_id')
 @click.option('--token', envvar='ACCESS_TOKEN')
-def get_device_data(device_id, token):  # TODO right now it requires device to 1st use `get_fake_tuple` (`init_integrity_data`) before 1st call to this
+def get_device_data(user_id, device_id, token):  # TODO right now it requires device to 1st use `get_fake_tuple` (`init_integrity_data`) before 1st call to this
     """
     Queries server for data of :param device_id device and then verifies the received data using
     integrity information from device (received using MQTT Broker) and correctness hash attribute
     of each DB row.
     """
-    user_id = 1  # TODO get it from env_var or file
+    user_id = int(user_id)
     data = {"device_id": device_id, "access_token": token}
 
     r = requests.post(URL_GET_DEVICE_DATA, params=data, verify=VERIFY_CERTS)
@@ -331,7 +320,11 @@ def get_device_data(device_id, token):  # TODO right now it requires device to 1
 
 
 def _handle_on_message(mqtt_client, userdata, msg, device_id, user_id):
-    msg.payload = bytes_to_json(msg.payload)  # TODO sanitize this?
+    try:
+        msg.payload = bytes_to_json(msg.payload)
+    except JSONDecodeError:
+        click.echo(f"Received invalid payload: {msg.payload.decode()}")
+        return
     topic = msg.topic.split("/")
     if is_number(topic[0]) and int(topic[0]) == device_id and is_number(topic[1]) and int(topic[1]) == user_id:
         mqtt_client.disconnect()
@@ -401,9 +394,7 @@ def get_encryption_keys(device_id, db_keys):
     :param db_keys: list of TinyDB key names, e.g.: ["device_type:description", "action:name"]
     :return: dictionary of key, value pair of column name and encryption string, e.g.: {"action:name": "9dd1a57836a5...858372a8c0c42515", ...}
     """
-    db = TinyDB(path)
-    table = db.table(name='device_keys')
-    doc = table.get(Query().device_id == str(device_id))
+    doc = search_tinydb_doc(path, 'device_keys', Query().device_id == str(device_id))
     result = {}
     for key in db_keys:
         result[key] = doc[key]
@@ -445,13 +436,10 @@ def decrypt_row(row, keys):
     """
     result = {}
     for col, val in row.items():
-        key = a2b_hex(keys[col][0].encode())
         if not keys[col][1]:  # if key is for fernet (is_numeric is False) create Fernet token
-            cipher = Fernet(base64.urlsafe_b64encode(key))
-            result[col] = cipher.decrypt(val.encode()).decode()
+            result[col] = decrypt_using_fernet_hex(keys[col][0], val).decode()
         else:  # if key is for OPE (is_numeric is True) create OPE cipher
-            cipher = instantiate_ope_cipher(key)
-            result[col] = cipher.decrypt(val)
+            result[col] = decrypt_using_ope_hex(keys[col][0], val)
     return result
 
 
@@ -550,9 +538,9 @@ def get_attr_auth_keys(token):
     r = requests.post(AA_URL_SETUP, params=data, verify=VERIFY_CERTS)
     content = json.loads(r.content.decode('unicode-escape'))
     click.echo(f"Saving keys to {path}")
-    db = TinyDB(path)
-    table = db.table(name='aa_keys')
+    table = get_tinydb_table(path, 'aa_keys')
     doc = table.get(where('public_key').exists() & where('master_key').exists())
+    search_tinydb_doc(path, 'aa_keys', where('public_key').exists() & where('master_key').exists())
     data = {"public_key": content["public_key"], "master_key": content["master_key"]}
     if doc:
         table.update(data)
@@ -565,9 +553,7 @@ def get_attr_auth_keys(token):
 @click.argument('receiver_id')
 @click.option('--token', envvar='AA_ACCESS_TOKEN')
 def attr_auth_keygen(attr_list, receiver_id, token):
-    db = TinyDB(path)
-    table = db.table(name='aa_keys')
-    doc = table.get(where('public_key').exists() & where('master_key').exists())
+    doc = search_tinydb_doc(path, 'aa_keys', where('public_key').exists() & where('master_key').exists())
     if not doc:
         with click.Context(get_attr_auth_keys) as ctx:
             click.echo(f"Master key not present, please use: {ctx.command.name}")

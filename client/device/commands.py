@@ -1,23 +1,22 @@
-import base64
 import json
 import os
 import sys
-from binascii import b2a_hex, a2b_hex
 
 import click
-from cryptography.fernet import Fernet
 from cryptography.hazmat.backends import default_backend
 from cryptography.hazmat.primitives import serialization
 from cryptography.hazmat.primitives.asymmetric import ec
 from cryptography.hazmat.primitives.asymmetric.ec import EllipticCurvePublicKey
 from cryptography.hazmat.primitives.serialization import load_pem_public_key
-from tinydb import TinyDB, Query
+from tinydb import Query
 
 try:  # for packaged CLI (setup.py)
     from client.crypto_utils import triangle_wave, sawtooth_wave, square_wave, sine_wave, generate, fake_tuple_to_hash, \
-    encrypt_fake_tuple, index_function, hash
+    encrypt_fake_tuple, index_function, hash, hex_to_key, key_to_hex, hex_to_fernet, decrypt_using_fernet_hex
+    from client.utils import get_tinydb_table, search_tinydb_doc
 except ImportError:  # for un-packaged CLI
-    from crypto_utils import triangle_wave, sawtooth_wave, square_wave, sine_wave, generate, fake_tuple_to_hash, encrypt_fake_tuple, index_function, hash
+    from crypto_utils import triangle_wave, sawtooth_wave, square_wave, sine_wave, generate, fake_tuple_to_hash, encrypt_fake_tuple, index_function, hash, hex_to_key, key_to_hex, hex_to_fernet, decrypt_using_fernet_hex
+    from utils import get_tinydb_table, search_tinydb_doc
 
 dir_path = os.path.dirname(os.path.realpath(__file__))
 path = f'{dir_path}/data.json'
@@ -39,9 +38,8 @@ def device():
 @device.command()
 @click.argument('device_id')
 def init(device_id):
-    db = TinyDB(path)
-    table = db.table(name='device')
-    table.upsert({'id': device_id}, Query().id.exists())  # TODO change `device_id` to `int(device_id)`
+    table = get_tinydb_table(path, 'device')
+    table.upsert({'id': device_id}, Query().id.exists())
 
 
 @device.command()
@@ -52,13 +50,8 @@ def parse_msg(data):
         data = json.loads(data)
 
         if "ciphertext" in data:
-            db = TinyDB(path)
-            table = db.table(name='users')
-            doc = table.get(Query().id == data["user_id"])
-
-            shared_key = a2b_hex(doc["shared_key"].encode())
-            fernet_key = Fernet(base64.urlsafe_b64encode(shared_key))
-            plaintext = fernet_key.decrypt(data["ciphertext"].encode())
+            doc = search_tinydb_doc(path, 'users', Query().id == data["user_id"])
+            plaintext = decrypt_using_fernet_hex(doc["shared_key"], data["ciphertext"])
             click.echo(plaintext)
 
     except Exception as e:
@@ -75,16 +68,14 @@ def save_column_keys(data):
         data = json.loads(data)
 
         if "ciphertext" not in data:
-            db = TinyDB(path)
-            table = db.table(name='users')
+            table = get_tinydb_table(path, 'users')
             doc = table.get(Query().id == data["user_id"])
             data.pop("user_id", None)
 
-            shared_key = a2b_hex(doc["shared_key"].encode())
-            fernet_key = Fernet(base64.urlsafe_b64encode(shared_key))
+            fernet_key = hex_to_fernet(doc["shared_key"])
             keys = {}
             for k, v in data.items():
-                keys[k] = b2a_hex(fernet_key.decrypt(data[k].encode())).decode()
+                keys[k] = key_to_hex(fernet_key.decrypt(data[k].encode()))
 
             doc = {**doc, **keys}
             table.update(doc)
@@ -111,9 +102,8 @@ def receive_pk(data):
         shared_key = private_key.exchange(ec.ECDH(), public_key)
         # derived_key = Fernet(base64.urlsafe_b64encode(shared_key[:32]))
 
-        db = TinyDB(path)
-        table = db.table(name='users')
-        key = b2a_hex(shared_key[:32]).decode()  # NOTE: retrieve key as `a2b_hex(key.encode())`
+        table = get_tinydb_table(path, 'users')
+        key = key_to_hex(shared_key[:32])  # NOTE: retrieve key as `key_to_hex(key)`
         table.upsert({'id': user_id, 'shared_key': key}, Query().id == user_id)
 
         public_key = private_key.public_key()
@@ -135,8 +125,7 @@ def receive_pk(data):
 @click.argument('bound')
 def get_fake_tuple(user_id, bound):
     try:
-        db = TinyDB(path)
-        table = db.table(name='users')
+        table = get_tinydb_table(path, 'users')
         doc = table.get(Query().id == int(user_id))
         if bound == "upper_bound":
             if "integrity" not in doc:  # If it doesn't exist create it with starting lower and upper bounds
@@ -170,8 +159,7 @@ def get_fake_tuple(user_id, bound):
 
 
 def get_self_id():
-    db = TinyDB(path)
-    table = db.table(name='device')
+    table = get_tinydb_table(path, 'device')
     device_id = table.all()[0]["id"]
     return device_id
 
@@ -182,9 +170,7 @@ def get_fake_tuple_info(data):
     try:
         data = json.loads(data)
         if "request" in data and data["request"] == "fake_tuple_info":
-            db = TinyDB(path)
-            table = db.table(name='users')
-            doc = table.get(Query().id == int(data["user_id"]))
+            doc = search_tinydb_doc(path, 'users', Query().id == int(data["user_id"]))
             if doc is None:
                 raise Exception(f"No user with ID {data['user_id']}")
 
@@ -247,7 +233,9 @@ def init_integrity_data():
     }
 
 
-def increment_bounds(table, bound="upper_bound"):  # TODO check if lower_bound is smaller than upper_bound (can't remove what was not inserted yet)
+def increment_bounds(table, bound="upper_bound"):
     for k, v in table.items():
+        if table[k]["lower_bound"] > table[k]["upper_bound"]:
+            raise Exception("Invalid Bounds.")
         table[k][bound] += 1
     return table
