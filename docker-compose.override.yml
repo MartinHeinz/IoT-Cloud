@@ -46,10 +46,11 @@ services:
     - DOCKER_TLS_VERIFY=True
     - COMPOSE_TLS_VERSION=TLSv1_2
     volumes:
-    - ./mosquitto/config:/mosquitto/config
+    - ./mosquitto/config:/etc/mosquitto
     - ./mosquitto/data:/mosquitto/data
     - ./mosquitto/log:/mosquitto/log
     - ./mosquitto/certs:/mosquitto/certs
+    command: ["mosquitto", "-c", "/etc/mosquitto/mosquitto.conf"]
     networks:
     - test
   nginx:

@@ -9,7 +9,7 @@ from passlib.hash import bcrypt
 
 from app.consts import DEVICE_TYPE_ID_MISSING_ERROR_MSG, DEVICE_TYPE_ID_INCORRECT_ERROR_MSG, DEVICE_NAME_BI_MISSING_ERROR_MSG, DEVICE_NAME_MISSING_ERROR_MSG, \
     DATA_RANGE_MISSING_ERROR_MSG, DATA_OUT_OF_OUTPUT_RANGE_ERROR_MSG, CORRECTNESS_HASH_MISSING_ERROR_MSG, SOMETHING_WENT_WRONG_MSG, DEVICE_ID_MISSING_ERROR_MSG, \
-    DEVICE_NAME_INVALID_ERROR_MSG
+    DEVICE_NAME_INVALID_ERROR_MSG, DEVICE_PASSWORD_MISSING_ERROR_MSG
 from app.models.models import DeviceType, Device
 from app.app_setup import client as mqtt_client
 from app.utils import is_valid_uuid
@@ -139,6 +139,18 @@ def test_api_dv_create(client, app_and_ctx, access_token):
     response = client.post('/api/device/create', query_string=data, follow_redirects=True)
     assert response.status_code == 400
     json_data = json.loads(response.data.decode("utf-8"))
+    assert (json_data["error"]) == DEVICE_PASSWORD_MISSING_ERROR_MSG
+
+    data = {
+        "type_id": "anything",
+        "access_token": access_token,
+        "correctness_hash": '$2b$12$WCDgDQQwfA2UtS7qk5eiO.W23sRkaHjKSBWrkhB8Q9VGPUnMUKtye',
+        "name": "test",
+        "password": "PBKDF2$sha256$10000$qu5hXEoBLNeKuzR7$rdth45656456456564"
+    }
+    response = client.post('/api/device/create', query_string=data, follow_redirects=True)
+    assert response.status_code == 400
+    json_data = json.loads(response.data.decode("utf-8"))
     assert (json_data["error"]) == DEVICE_NAME_BI_MISSING_ERROR_MSG
 
     data = {
@@ -146,6 +158,7 @@ def test_api_dv_create(client, app_and_ctx, access_token):
         "access_token": access_token,
         "correctness_hash": '$2b$12$WCDgDQQwfA2UtS7qk5eiO.W23sRkaHjKSBWrkhB8Q9VGPUnMUKtye',
         "name": "test",
+        "password": "PBKDF2$sha256$10000$qu5hXEoBLNeKuzR7$rdth45656456456564",
         "name_bi": "$2b$12$1xxxxxxxxxxxxxxxxxxxxuDUX01AKuyu/3/PdSxQT4qMDVTUawIUq"
     }
     response = client.post('/api/device/create', query_string=data, follow_redirects=True)
@@ -164,6 +177,7 @@ def test_api_dv_create(client, app_and_ctx, access_token):
             "access_token": access_token,
             "correctness_hash": '$2b$12$WCDgDQQwfA2UtS7qk5eiO.W23sRkaHjKSBWrkhB8Q9VGPUnMUKtye',
             "name": "test",
+            "password": "PBKDF2$sha256$10000$qu5hXEoBLNeKuzR7$rdth45656456456564",
             "name_bi": "$2b$12$1xxxxxxxxxxxxxxxxxxxxuDUX01AKuyu/3/PdSxQT4qMDVTUawIUq"
         }
 
@@ -176,6 +190,11 @@ def test_api_dv_create(client, app_and_ctx, access_token):
         inserted_dv = db.session.query(Device).filter(Device.id == json_data["id"]).first()
         assert inserted_dv.owner.access_token == data["access_token"]
         assert inserted_dv.name_bi == data["name_bi"]
+
+        assert inserted_dv.mqtt_creds is not None
+        assert inserted_dv.mqtt_creds.username == str(json_data["id"])
+        assert inserted_dv.mqtt_creds.password_hash == data["password"]
+        assert len(inserted_dv.mqtt_creds.acls) == 4
 
 
 def test_api_get_device_by_name(client, app_and_ctx, access_token):

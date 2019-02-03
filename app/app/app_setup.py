@@ -16,7 +16,7 @@ client = mqtt.Client(client_id=f'server_{str(uuid.uuid4())}')
 
 
 def register_models():
-    from app.models.models import Device, DeviceType, User, DeviceData, Action, Scene, AttrAuthUser, PublicKey, PrivateKey, Attribute, UserDevice  # noqa pylint: disable=unused-variable, cyclic-import
+    from app.models.models import Device, DeviceType, User, DeviceData, Action, Scene, AttrAuthUser, PublicKey, PrivateKey, Attribute, UserDevice, MQTTUser, ACL  # noqa pylint: disable=unused-variable, cyclic-import
 
 
 def create_app(config_name):
@@ -98,6 +98,7 @@ def create_app(config_name):
         client.tls_insecure_set(app.config["SSL_INSECURE"])
     except ValueError as e:
         app.logger.error(e)
+    client.username_pw_set("admin", "password")  # TODO Read password from file
     client.connect(app.config["MQTT_BROKER_URL"], app.config["MQTT_BROKER_PORT"], 60)
     app.logger.info("Client connected...")
 

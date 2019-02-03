@@ -5,7 +5,9 @@ services:
   web:
     build: ./
   mqtt:
-    image: eclipse-mosquitto:latest
+    build:
+      context: .
+      dockerfile: ./mosquitto/Dockerfile
   nginx:
     image: nginx:latest
   web_test:
