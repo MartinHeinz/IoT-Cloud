@@ -2,6 +2,7 @@ import datetime
 from uuid import uuid4
 from sqlalchemy import func, and_
 from sqlalchemy.dialects.postgresql import UUID
+from sqlalchemy.ext.hybrid import hybrid_property
 from sqlalchemy.orm import relationship
 
 from app.app_setup import db
@@ -42,6 +43,7 @@ class User(MixinGetByAccessToken, MixinGetById, db.Model):
     device_types = relationship("DeviceType", back_populates="owner")
     devices = relationship("UserDevice", back_populates="user")
     owned_devices = relationship("Device", back_populates="owner")
+    mqtt_creds = relationship("MQTTUser", uselist=False, back_populates="user")
 
     @classmethod
     def can_use_device(cls, user_access_token, device_id):
@@ -86,11 +88,56 @@ class Device(MixinGetById, MixinAsDict, db.Model):
         back_populates="devices")
     owner_id = db.Column(db.Integer, db.ForeignKey('user.id'))
     owner = relationship("User", back_populates="owned_devices")
+    mqtt_creds = relationship("MQTTUser", uselist=False, back_populates="device")
 
     name = db.Column(db.LargeBinary, nullable=False)
     name_bi = db.Column(db.String(200), unique=False, nullable=True)  # Blind index for .name
 
     correctness_hash = db.Column(db.String(200), nullable=False)  # correctness_hash("name")
+
+    def create_mqtt_creds_for_device(self, password, session):
+        session.flush()
+        self.mqtt_creds = MQTTUser(
+            username=self.id,
+            password_hash=password,
+            acls=[
+                ACL(username=self.id, topic=f"{self.owner_id}/{self.id}/+", acc=1),
+                ACL(username=self.id, topic=f"{self.id}/{self.owner_id}/+", acc=2),
+                ACL(username=self.id, topic=f"{self.id}/server/+", acc=2),
+                ACL(username=self.id, topic=f"server/{self.id}/+", acc=1)
+            ])
+
+
+class MQTTUser(db.Model):
+    __tablename__ = 'mqtt_user'
+    __table_args__ = {'extend_existing': True}
+
+    id = db.Column(db.Integer, primary_key=True)
+    username = db.Column(db.String(200), unique=True, nullable=False)
+    password_hash = db.Column(db.String(200), unique=False, nullable=False)
+    superuser = db.Column(db.Integer, default=0)
+    acls = relationship("ACL", back_populates="mqtt_user")
+
+    user_id = db.Column(db.Integer, db.ForeignKey('user.id'))
+    user = relationship("User", back_populates="mqtt_creds")
+    device_id = db.Column(db.Integer, db.ForeignKey('device.id'))
+    device = relationship("Device", back_populates="mqtt_creds")
+
+    @hybrid_property  # TODO test
+    def is_device(self):
+        return self.device is not None
+
+
+class ACL(db.Model):
+    __tablename__ = 'acl'
+    __table_args__ = {'extend_existing': True}
+
+    id = db.Column(db.Integer, primary_key=True)
+    mqtt_user_id = db.Column(db.Integer, db.ForeignKey('mqtt_user.id'))
+    mqtt_user = relationship("MQTTUser", back_populates="acls")
+    username = db.Column(db.String(200), nullable=False)  # TODO make this primary key (as pair with id or remove it)
+    topic = db.Column(db.String(200), unique=False, nullable=True)
+    acc = db.Column(db.Integer)  # Access 1 = read-only; 2 = write-only; 3 = both
 
 
 class DeviceData(MixinAsDict, db.Model):

@@ -9,7 +9,7 @@ from app.auth.utils import require_api_token
 from app.consts import DEVICE_TYPE_ID_MISSING_ERROR_MSG, DEVICE_TYPE_ID_INCORRECT_ERROR_MSG, DEVICE_TYPE_DESC_MISSING_ERROR_MSG, \
     DEVICE_NAME_BI_MISSING_ERROR_MSG, DEVICE_NAME_MISSING_ERROR_MSG, DATA_RANGE_MISSING_ERROR_MSG, DATA_OUT_OF_OUTPUT_RANGE_ERROR_MSG, \
     CORRECTNESS_HASH_MISSING_ERROR_MSG, DEVICE_ID_MISSING_ERROR_MSG, PUBLIC_KEY_MISSING_ERROR_MSG, UNAUTHORIZED_USER_ERROR_MSG, NO_PUBLIC_KEY_ERROR_MSG, \
-    DEVICE_NAME_INVALID_ERROR_MSG
+    DEVICE_NAME_INVALID_ERROR_MSG, DEVICE_PASSWORD_MISSING_ERROR_MSG
 from app.models.models import DeviceType, Device, DeviceData, UserDevice, User
 from app.mqtt.utils import Payload
 from app.utils import http_json_response, check_missing_request_argument, is_valid_uuid
@@ -47,11 +47,13 @@ def create_device():
     correctness_hash = request.args.get("correctness_hash", None)
     name = request.args.get("name", None)
     name_bi = request.args.get("name_bi", None)
+    password_hash = request.args.get("password", None)  # TODO check if its correct format
     user = User.get_by_access_token(request.args.get("access_token", ""))
     arg_check = check_missing_request_argument(
         (device_type_id, DEVICE_TYPE_ID_MISSING_ERROR_MSG),
         (correctness_hash, CORRECTNESS_HASH_MISSING_ERROR_MSG),
         (name, DEVICE_NAME_MISSING_ERROR_MSG),
+        (password_hash, DEVICE_PASSWORD_MISSING_ERROR_MSG),
         (name_bi, DEVICE_NAME_BI_MISSING_ERROR_MSG))
     if arg_check is not True:
         return arg_check
@@ -69,6 +71,7 @@ def create_device():
                 correctness_hash=correctness_hash,
                 name=name.encode(),
                 name_bi=name_bi)
+    dv.create_mqtt_creds_for_device(password_hash, db.session)
     db.session.add(dv)
     db.session.commit()
     return http_json_response(**{'id': dv.id})
