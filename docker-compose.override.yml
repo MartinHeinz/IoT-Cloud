@@ -38,6 +38,7 @@ services:
       - web_test
   mqtt:
     container_name: iot_cloud_mqtt
+    user: ${CURRENT_UID}
     restart: always
     ports:
     - "8883:8883"

@@ -28,10 +28,11 @@ try:  # for packaged CLI (setup.py)
     from client.crypto_utils import hash, correctness_hash, check_correctness_hash, int_to_bytes, instantiate_ope_cipher, int_from_bytes, hex_to_key, key_to_hex, \
     hex_to_fernet, hex_to_ope, decrypt_using_fernet_hex, decrypt_using_ope_hex
     from client.utils import json_string_with_bytes_to_dict, _create_payload, search_tinydb_doc, get_tinydb_table
+    from client.password_hashing import pbkdf2_hash
 except ImportError:  # for un-packaged CLI
     from crypto_utils import hash, correctness_hash, check_correctness_hash, instantiate_ope_cipher, int_from_bytes, hex_to_key, key_to_hex, hex_to_fernet, hex_to_ope, decrypt_using_fernet_hex, decrypt_using_ope_hex
     from utils import json_string_with_bytes_to_dict, _create_payload, search_tinydb_doc, get_tinydb_table
-
+    from password_hashing import pbkdf2_hash
 
 URL_BASE = "https://localhost/api/"
 URL_PUBLISH = URL_BASE + "publish"
@@ -102,14 +103,18 @@ def create_device_type(description, token):
 @click.argument('device_type_id')
 @click.argument('device_name')
 @click.argument('user_id')
+@click.argument('password')
 @click.option('--token', envvar='ACCESS_TOKEN')
-def create_device(device_type_id, user_id, device_name, token):
+def create_device(device_type_id, user_id, device_name, password, token):
+    password_hash = pbkdf2_hash(password)
     data = {
         "type_id": device_type_id,
         "access_token": token,
         "name": device_name,
         "correctness_hash": correctness_hash(device_name),
-        "name_bi": hash(device_name, user_id)}
+        "name_bi": hash(device_name, user_id),
+        "password": password_hash
+    }
     r = requests.post(URL_CREATE_DEVICE, params=data, verify=VERIFY_CERTS)
     click.echo(r.content.decode('unicode-escape'))
 
