@@ -331,10 +331,15 @@ def _handle_on_message(mqtt_client, userdata, msg, device_id, user_id):
         click.echo(f"Received invalid payload: {msg.payload.decode()}")
         return
     topic = msg.topic.split("/")
-    if is_number(topic[0]) and int(topic[0]) == device_id and is_number(topic[1]) and int(topic[1]) == user_id:
-        mqtt_client.disconnect()
-        global fake_tuple_data
-        fake_tuple_data = msg.payload
+    t_sender, sender_id = topic[0].split(":")
+    t_receiver, receiver_id = topic[1].split(":")
+    if t_sender == "d" and t_receiver == "u":
+        if is_number(sender_id) and int(sender_id) == device_id and is_number(receiver_id) and int(receiver_id) == user_id:
+            mqtt_client.disconnect()
+            global fake_tuple_data
+            fake_tuple_data = msg.payload
+        return
+    click.echo(f"Received invalid topic: {msg.topic}")
 
 
 def _get_fake_tuple_data(user_id, device_id):
@@ -345,8 +350,8 @@ def _get_fake_tuple_data(user_id, device_id):
 
     client = _setup_client(str({user_id}))
     payload = _create_payload(user_id, payload_dict)
-    client.subscribe(f"{device_id}/{user_id}")
-    client.publish(f"{user_id}/{device_id}", payload)
+    client.subscribe(f"d:{device_id}/u:{user_id}")
+    client.publish(f"u:{user_id}/d:{device_id}", payload)
     client.on_message = on_message
     click.echo("Waiting for response, CTRL-C to terminate...")
     client.loop_forever()

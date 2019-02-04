@@ -17,36 +17,38 @@ def handle_on_connect(client, userdata, flags, rc):
 
 # The callback for when a PUBLISH message is received from the server.
 def handle_on_message(client, userdata, msg, app, db):
-    msg.payload = bytes_to_json(msg.payload)  # TODO sanitize this?
-    print("Received message '" + str(msg.payload) + "' on topic '" + msg.topic + "' with QoS " + str(msg.qos), flush=True)
-
-    topic = msg.topic.split("/")
-    if len(topic) == 2 and topic[1] == "server":  # TODO don't trust the device, use a token to authenticate device
-        _save_device_pk(topic, msg, app, db)
-    elif len(topic) == 3 and topic[1] == "server":
-        if topic[2] in ["save_data", "remove_data"]:
-            if is_number(topic[0]):
-                _edit_device_data(int(topic[0]), topic[2], msg, app, db)
-            else:
-                print(f"Invalid Device ID: {topic[0]}", flush=True)
-
-
-def _save_device_pk(topic, msg, app, db):
     try:
-        device_id = int(topic[0])
-    except ValueError:
-        print(f"Invalid device ID: {topic[0]}", flush=True)
+        msg.payload = bytes_to_json(msg.payload)
+        print("Received message '" + str(msg.payload) + "' on topic '" + msg.topic + "' with QoS " + str(msg.qos), flush=True)
+    except:
+        print("Received invalid message '" + str(msg.payload) + "' on topic '" + msg.topic + "' with QoS " + str(msg.qos), flush=True)
         return
+    topic = msg.topic.split("/")
+    if len(topic) >= 2 and topic[1] == "server":
+        t, sender_id = topic[0].split(":")
+        if t == "d" and is_number(sender_id):
+            if len(topic) == 2:
+                _save_device_pk(int(sender_id), msg, app, db)
+            elif len(topic) == 3:
+                if topic[2] in ["save_data", "remove_data"]:
+                    _edit_device_data(int(sender_id), topic[2], msg, app, db)
+                else:
+                    print(f"Invalid topic: {msg.topic}", flush=True)
+        else:
+            print(f"Invalid Device type or ID", flush=True)
+
+
+def _save_device_pk(sender_id, msg, app, db):
     payload = Payload(**msg.payload)
     with app.app_context():
         user = User.get_by_id(payload.user_id)
-        user_device = next((d for d in user.devices if d.device_id == device_id), None)
+        user_device = next((d for d in user.devices if d.device_id == sender_id), None)
         if user_device:
             user_device.device_public_session_key = payload.device_public_key
             db.session.add(user_device)
             db.session.commit()
         else:
-            print(f"This User can't access device {device_id}", flush=True)
+            print(f"This User can't access device {sender_id}", flush=True)
 
 
 def _edit_device_data(device_id, action, msg, app, db):
