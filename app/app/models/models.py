@@ -101,10 +101,10 @@ class Device(MixinGetById, MixinAsDict, db.Model):
             username=self.id,
             password_hash=password,
             acls=[
-                ACL(username=self.id, topic=f"{self.owner_id}/{self.id}/+", acc=1),
-                ACL(username=self.id, topic=f"{self.id}/{self.owner_id}/+", acc=2),
-                ACL(username=self.id, topic=f"{self.id}/server/+", acc=2),
-                ACL(username=self.id, topic=f"server/{self.id}/+", acc=1)
+                ACL(username=self.id, topic=f"u:{self.owner_id}/d:{self.id}/+", acc=1),
+                ACL(username=self.id, topic=f"d:{self.id}/u:{self.owner_id}/+", acc=2),
+                ACL(username=self.id, topic=f"d:{self.id}/server/+", acc=2),
+                ACL(username=self.id, topic=f"server/d:{self.id}/+", acc=1)
             ])
 
 

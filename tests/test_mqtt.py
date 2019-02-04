@@ -44,11 +44,22 @@ def test_payload_string():
     assert str(p) == '{\n    "added": "2001-03-28",\n    "data": "\\\\001"\n}'
 
 
+def test_mqtt_handle_on_message_invalid_message(app_and_ctx, capsys):
+    msg = MQTTMessage(topic=b"anything")
+    msg.payload = b"invalid"
+    from app.mqtt.mqtt import handle_on_message
+    app, ctx = app_and_ctx
+    with app.app_context():
+        handle_on_message(None, None, msg, app, db)
+        captured = capsys.readouterr()
+        assert f"Received invalid message '" in captured.out
+
+
 def test_mqtt_handle_on_message_receive_pk(app_and_ctx):
     pk = b'-----BEGIN PUBLIC KEY-----\\nMHYwEAYHKoZIzj0CAQYFK4EEACIDYgAE2rD6Bhju8WSEFogdBxZt/N+n7ziUPi5C\\nQU1gSQQDNm57fdDuYNDOR7Wwb1fq5tSl2TC1D6WRTIt1gzzCsApGpZ3PIs7Wdbil\\neJL/ETGa2Sqwav7JDH4r0V30sF4NqDok\\n-----END PUBLIC KEY-----\\n'
     user_id = 1
     device_id = 23
-    msg = MQTTMessage(topic=b"%a/server" % device_id)
+    msg = MQTTMessage(topic=b"d:%a/server" % device_id)
     msg.payload = b"{'user_id': %a, " \
                   b"'device_public_key': '%b'}" % (user_id, pk)
     from app.mqtt.mqtt import handle_on_message
@@ -73,7 +84,7 @@ def test_mqtt_handle_on_message_receive_pk_invalid_device_id(app_and_ctx, capsys
     pk = b'-----BEGIN PUBLIC KEY-----\\nMHYwEAYHKoZIzj0CAQYFK4EEACIDYgAE2rD6Bhju8WSEFogdBxZt/N+n7ziUPi5C\\nQU1gSQQDNm57fdDuYNDOR7Wwb1fq5tSl2TC1D6WRTIt1gzzCsApGpZ3PIs7Wdbil\\neJL/ETGa2Sqwav7JDH4r0V30sF4NqDok\\n-----END PUBLIC KEY-----\\n'
     user_id = 1
     device_id = "invalid"
-    msg = MQTTMessage(topic=b"%b/server" % device_id.encode())
+    msg = MQTTMessage(topic=b"d:%b/server" % device_id.encode())
     msg.payload = b"{'user_id': %a, " \
                   b"'device_public_key': '%b'}" % (user_id, pk)
     from app.mqtt.mqtt import handle_on_message
@@ -81,14 +92,14 @@ def test_mqtt_handle_on_message_receive_pk_invalid_device_id(app_and_ctx, capsys
     with app.app_context():
         handle_on_message(None, None, msg, app, db)
         captured = capsys.readouterr()
-        assert f"Invalid device ID: {device_id}" in captured.out
+        assert f"Invalid Device type or ID" in captured.out
 
 
 def test_mqtt_handle_on_message_receive_pk_user_doesnt_have_this_device(app_and_ctx, capsys):
     pk = b'-----BEGIN PUBLIC KEY-----\\nMHYwEAYHKoZIzj0CAQYFK4EEACIDYgAE2rD6Bhju8WSEFogdBxZt/N+n7ziUPi5C\\nQU1gSQQDNm57fdDuYNDOR7Wwb1fq5tSl2TC1D6WRTIt1gzzCsApGpZ3PIs7Wdbil\\neJL/ETGa2Sqwav7JDH4r0V30sF4NqDok\\n-----END PUBLIC KEY-----\\n'
     user_id = 1
     device_id = 34
-    msg = MQTTMessage(topic=b"%a/server" % device_id)
+    msg = MQTTMessage(topic=b"d:%a/server" % device_id)
     msg.payload = b"{'user_id': %a, " \
                   b"'device_public_key': '%b'}" % (user_id, pk)
     from app.mqtt.mqtt import handle_on_message
@@ -102,13 +113,23 @@ def test_mqtt_handle_on_message_receive_pk_user_doesnt_have_this_device(app_and_
 def test_mqtt_handle_on_message_save_device_data(app_and_ctx, capsys):
     device_id = 9999  # not present
     tid_bi = hash("8", "23")
-    topic = b"%a/server/save_data" % device_id
     payload = b"{'added': 6987, 'num_data': 31164, 'data': 'gAAAAABcTFAz9Wr5ZsnMcVYbQiXlnZCvT36MfDatZNyLwDpm_ixbzkZhM1NA4w7MN2p3CW3gyTA8gYtuKtDTomhulszvLTFfPA==', 'tid': 'encrypted_tid(8)', 'tid_bi': '$2b$12$23xxxxxxxxxxxxxxxxxxxuLHznKMxjdogfckEGo6U8J.idwkqiHaO', 'correctness_hash': '$2b$12$9hxKg4pjXbm0kpbItQTd2uMICAGn2ntRw1qQskHIL/7tLa3ISIlmO'}"
+
+    topic = b"d:%a/server/save_data" % device_id
     msg = MQTTMessage(topic=topic)
     msg.payload = payload
+
+    invalid_topic = b"d:%a/server/invalid" % device_id
+    msg_invalid = MQTTMessage(topic=invalid_topic)
+    msg_invalid.payload = payload
+
     from app.mqtt.mqtt import handle_on_message
     app, ctx = app_and_ctx
     with app.app_context():
+        handle_on_message(None, None, msg_invalid, app, db)
+        captured = capsys.readouterr()
+        assert f"Invalid topic: {msg_invalid.topic}" in captured.out
+
         handle_on_message(None, None, msg, app, db)
         captured = capsys.readouterr()
         assert f"Device with id: {device_id} doesn't exist." in captured.out
@@ -119,7 +140,7 @@ def test_mqtt_handle_on_message_save_device_data(app_and_ctx, capsys):
         assert device_data is None
         msg.payload = payload  # reassign, because `handle_on_message` causes side-effect and converts it to `dict`
         device_id = 23
-        topic = b"%a/server/save_data" % device_id
+        topic = b"d:%a/server/save_data" % device_id
         msg.topic = topic
 
         handle_on_message(None, None, msg, app, db)
@@ -136,7 +157,7 @@ def test_mqtt_handle_on_message_save_device_data(app_and_ctx, capsys):
 def test_mqtt_handle_on_message_delete_device_data(app_and_ctx, capsys):
     device_id = 23
     tid_bi = hash("8", "23")
-    topic = b"%a/server/remove_data" % device_id
+    topic = b"d:%a/server/remove_data" % device_id
     payload = b"{'added': 6987, 'num_data': 31164, 'data': 'gAAAAABcTFAz9Wr5ZsnMcVYbQiXlnZCvT36MfDatZNyLwDpm_ixbzkZhM1NA4w7MN2p3CW3gyTA8gYtuKtDTomhulszvLTFfPA==', 'tid': 'encrypted_tid(8)', 'tid_bi': '$2b$12$23xxxxxxxxxxxxxxxxxxxuLHznKMxjdogfckEGo6U8J.idwkqiHaO', 'correctness_hash': '$2b$12$9hxKg4pjXbm0kpbItQTd2uMICAGn2ntRw1qQskHIL/7tLa3ISIlmO'}"
     msg = MQTTMessage(topic=topic)
     msg.payload = payload

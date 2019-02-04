@@ -143,9 +143,22 @@ def test_get_device_data(runner, access_token, app_and_ctx, reset_tiny_db, col_k
 def test_get_fake_tuple_data(capsys):
     device_id = 23
     user_id = 1
+    valid_payload = b'{"device_data": {"added": {'\
+                    b'"function_name": "triangle_wave",'\
+                    b'"lower_bound": 12,'\
+                    b'"upper_bound": 11,'\
+                    b'"is_numeric": true }}}'
     mqtt_client = Mock()
 
-    msg = MQTTMessage(topic=b"%a/%a" % (device_id, user_id))
+    invalid_msg = MQTTMessage(topic=b"x:%a/g:%a" % (device_id, user_id))
+    invalid_msg.payload = valid_payload
+
+    cmd._handle_on_message(mqtt_client, None, invalid_msg, device_id, user_id)
+    assert cmd.fake_tuple_data is None
+    captured = capsys.readouterr()
+    assert f"Received invalid topic: {invalid_msg.topic}" in captured.out
+
+    msg = MQTTMessage(topic=b"d:%a/u:%a" % (device_id, user_id))
     msg.payload = b'{"device_data": {"added": { ... Invalid payload'
 
     cmd._handle_on_message(mqtt_client, None, msg, device_id, user_id)
@@ -153,11 +166,7 @@ def test_get_fake_tuple_data(capsys):
     captured = capsys.readouterr()
     assert f"Received invalid payload: {msg.payload.decode()}" in captured.out
 
-    msg.payload = b'{"device_data": {"added": {'\
-                  b'"function_name": "triangle_wave",'\
-                  b'"lower_bound": 12,'\
-                  b'"upper_bound": 11,'\
-                  b'"is_numeric": true }}}'
+    msg.payload = valid_payload
 
     cmd._handle_on_message(mqtt_client, None, msg, device_id, user_id)
     mqtt_client.disconnect.assert_called_once()
@@ -523,7 +532,7 @@ def test_aa_encrypt(runner, attr_auth_access_token_one):
 
 @pytest.mark.parametrize('reset_tiny_db', [device_cmd.path], indirect=True)
 def test_device_init(runner, reset_tiny_db):
-    runner.invoke(device_cmd.init, ["23"])
+    runner.invoke(device_cmd.init, ["23", "test_password"])
     table = get_tinydb_table(device_cmd.path, 'device')
     doc = table.search(where('id').exists())
     assert doc is not None, "Keys not present in DB."
