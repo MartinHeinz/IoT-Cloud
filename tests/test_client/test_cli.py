@@ -341,7 +341,7 @@ def test_create_device_type(runner, access_token):
 def test_create_device(runner, access_token):
     result = runner.invoke(cmd.create_device_type, ["description-again", '--token', access_token])
     type_id = re.search('type_id": "(.+)"', result.output, re.IGNORECASE).group(1)
-    result = runner.invoke(cmd.create_device, [type_id, "1", "CLITest", '--token', access_token])
+    result = runner.invoke(cmd.create_device, [type_id, "1", "CLITest", "test_pass", '--token', access_token])
     assert "\"success\": true" in result.output
     assert "\"id\": " in result.output
 
