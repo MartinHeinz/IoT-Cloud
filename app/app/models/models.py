@@ -43,7 +43,7 @@ class User(MixinGetByAccessToken, MixinGetById, db.Model):
     device_types = relationship("DeviceType", back_populates="owner")
     devices = relationship("UserDevice", back_populates="user")
     owned_devices = relationship("Device", back_populates="owner")
-    mqtt_creds = relationship("MQTTUser", uselist=False, back_populates="user")
+    mqtt_creds = relationship("MQTTUser", uselist=False, cascade='all,delete', back_populates="user")
 
     @classmethod
     def can_use_device(cls, user_access_token, device_id):
@@ -55,6 +55,17 @@ class User(MixinGetByAccessToken, MixinGetById, db.Model):
             exists()
         )
         return q.scalar()
+
+    def create_mqtt_creds_for_user(self, password, session):
+        session.flush()
+        self.mqtt_creds = MQTTUser(
+            username=self.id,
+            password_hash=password,
+            user=self,
+            acls=[
+                ACL(username=self.id, topic=f"u:{self.id}/server/+", acc=2),
+                ACL(username=self.id, topic=f"server/u:{self.id}/+", acc=1)
+            ])
 
 
 class DeviceType(db.Model):
@@ -100,6 +111,7 @@ class Device(MixinGetById, MixinAsDict, db.Model):
         self.mqtt_creds = MQTTUser(
             username=self.id,
             password_hash=password,
+            device=self,
             acls=[
                 ACL(username=self.id, topic=f"u:{self.owner_id}/d:{self.id}/+", acc=1),
                 ACL(username=self.id, topic=f"d:{self.id}/u:{self.owner_id}/+", acc=2),
@@ -123,7 +135,7 @@ class MQTTUser(db.Model):
     device_id = db.Column(db.Integer, db.ForeignKey('device.id'))
     device = relationship("Device", back_populates="mqtt_creds")
 
-    @hybrid_property  # TODO test
+    @hybrid_property
     def is_device(self):
         return self.device is not None
 

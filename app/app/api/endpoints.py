@@ -6,10 +6,13 @@ from app.api import api
 from app.api.utils import is_number
 from app.app_setup import client, db
 from app.auth.utils import require_api_token
-from app.consts import DEVICE_TYPE_ID_MISSING_ERROR_MSG, DEVICE_TYPE_ID_INCORRECT_ERROR_MSG, DEVICE_TYPE_DESC_MISSING_ERROR_MSG, \
-    DEVICE_NAME_BI_MISSING_ERROR_MSG, DEVICE_NAME_MISSING_ERROR_MSG, DATA_RANGE_MISSING_ERROR_MSG, DATA_OUT_OF_OUTPUT_RANGE_ERROR_MSG, \
-    CORRECTNESS_HASH_MISSING_ERROR_MSG, DEVICE_ID_MISSING_ERROR_MSG, PUBLIC_KEY_MISSING_ERROR_MSG, UNAUTHORIZED_USER_ERROR_MSG, NO_PUBLIC_KEY_ERROR_MSG, \
-    DEVICE_NAME_INVALID_ERROR_MSG, DEVICE_PASSWORD_MISSING_ERROR_MSG
+from app.consts import DEVICE_TYPE_ID_MISSING_ERROR_MSG, DEVICE_TYPE_ID_INCORRECT_ERROR_MSG, \
+    DEVICE_TYPE_DESC_MISSING_ERROR_MSG, \
+    DEVICE_NAME_BI_MISSING_ERROR_MSG, DEVICE_NAME_MISSING_ERROR_MSG, DATA_RANGE_MISSING_ERROR_MSG, \
+    DATA_OUT_OF_OUTPUT_RANGE_ERROR_MSG, \
+    CORRECTNESS_HASH_MISSING_ERROR_MSG, DEVICE_ID_MISSING_ERROR_MSG, PUBLIC_KEY_MISSING_ERROR_MSG, \
+    UNAUTHORIZED_USER_ERROR_MSG, NO_PUBLIC_KEY_ERROR_MSG, \
+    DEVICE_NAME_INVALID_ERROR_MSG, DEVICE_PASSWORD_MISSING_ERROR_MSG, USER_MISSING_PASSWORD_HASH
 from app.models.models import DeviceType, Device, DeviceData, UserDevice, User
 from app.mqtt.utils import Payload
 from app.utils import http_json_response, check_missing_request_argument, is_valid_uuid
@@ -21,6 +24,22 @@ def publish_message():
     topic = request.args.get("topic")
     client.publish(topic, str(message))
     return http_json_response()
+
+
+@api.route('/user/broker_register', methods=['POST'])
+@require_api_token()
+def register_to_broker():
+    password_hash = request.args.get("password", None)
+    user = User.get_by_access_token(request.args.get("access_token", ""))
+    arg_check = check_missing_request_argument(
+        (password_hash, USER_MISSING_PASSWORD_HASH))
+    if arg_check is not True:
+        return arg_check
+
+    user.create_mqtt_creds_for_user(password_hash, db.session)
+    db.session.commit()
+
+    return http_json_response(**{"broker_id": str(user.id)})
 
 
 @api.route('/device_type/create', methods=['POST'])

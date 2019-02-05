@@ -27,11 +27,12 @@ sys.stdout = sys.__stdout__
 try:  # for packaged CLI (setup.py)
     from client.crypto_utils import hash, correctness_hash, check_correctness_hash, int_to_bytes, instantiate_ope_cipher, int_from_bytes, hex_to_key, key_to_hex, \
     hex_to_fernet, hex_to_ope, decrypt_using_fernet_hex, decrypt_using_ope_hex
-    from client.utils import json_string_with_bytes_to_dict, _create_payload, search_tinydb_doc, get_tinydb_table
+    from client.utils import json_string_with_bytes_to_dict, _create_payload, search_tinydb_doc, get_tinydb_table, \
+    insert_into_tinydb
     from client.password_hashing import pbkdf2_hash
 except ImportError:  # for un-packaged CLI
     from crypto_utils import hash, correctness_hash, check_correctness_hash, instantiate_ope_cipher, int_from_bytes, hex_to_key, key_to_hex, hex_to_fernet, hex_to_ope, decrypt_using_fernet_hex, decrypt_using_ope_hex
-    from utils import json_string_with_bytes_to_dict, _create_payload, search_tinydb_doc, get_tinydb_table
+    from utils import json_string_with_bytes_to_dict, _create_payload, search_tinydb_doc, get_tinydb_table, insert_into_tinydb
     from password_hashing import pbkdf2_hash
 
 URL_BASE = "https://localhost/api/"
@@ -43,6 +44,7 @@ URL_GET_DEVICE_DATA_BY_RANGE = URL_BASE + "data/get_by_num_range"
 URL_GET_DEVICE_DATA = URL_BASE + "data/get_device_data"
 URL_START_KEY_EXCHANGE = URL_BASE + "exchange_session_keys"
 URL_RECEIVE_PUBLIC_KEY = URL_BASE + "retrieve_public_key"
+URL_REGISTER_TO_BROKER = URL_BASE + "user/broker_register"
 
 AA_URL_BASE = "https://localhost/attr_auth/"
 AA_URL_SET_USERNAME = AA_URL_BASE + "set_username"
@@ -88,6 +90,17 @@ def send_message(user_id, device_id, data):
     payload = _create_payload(user_id, {"ciphertext": token.decode()})
     ret = client.publish(f"{user_id}/{device_id}", payload)  # TODO change payload to json and parse it as JSON on device end
     click.echo(f"RC and MID = {ret}")
+
+
+@user.command()
+@click.argument('password')
+@click.option('--token', envvar='ACCESS_TOKEN')
+def register_to_broker(password, token):
+    password_hash = pbkdf2_hash(password)
+    data = {"password": password_hash, "access_token": token}
+    r = requests.post(URL_REGISTER_TO_BROKER, params=data, verify=VERIFY_CERTS)
+    content = json.loads(r.content.decode('unicode-escape'))
+    insert_into_tinydb(path, "credentials", {"broker_id": content["broker_id"], "broker_password": password})
 
 
 @user.command()

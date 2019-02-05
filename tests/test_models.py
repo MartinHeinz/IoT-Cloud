@@ -1,4 +1,4 @@
-from app.models.models import DeviceType, User
+from app.models.models import DeviceType, User, Device, MQTTUser
 from app.utils import is_valid_uuid
 from client.crypto_utils import correctness_hash
 
@@ -21,3 +21,11 @@ def test_can_use_device(app_and_ctx, access_token_two):
     with app.app_context():
         assert not User.can_use_device(access_token_two, 23)
         assert User.can_use_device(access_token_two, 34)
+
+
+def test_is_device():
+    user = MQTTUser()
+    assert not user.is_device
+
+    user.device = Device()
+    assert user.is_device

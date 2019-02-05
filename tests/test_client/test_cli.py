@@ -19,6 +19,7 @@ from app.app_setup import db, create_app
 from app.cli import populate
 import client.user.commands as cmd
 import client.device.commands as device_cmd
+from app.models.models import MQTTUser, User
 from crypto_utils import hash, check_correctness_hash, hex_to_fernet, hex_to_ope, decrypt_using_fernet_hex, \
     decrypt_using_ope_hex
 from utils import json_string_with_bytes_to_dict, get_tinydb_table, search_tinydb_doc, insert_into_tinydb
@@ -27,7 +28,7 @@ cmd.path = '/tmp/keystore.json'
 
 # NOTE: These values are necessary here, because global vars are not properly initialized when using Click Test runner
 cmd.VERIFY_CERTS = False
-cmd.MQTT_BROKER = "172.21.0.3"
+cmd.MQTT_BROKER = "172.22.0.3"
 cmd.MQTT_PORT = 8883
 
 device_cmd.path = '/tmp/data.json'
@@ -55,7 +56,7 @@ def change_to_dev_db():
     ctx = app.app_context()
     ctx.push()
     yield app, ctx
-    app.config["SQLALCHEMY_DATABASE_URI"] = re.sub(r"testing$", 'postgres', app.config["SQLALCHEMY_DATABASE_URI"])
+    app.config["SQLALCHEMY_DATABASE_URI"] = re.sub(r"postgres$", 'testing', app.config["SQLALCHEMY_DATABASE_URI"])
 
 
 def test_populate(runner):
@@ -341,13 +342,35 @@ def test_save_column_keys(runner, reset_tiny_db):
     assert isinstance(cipher, OPE)
 
 
+@pytest.mark.parametrize('reset_tiny_db', [cmd.path], indirect=True)
+def test_register_to_broker(change_to_dev_db, runner, access_token_tree, reset_tiny_db):
+    password = "some_bad_pass"
+    app, ctx = change_to_dev_db
+    with app.app_context():
+        creds = db.session.query(User).filter(User.access_token == access_token_tree).first().mqtt_creds
+
+    runner.invoke(cmd.register_to_broker, [password, '--token', access_token_tree])
+    table = get_tinydb_table(cmd.path, 'credentials')
+    doc = table.search(where('broker_id').exists() & where('broker_password').exists())
+    assert doc is not None, "Keys not present in DB."
+    assert len(doc) == 1
+    assert doc[0]["broker_password"] == password
+
+    with app.app_context():
+        creds_new = db.session.query(User).filter(User.access_token == access_token_tree).first().mqtt_creds
+        assert creds is None
+        assert len(creds_new.acls) == 2
+        to_delete = db.session.query(MQTTUser).filter(MQTTUser.username == creds_new.username).first()
+        db.session.delete(to_delete)
+
+
 def test_create_device_type(runner, access_token):
     result = runner.invoke(cmd.create_device_type, ["description", '--token', access_token])
     assert "\"success\": true," in result.output
     assert "\"type_id\": " in result.output
 
 
-def test_create_device(runner, access_token):
+def test_create_device(runner, access_token):  # TODO this inserts record to dev DB - do clean-up with `change_to_dev_db`
     result = runner.invoke(cmd.create_device_type, ["description-again", '--token', access_token])
     type_id = re.search('type_id": "(.+)"', result.output, re.IGNORECASE).group(1)
     result = runner.invoke(cmd.create_device, [type_id, "1", "CLITest", "test_pass", '--token', access_token])

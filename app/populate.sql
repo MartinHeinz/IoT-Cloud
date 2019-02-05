@@ -2,6 +2,7 @@ TRUNCATE public.acl, public.action, public.device, public.device_data, public.de
 
 INSERT INTO public."user" (id, name, email, access_token, access_token_update) VALUES (1, 'MartinHeinz', 'martin7.heinz@gmail.com', '5c36ab84439c45a3719644c0d9bd7b31929afd9f', '2018-12-24 10:23:54');
 INSERT INTO public."user" (id, name, email, access_token, access_token_update) VALUES (2, 'TestUser', 'testuser@domain.com', '5c36ab84439c55a3c196f4csd9bd7b319291239f', '2018-12-10 15:12:34');
+INSERT INTO public."user" (id, name, email, access_token, access_token_update) VALUES (3, 'TestRunner', 'TestRunner@domain.com', '5c36ab84439c55a3c196f4csd9bd7b3d9291f39g', '2018-12-15 15:12:34');
 
 INSERT INTO public.device_type (id, type_id, description, user_id, correctness_hash) VALUES (23525, '12ef8ea3-ba06-4aa9-904e-d5a9f35b09c5', '\x674141414141426356793147467255677779764b614d5939415f464f455666476d646e346974484b6d774a744e666d595157764c536f376e645a5a4e35756c4e5137504e4778575f656335524b5a376a45784a502d6151466a4c6539565938524b413d3d', 1, '$2b$12$4UaetPVYtRRSZhILDbBhLuivBgPlE6.Wz5nFXJqJdVHdySuscgKJO');
 INSERT INTO public.device_type (id, type_id, description, user_id, correctness_hash) VALUES (12452, 'dbb028df-87e7-452d-b160-19e03d93f239', '\x67414141414142635679314779586b74416d7378613042496a334a3464774744315f3057357774614539726567794f37554e704f63307975434f5a4a526e755a796d5849697a676635477163426171583549345457675f41394c2d77337a366d47673d3d', 1, '$2b$12$Ya1AAz3OywUEryac0j7zLum6UPYTbaQ0WG0ggvRRgWjMQBdzjsWi6');
@@ -20,7 +21,7 @@ INSERT INTO public.mqtt_user (id, username, password_hash, superuser, user_id, d
 
 -- FOR SERVER USER AND DEBUGGING
 INSERT INTO public.mqtt_user (id, username, password_hash, superuser) VALUES (7, 'admin', 'PBKDF2$sha256$10000$J8N0E3qluPAwm8uN$n8jehANuh+6ddOtNmopG0Jem79LzV+X4', 1);  -- password
-INSERT INTO public.mqtt_user (id, username, password_hash) VALUES (8, 'testuser', 'PBKDF2$sha256$10000$qu5hXEoBLNeKuzR7$koo7Ozny5dpZE8Vy8GZVi6kcMvWVPrs6');  -- testuser
+INSERT INTO public.mqtt_user (id, username, password_hash, superuser, user_id) VALUES (8, 'testuser', 'PBKDF2$sha256$10000$qu5hXEoBLNeKuzR7$koo7Ozny5dpZE8Vy8GZVi6kcMvWVPrs6', 0, 2);  -- testuser
 
 INSERT INTO acl (id, mqtt_user_id, username, topic, acc) VALUES (17, 8, 'testuser', 'read', 1);
 INSERT INTO acl (id, mqtt_user_id, username, topic, acc) VALUES (18, 8, 'testuser', 'write', 2);
@@ -69,7 +70,7 @@ SELECT pg_catalog.setval('public.device_id_seq', 46, false);
 SELECT pg_catalog.setval('public.device_type_id_seq', 1, false);
 SELECT pg_catalog.setval('public.mqtt_user_id_seq', 8, true);
 SELECT pg_catalog.setval('public.scene_id_seq', 1, false);
-SELECT pg_catalog.setval('public.user_id_seq', 2, true);
+SELECT pg_catalog.setval('public.user_id_seq', 3, true);
 
 
 -- public.device_data.added was converted as `int(time.mktime(parser.parse('2018-12-11 00:00:00+00').timetuple()))`
