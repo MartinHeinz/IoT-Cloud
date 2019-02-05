@@ -50,6 +50,11 @@ def access_token_two():
 
 
 @pytest.fixture(scope="session")
+def access_token_tree():
+    return '5c36ab84439c55a3c196f4csd9bd7b3d9291f39g'
+
+
+@pytest.fixture(scope="session")
 def master_key_user_one():  # `b'...'.decode("utf-8")`
     return 'eJyNUstOxDAM/JWo5x7iNC/zKwhVXVTBoQekLkhotf+Ox45hjxzSJs7Enhn7Nl326zY9hdu0rq/Hdp7rKqfp8n3dz2kOEv3ajs9do8+5z6HIqnUOlEgO2MQ0h8ZyyHMAohYJEm5l0+UyN9' \
            'njLyCWfYsAMJ42fBaBIdwMSkmwlUcSgJkts9ZUCB42ibQM2IKIUumeFOkrYb3cRcZbWrfj4/3fSks0peDVQRuUowobUYpSupdBl6LUYhCSQ19Mb1uMegcrGoxhSqEhMEV71avpqm4KbIKf' \

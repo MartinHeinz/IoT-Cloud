@@ -7,9 +7,11 @@ from uuid import UUID
 import pytest
 from passlib.hash import bcrypt
 
-from app.consts import DEVICE_TYPE_ID_MISSING_ERROR_MSG, DEVICE_TYPE_ID_INCORRECT_ERROR_MSG, DEVICE_NAME_BI_MISSING_ERROR_MSG, DEVICE_NAME_MISSING_ERROR_MSG, \
-    DATA_RANGE_MISSING_ERROR_MSG, DATA_OUT_OF_OUTPUT_RANGE_ERROR_MSG, CORRECTNESS_HASH_MISSING_ERROR_MSG, SOMETHING_WENT_WRONG_MSG, DEVICE_ID_MISSING_ERROR_MSG, \
-    DEVICE_NAME_INVALID_ERROR_MSG, DEVICE_PASSWORD_MISSING_ERROR_MSG
+from app.consts import DEVICE_TYPE_ID_MISSING_ERROR_MSG, DEVICE_TYPE_ID_INCORRECT_ERROR_MSG, \
+    DEVICE_NAME_BI_MISSING_ERROR_MSG, DEVICE_NAME_MISSING_ERROR_MSG, \
+    DATA_RANGE_MISSING_ERROR_MSG, DATA_OUT_OF_OUTPUT_RANGE_ERROR_MSG, CORRECTNESS_HASH_MISSING_ERROR_MSG, \
+    SOMETHING_WENT_WRONG_MSG, DEVICE_ID_MISSING_ERROR_MSG, \
+    DEVICE_NAME_INVALID_ERROR_MSG, DEVICE_PASSWORD_MISSING_ERROR_MSG, USER_MISSING_PASSWORD_HASH
 from app.models.models import DeviceType, Device
 from app.app_setup import client as mqtt_client
 from app.utils import is_valid_uuid
@@ -65,6 +67,26 @@ def test_api_publish(client):
     ), follow_redirects=True)
 
     assert response.status_code == 200
+
+
+def test_api_user_register_broker(client, app_and_ctx, access_token_tree):
+    data = {
+        "not-password": "non-empty",
+        "access_token": access_token_tree
+    }
+    response = client.post('/api/user/broker_register', query_string=data, follow_redirects=True)
+    assert response.status_code == 400
+    json_data = json.loads(response.data.decode("utf-8"))
+    assert (json_data["error"]) == USER_MISSING_PASSWORD_HASH
+
+    data = {
+        "password": "PBKDF2$sha256$10000$+Ezww8vsOcflcODC$OTlWyBkxSHptuqv/glKuu1soqM3W+NNR",  # some_pass
+        "access_token": access_token_tree
+    }
+    response = client.post('/api/user/broker_register', query_string=data, follow_redirects=True)
+    assert response.status_code == 200
+    json_data = json.loads(response.data.decode("utf-8"))
+    assert (json_data["broker_id"]) == "3"
 
 
 def test_api_dt_create(client, app_and_ctx, access_token):

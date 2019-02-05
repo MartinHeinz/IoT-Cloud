@@ -1,3 +1,4 @@
+USER_MISSING_PASSWORD_HASH = 'Missing password hash.'
 DEVICE_TYPE_ID_MISSING_ERROR_MSG = 'Missing device type id.'
 DEVICE_TYPE_ID_INCORRECT_ERROR_MSG = 'Incorrect device type id.'
 DEVICE_TYPE_DESC_MISSING_ERROR_MSG = 'Missing device type description.'
