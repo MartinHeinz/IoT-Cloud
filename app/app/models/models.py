@@ -43,7 +43,7 @@ class User(MixinGetByAccessToken, MixinGetById, db.Model):
     device_types = relationship("DeviceType", back_populates="owner")
     devices = relationship("UserDevice", back_populates="user")
     owned_devices = relationship("Device", back_populates="owner")
-    mqtt_creds = relationship("MQTTUser", uselist=False, cascade='all,delete', back_populates="user")
+    mqtt_creds = relationship("MQTTUser", uselist=False, cascade='all,delete-orphan', back_populates="user", passive_deletes=True)
 
     @classmethod
     def can_use_device(cls, user_access_token, device_id):
@@ -58,14 +58,27 @@ class User(MixinGetByAccessToken, MixinGetById, db.Model):
 
     def create_mqtt_creds_for_user(self, password, session):
         session.flush()
-        self.mqtt_creds = MQTTUser(
-            username=self.id,
-            password_hash=password,
-            user=self,
-            acls=[
-                ACL(username=self.id, topic=f"u:{self.id}/server/+", acc=2),
-                ACL(username=self.id, topic=f"server/u:{self.id}/+", acc=1)
-            ])
+        acls = [
+            ACL(username=self.id, topic=f"u:{self.id}/server", acc=2),
+            ACL(username=self.id, topic=f"server/u:{self.id}", acc=1)
+        ]
+        if self.mqtt_creds is None:
+            self.mqtt_creds = MQTTUser(
+                username=self.id,
+                password_hash=password,
+                user=self,
+                user_id=self.id,
+                acls=acls)
+        else:
+            self.mqtt_creds.password_hash = password
+            self.mqtt_creds.acls = acls
+
+    def add_acls_for_device(self, device_id):
+        self.mqtt_creds.acls.extend([
+            ACL(username=self.id, topic=f"u:{self.id}/d:{device_id}", acc=2),
+            ACL(username=self.id, topic=f"d:{device_id}/u:{self.id}", acc=1),
+            ACL(username=self.id, topic=f"d:{device_id}/u:{self.id}", acc=4)  # NOTE: seems to be necessary because of the way paho.mqtt connects to broker
+        ])
 
 
 class DeviceType(db.Model):
@@ -113,10 +126,11 @@ class Device(MixinGetById, MixinAsDict, db.Model):
             password_hash=password,
             device=self,
             acls=[
-                ACL(username=self.id, topic=f"u:{self.owner_id}/d:{self.id}/+", acc=1),
-                ACL(username=self.id, topic=f"d:{self.id}/u:{self.owner_id}/+", acc=2),
+                ACL(username=self.id, topic=f"u:{self.owner_id}/d:{self.id}", acc=1),
+                ACL(username=self.id, topic=f"d:{self.id}/u:{self.owner_id}", acc=2),
                 ACL(username=self.id, topic=f"d:{self.id}/server/+", acc=2),
-                ACL(username=self.id, topic=f"server/d:{self.id}/+", acc=1)
+                ACL(username=self.id, topic=f"d:{self.id}/server", acc=2),
+                ACL(username=self.id, topic=f"server/d:{self.id}", acc=1)
             ])
 
 
@@ -128,11 +142,11 @@ class MQTTUser(db.Model):
     username = db.Column(db.String(200), unique=True, nullable=False)
     password_hash = db.Column(db.String(200), unique=False, nullable=False)
     superuser = db.Column(db.Integer, default=0)
-    acls = relationship("ACL", back_populates="mqtt_user")
+    acls = relationship("ACL", cascade='all,delete-orphan', back_populates="mqtt_user")
 
-    user_id = db.Column(db.Integer, db.ForeignKey('user.id'))
+    user_id = db.Column(db.Integer, db.ForeignKey('user.id', ondelete='CASCADE'))
     user = relationship("User", back_populates="mqtt_creds")
-    device_id = db.Column(db.Integer, db.ForeignKey('device.id'))
+    device_id = db.Column(db.Integer, db.ForeignKey('device.id', ondelete='CASCADE'))
     device = relationship("Device", back_populates="mqtt_creds")
 
     @hybrid_property

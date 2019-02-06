@@ -9,7 +9,10 @@ def http_json_response(success=True, code=200, **data):
 
 
 def bytes_to_json(value):
-    string_value = value.decode("utf8").replace("'", '"')
+    value = value.decode("utf8")
+    if value.startswith('"') and value.endswith('"'):
+        value = value[1:-1]
+    string_value = value.replace("'", '"').replace("\n", "\\n")
     return json.loads(string_value)
 
 

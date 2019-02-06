@@ -83,14 +83,20 @@ def create_device():
     finally:
         if dt is None:
             return http_json_response(False, 400, **{"error": DEVICE_TYPE_ID_INCORRECT_ERROR_MSG})
+    ud = UserDevice()
     # noinspection PyArgumentList
     dv = Device(device_type_id=device_type_id,
                 device_type=dt,
                 owner=user,
+                owner_id=user.id,
                 correctness_hash=correctness_hash,
                 name=name.encode(),
                 name_bi=name_bi)
+    ud.device = dv
+    with db.session.no_autoflush:
+        user.devices.append(ud)
     dv.create_mqtt_creds_for_device(password_hash, db.session)
+    user.add_acls_for_device(dv.id)
     db.session.add(dv)
     db.session.commit()
     return http_json_response(**{'id': dv.id})
@@ -218,7 +224,7 @@ def exchange_session_keys():
         user_public_key=user_public_key_bytes,
         user_id=user.id
     ))
-    client.publish(f'server/{device_id}', f'"{payload_bytes.decode("utf-8")}"'.encode())
+    client.publish(f'server/d:{device_id}', f'"{payload_bytes.decode("utf-8")}"'.encode())
     return http_json_response()
 
 

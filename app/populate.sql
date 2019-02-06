@@ -27,22 +27,22 @@ INSERT INTO acl (id, mqtt_user_id, username, topic, acc) VALUES (17, 8, 'testuse
 INSERT INTO acl (id, mqtt_user_id, username, topic, acc) VALUES (18, 8, 'testuser', 'write', 2);
 INSERT INTO acl (id, mqtt_user_id, username, topic, acc) VALUES (19, 8, 'testuser', 'both', 3);
 
-INSERT INTO public.acl (id, mqtt_user_id, username, topic, acc) VALUES (1, 1, 'device1', 'u:1/d:23/+', 1);
-INSERT INTO public.acl (id, mqtt_user_id, username, topic, acc) VALUES (2, 1, 'device1', 'd:23/u:1/+', 2);
-INSERT INTO public.acl (id, mqtt_user_id, username, topic, acc) VALUES (3, 1, 'device1', 'd:23/server/+', 2);
-INSERT INTO public.acl (id, mqtt_user_id, username, topic, acc) VALUES (4, 1, 'device1', 'server/d:23/+', 1);
-INSERT INTO public.acl (id, mqtt_user_id, username, topic, acc) VALUES (5, 2, 'MartinHeinz', 'u:1/23/+', 2);
-INSERT INTO public.acl (id, mqtt_user_id, username, topic, acc) VALUES (6, 2, 'MartinHeinz', 'd:23/u:1/+', 1);
-INSERT INTO public.acl (id, mqtt_user_id, username, topic, acc) VALUES (7, 2, 'MartinHeinz', 'u:1/server/+', 2);
-INSERT INTO public.acl (id, mqtt_user_id, username, topic, acc) VALUES (8, 2, 'MartinHeinz', 'server/u:1/+', 1);
-INSERT INTO public.acl (id, mqtt_user_id, username, topic, acc) VALUES (9, 3, 'device2', 'u:2/d:45/+', 1);
-INSERT INTO public.acl (id, mqtt_user_id, username, topic, acc) VALUES (10, 3, 'device2', 'd:45/u:2/+', 2);
-INSERT INTO public.acl (id, mqtt_user_id, username, topic, acc) VALUES (11, 3, 'device2', 'd:45/server/+', 2);
-INSERT INTO public.acl (id, mqtt_user_id, username, topic, acc) VALUES (12, 3, 'device2', 'server/d:45/+', 1);
-INSERT INTO public.acl (id, mqtt_user_id, username, topic, acc) VALUES (13, 6, 'TestUser', 'u:2/d:45/+', 2);
-INSERT INTO public.acl (id, mqtt_user_id, username, topic, acc) VALUES (14, 6, 'TestUser', 'd:45/u:2/+', 1);
-INSERT INTO public.acl (id, mqtt_user_id, username, topic, acc) VALUES (15, 6, 'TestUser', 'u:2/server/+', 2);
-INSERT INTO public.acl (id, mqtt_user_id, username, topic, acc) VALUES (16, 6, 'TestUser', 'server/u:2/+', 1);
+INSERT INTO public.acl (id, mqtt_user_id, username, topic, acc) VALUES (1, 1, 'device1', 'u:1/d:23', 1);
+INSERT INTO public.acl (id, mqtt_user_id, username, topic, acc) VALUES (2, 1, 'device1', 'd:23/u:1', 2);
+INSERT INTO public.acl (id, mqtt_user_id, username, topic, acc) VALUES (3, 1, 'device1', 'd:23/server', 2);
+INSERT INTO public.acl (id, mqtt_user_id, username, topic, acc) VALUES (4, 1, 'device1', 'server/d:23', 1);
+INSERT INTO public.acl (id, mqtt_user_id, username, topic, acc) VALUES (5, 2, 'MartinHeinz', 'u:1/d:23', 2);
+INSERT INTO public.acl (id, mqtt_user_id, username, topic, acc) VALUES (6, 2, 'MartinHeinz', 'd:23/u:1', 1);
+INSERT INTO public.acl (id, mqtt_user_id, username, topic, acc) VALUES (7, 2, 'MartinHeinz', 'u:1/server', 2);
+INSERT INTO public.acl (id, mqtt_user_id, username, topic, acc) VALUES (8, 2, 'MartinHeinz', 'server/u:1', 1);
+INSERT INTO public.acl (id, mqtt_user_id, username, topic, acc) VALUES (9, 3, 'device2', 'u:2/d:45', 1);
+INSERT INTO public.acl (id, mqtt_user_id, username, topic, acc) VALUES (10, 3, 'device2', 'd:45/u:2', 2);
+INSERT INTO public.acl (id, mqtt_user_id, username, topic, acc) VALUES (11, 3, 'device2', 'd:45/server', 2);
+INSERT INTO public.acl (id, mqtt_user_id, username, topic, acc) VALUES (12, 3, 'device2', 'server/d:45', 1);
+INSERT INTO public.acl (id, mqtt_user_id, username, topic, acc) VALUES (13, 6, 'TestUser', 'u:2/d:45', 2);
+INSERT INTO public.acl (id, mqtt_user_id, username, topic, acc) VALUES (14, 6, 'TestUser', 'd:45/u:2', 1);
+INSERT INTO public.acl (id, mqtt_user_id, username, topic, acc) VALUES (15, 6, 'TestUser', 'u:2/server', 2);
+INSERT INTO public.acl (id, mqtt_user_id, username, topic, acc) VALUES (16, 6, 'TestUser', 'server/u:2', 1);
 
 INSERT INTO public.action (id, name, device_id, correctness_hash) VALUES (1, '\x6741414141414263567931494a6c344b506c76754e343634614a6b6b54376f6c713937746130714e31733330594b73486743334b476756626f314c4d72584e436a6658454c6d4739377131754b3979434c7455646c4c52766f392d4f674175364d413d3d', 23, '$2b$12$PC4KWELmJJDjyFwdJfyYF.IfALYWfu5nMRGBo.wUp8TMIQZKOixOC');
 INSERT INTO public.action (id, name, device_id, correctness_hash) VALUES (2, '\x67414141414142635679314939685a6d73794d6d7041307678547a5046587144455337385f7566417948462d64364c6a676a65526735694b634673486c5a436a6c42656544794a78314b725672785948367642394669366c5030554d327870494e773d3d', 23, '$2b$12$V6UEFPM/kaatcDeHq7PIu.XZK2RSKBvp/TE84O069RZQHV.Lf02oq');
