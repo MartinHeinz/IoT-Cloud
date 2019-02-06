@@ -12,9 +12,9 @@ from app.consts import DEVICE_TYPE_ID_MISSING_ERROR_MSG, DEVICE_TYPE_ID_INCORREC
     DATA_RANGE_MISSING_ERROR_MSG, DATA_OUT_OF_OUTPUT_RANGE_ERROR_MSG, CORRECTNESS_HASH_MISSING_ERROR_MSG, \
     SOMETHING_WENT_WRONG_MSG, DEVICE_ID_MISSING_ERROR_MSG, \
     DEVICE_NAME_INVALID_ERROR_MSG, DEVICE_PASSWORD_MISSING_ERROR_MSG, USER_MISSING_PASSWORD_HASH
-from app.models.models import DeviceType, Device
+from app.models.models import DeviceType, Device, User
 from app.app_setup import client as mqtt_client
-from app.utils import is_valid_uuid
+from app.utils import is_valid_uuid, bytes_to_json
 from client.crypto_utils import encrypt, hash, correctness_hash, triangle_wave, sawtooth_wave, square_wave, sine_wave, generate, fake_tuple_to_hash, \
     encrypt_fake_tuple, instantiate_ope_cipher, decrypt_using_fernet_hex, decrypt_using_ope_hex
 
@@ -212,11 +212,16 @@ def test_api_dv_create(client, app_and_ctx, access_token):
         inserted_dv = db.session.query(Device).filter(Device.id == json_data["id"]).first()
         assert inserted_dv.owner.access_token == data["access_token"]
         assert inserted_dv.name_bi == data["name_bi"]
+        assert inserted_dv.users is not None
 
         assert inserted_dv.mqtt_creds is not None
         assert inserted_dv.mqtt_creds.username == str(json_data["id"])
         assert inserted_dv.mqtt_creds.password_hash == data["password"]
-        assert len(inserted_dv.mqtt_creds.acls) == 4
+        assert len(inserted_dv.mqtt_creds.acls) == 5
+
+        device_owner = User.get_by_access_token(access_token)
+        new_acl = next((acl for acl in device_owner.mqtt_creds.acls if acl.topic == f"u:1/d:{json_data['id']}"), None)
+        assert new_acl is not None, "New ACL for device was not inserted."
 
 
 def test_api_get_device_by_name(client, app_and_ctx, access_token):
@@ -454,3 +459,10 @@ def test_encrypt_fake_tuple():
     result = encrypt_fake_tuple(fake_tuple, keys)
     plaintext = decrypt_using_fernet_hex(keys["tid"][0], result["tid"])
     assert plaintext.decode() == '1'
+
+
+def test_bytes_to_json():
+    val = b'"{\'user_public_key\': \'-----BEGIN PUBLIC KEY-----\nMHYwEAYHKoZIzj0CAQYFK4EEACIDYgAE7duCMX2lDbj0KiC3fODqQp3oDXHoVvUa\nVOgbxNMo73cjgiJFtHo9T2UZZxu/bAEZ81ZF4pHryv1TK5VUcqprKTlPYDSj1n6A\nzYQVz/mV5Ou4eZOOBhoovV5YwJUJo2yW\n-----END PUBLIC KEY-----\n\', \'user_id\': \'1\'}"'
+
+    result = bytes_to_json(val)
+    assert isinstance(result, dict)

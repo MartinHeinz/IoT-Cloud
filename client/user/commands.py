@@ -88,7 +88,7 @@ def send_message(user_id, device_id, data):
     client = _setup_client(user_id)
 
     payload = _create_payload(user_id, {"ciphertext": token.decode()})
-    ret = client.publish(f"{user_id}/{device_id}", payload)  # TODO change payload to json and parse it as JSON on device end
+    ret = client.publish(f"u:{user_id}/d:{device_id}", payload)  # TODO change payload to json and parse it as JSON on device end
     click.echo(f"RC and MID = {ret}")
 
 
@@ -100,7 +100,11 @@ def register_to_broker(password, token):
     data = {"password": password_hash, "access_token": token}
     r = requests.post(URL_REGISTER_TO_BROKER, params=data, verify=VERIFY_CERTS)
     content = json.loads(r.content.decode('unicode-escape'))
-    insert_into_tinydb(path, "credentials", {"broker_id": content["broker_id"], "broker_password": password})
+    table = get_tinydb_table(path, 'credentials')
+    table.upsert({
+        "broker_id": content["broker_id"],
+        "broker_password": password
+    }, Query().broker_id == content["broker_id"])
 
 
 @user.command()
@@ -304,11 +308,11 @@ def send_column_keys(user_id, device_id):
         payload_keys[k] = fernet_key.encrypt(random_bytes).decode()
 
     doc = {**doc, **keys}
-    table.update(doc)
+    table.upsert(doc, Query().device_id == device_id)
 
     client = _setup_client(user_id)
     payload = _create_payload(user_id, payload_keys)
-    ret = client.publish(f"{user_id}/{device_id}", payload)
+    ret = client.publish(f"u:{user_id}/d:{device_id}", payload)
     click.echo(f"RC and MID = {ret}")
 
 
@@ -363,9 +367,11 @@ def _get_fake_tuple_data(user_id, device_id):
 
     client = _setup_client(str({user_id}))
     payload = _create_payload(user_id, payload_dict)
-    client.subscribe(f"d:{device_id}/u:{user_id}")
+    sub_topic = f"d:{device_id}/u:{user_id}"
+    client.subscribe(sub_topic)
     client.publish(f"u:{user_id}/d:{device_id}", payload)
     client.on_message = on_message
+    click.echo(f"Subscribed to {sub_topic}")
     click.echo("Waiting for response, CTRL-C to terminate...")
     client.loop_forever()
 
@@ -541,7 +547,9 @@ def _setup_client(user_id):
                    keyfile=None,
                    tls_version=ssl.PROTOCOL_TLSv1_2)
     client.tls_insecure_set(True)
-    client.connect(MQTT_BROKER, MQTT_PORT)
+    doc = search_tinydb_doc(path, 'credentials', where('broker_id').exists() & where('broker_password').exists())
+    client.username_pw_set(doc['broker_id'], doc['broker_password'])
+    client.connect(MQTT_BROKER, MQTT_PORT, 30)
     return client
 
 
@@ -563,7 +571,6 @@ def get_attr_auth_keys(token):
     click.echo(f"Saving keys to {path}")
     table = get_tinydb_table(path, 'aa_keys')
     doc = table.get(where('public_key').exists() & where('master_key').exists())
-    search_tinydb_doc(path, 'aa_keys', where('public_key').exists() & where('master_key').exists())
     data = {"public_key": content["public_key"], "master_key": content["master_key"]}
     if doc:
         table.update(data)

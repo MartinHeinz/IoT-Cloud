@@ -82,6 +82,7 @@ def test_send_message(runner, access_token, reset_tiny_db):
     assert f"Keys for device {device_id} not present, please use:" in result.output
 
     insert_into_tinydb(cmd.path, 'device_keys', {'device_id': device_id, 'shared_key': key})
+    insert_into_tinydb(cmd.path, "credentials", {"broker_id": "4", "broker_password": 'test_pass'})
 
     result = runner.invoke(cmd.send_message, [user_id, device_id, "test"])
     assert "Data published" in result.output
@@ -97,6 +98,7 @@ def test_send_column_keys(runner, access_token, reset_tiny_db):
     assert f"Keys for device {device_id} not present, please use:" in result.output
 
     insert_into_tinydb(cmd.path, 'device_keys', {'device_id': device_id, 'shared_key': key})
+    insert_into_tinydb(cmd.path, "credentials", {"broker_id": "4", "broker_password": 'test_pass'})
 
     result = runner.invoke(cmd.send_column_keys, [user_id, device_id])
     assert "Data published" in result.output
