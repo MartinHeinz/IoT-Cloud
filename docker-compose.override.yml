@@ -17,14 +17,14 @@ services:
       POSTGRES_DB: postgres
       PGPORT: 5432
     networks:
-      - test
+      - shared_net
   web:
     container_name: iot_cloud_web
     working_dir: /app
     volumes:
       - ./app:/app
     networks:
-      - test
+      - shared_net
 
     environment:
       - DOCKER_TLS_VERIFY=True
@@ -53,7 +53,7 @@ services:
     - ./mosquitto/certs:/mosquitto/certs
     command: ["mosquitto", "-c", "/etc/mosquitto/mosquitto.conf"]
     networks:
-    - test
+    - shared_net
   nginx:
     container_name: iot_cloud_nginx
     ports:
@@ -64,7 +64,7 @@ services:
     depends_on:
     - web
     networks:
-    - test
+    - shared_net
   web_test:
     container_name: iot_cloud_web_test
     working_dir: /app
@@ -82,11 +82,11 @@ services:
     depends_on:
       - db_test
     networks:
-      - test
+      - shared_net
 
 volumes:
   data_test: {}
 
 networks:
-  test:
+  shared_net:
     driver: bridge

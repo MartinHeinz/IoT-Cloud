@@ -18,11 +18,11 @@ services:
       POSTGRES_DB: postgres
       PGPORT: 5430
     networks:
-      - iot-cloud_test
+      - iot-cloud_shared_net
 
 volumes:
   data: {}
 
 networks:
-  iot-cloud_test:
+  iot-cloud_shared_net:
     external: true
