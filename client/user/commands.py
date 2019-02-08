@@ -26,12 +26,12 @@ sys.stdout = sys.__stdout__
 
 try:  # for packaged CLI (setup.py)
     from client.crypto_utils import hash, correctness_hash, check_correctness_hash, int_to_bytes, instantiate_ope_cipher, int_from_bytes, hex_to_key, key_to_hex, \
-    hex_to_fernet, hex_to_ope, decrypt_using_fernet_hex, decrypt_using_ope_hex
+    hex_to_fernet, hex_to_ope, decrypt_using_fernet_hex, decrypt_using_ope_hex, encrypt_using_fernet_hex
     from client.utils import json_string_with_bytes_to_dict, _create_payload, search_tinydb_doc, get_tinydb_table, \
     insert_into_tinydb
     from client.password_hashing import pbkdf2_hash
 except ImportError:  # for un-packaged CLI
-    from crypto_utils import hash, correctness_hash, check_correctness_hash, instantiate_ope_cipher, int_from_bytes, hex_to_key, key_to_hex, hex_to_fernet, hex_to_ope, decrypt_using_fernet_hex, decrypt_using_ope_hex
+    from crypto_utils import hash, correctness_hash, check_correctness_hash, instantiate_ope_cipher, int_from_bytes, hex_to_key, key_to_hex, hex_to_fernet, hex_to_ope, decrypt_using_fernet_hex, decrypt_using_ope_hex, encrypt_using_fernet_hex
     from utils import json_string_with_bytes_to_dict, _create_payload, search_tinydb_doc, get_tinydb_table, insert_into_tinydb
     from password_hashing import pbkdf2_hash
 
@@ -39,6 +39,7 @@ URL_BASE = "https://localhost/api/"
 URL_PUBLISH = URL_BASE + "publish"
 URL_CREATE_DEVICE_TYPE = URL_BASE + "device_type/create"
 URL_CREATE_DEVICE = URL_BASE + "device/create"
+URL_SET_ACTION = URL_BASE + "device/set_action"
 URL_GET_DEVICE = URL_BASE + "device/get"
 URL_GET_DEVICE_DATA_BY_RANGE = URL_BASE + "data/get_by_num_range"
 URL_GET_DEVICE_DATA = URL_BASE + "data/get_device_data"
@@ -79,7 +80,7 @@ def send_message(user_id, device_id, data):
     if not doc:
         with click.Context(send_key_to_device) as ctx:
             click.echo(f"Keys for device {device_id} not present, please use: {ctx.command.name}")
-            click.echo(get_attr_auth_keys.get_help(ctx))
+            click.echo(send_key_to_device.get_help(ctx))
             return
 
     fernet_key = hex_to_fernet(doc["shared_key"])
@@ -133,6 +134,30 @@ def create_device(device_type_id, user_id, device_name, password, token):
         "password": password_hash
     }
     r = requests.post(URL_CREATE_DEVICE, params=data, verify=VERIFY_CERTS)
+    click.echo(r.content.decode('unicode-escape'))
+
+
+@user.command()
+@click.argument('device_id')
+@click.argument('name')
+@click.argument('user_id')
+@click.option('--token', envvar='ACCESS_TOKEN')
+def set_action(device_id, name, user_id, token):
+    doc = search_tinydb_doc(path, 'device_keys', Query().device_id == str(device_id))
+    if not doc:
+        with click.Context(send_key_to_device) as ctx:
+            click.echo(f"Keys for device {device_id} not present, please use: {ctx.command.name}")
+            click.echo(send_key_to_device.get_help(ctx))
+            return
+
+    data = {
+        "device_id": device_id,
+        "name": encrypt_using_fernet_hex(doc["action:name"], name),
+        "correctness_hash": correctness_hash(name),
+        "name_bi": hash(name, user_id),
+        "access_token": token
+    }
+    r = requests.post(URL_SET_ACTION, params=data, verify=VERIFY_CERTS)
     click.echo(r.content.decode('unicode-escape'))
 
 

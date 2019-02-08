@@ -12,7 +12,8 @@ from app.consts import DEVICE_TYPE_ID_MISSING_ERROR_MSG, DEVICE_TYPE_ID_INCORREC
     DATA_OUT_OF_OUTPUT_RANGE_ERROR_MSG, \
     CORRECTNESS_HASH_MISSING_ERROR_MSG, DEVICE_ID_MISSING_ERROR_MSG, PUBLIC_KEY_MISSING_ERROR_MSG, \
     UNAUTHORIZED_USER_ERROR_MSG, NO_PUBLIC_KEY_ERROR_MSG, \
-    DEVICE_NAME_INVALID_ERROR_MSG, DEVICE_PASSWORD_MISSING_ERROR_MSG, USER_MISSING_PASSWORD_HASH
+    DEVICE_NAME_INVALID_ERROR_MSG, DEVICE_PASSWORD_MISSING_ERROR_MSG, USER_MISSING_PASSWORD_HASH, ACTION_NAME_MISSING_ERROR_MSG, \
+    ACTION_NAME_BI_MISSING_ERROR_MSG
 from app.models.models import DeviceType, Device, DeviceData, UserDevice, User
 from app.mqtt.utils import Payload
 from app.utils import http_json_response, check_missing_request_argument, is_valid_uuid
@@ -61,7 +62,7 @@ def create_device_type():
 
 @api.route('/device/create', methods=['POST'])
 @require_api_token()
-def create_device():
+def create_device():  # TODO check if user is registered to Broker before allowing him to create device
     device_type_id = request.args.get("type_id", None)
     correctness_hash = request.args.get("correctness_hash", None)
     name = request.args.get("name", None)
@@ -100,6 +101,34 @@ def create_device():
     db.session.add(dv)
     db.session.commit()
     return http_json_response(**{'id': dv.id})
+
+
+@api.route('/device/set_action', methods=['POST'])
+@require_api_token()
+def set_device_action():  # TODO check if user is registered to Broker before allowing him to create device?
+    device_id = request.args.get("device_id", None)
+    correctness_hash = request.args.get("correctness_hash", None)
+    name = request.args.get("name", None)
+    name_bi = request.args.get("name_bi", None)
+    access_token = request.args.get("access_token", "")
+    arg_check = check_missing_request_argument(
+        (device_id, DEVICE_ID_MISSING_ERROR_MSG),
+        (correctness_hash, CORRECTNESS_HASH_MISSING_ERROR_MSG),
+        (name, ACTION_NAME_MISSING_ERROR_MSG),
+        (name_bi, ACTION_NAME_BI_MISSING_ERROR_MSG))
+    if arg_check is not True:
+        return arg_check
+
+    if not User.can_use_device(access_token, device_id):
+        return http_json_response(False, 400, **{"error": UNAUTHORIZED_USER_ERROR_MSG})
+
+    dv = Device.get_by_id(device_id)
+    with db.session.no_autoflush:
+        dv.add_action(name.encode(), name_bi, correctness_hash)
+    db.session.add(dv)
+    db.session.commit()
+
+    return http_json_response()
 
 
 @api.route('/device/get', methods=['POST'])

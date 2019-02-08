@@ -133,6 +133,13 @@ class Device(MixinGetById, MixinAsDict, db.Model):
                 ACL(username=self.id, topic=f"server/d:{self.id}", acc=1)
             ])
 
+    def add_action(self, name, name_bi, correctness_hash):
+        self.actions.append(
+            Action(name=name,
+                   name_bi=name_bi,
+                   correctness_hash=correctness_hash)
+        )
+
 
 class MQTTUser(db.Model):
     __tablename__ = 'mqtt_user'
@@ -191,6 +198,8 @@ class Action(db.Model):
     name = db.Column(db.LargeBinary, nullable=False)
     device_id = db.Column(db.Integer, db.ForeignKey('device.id'))
     device = relationship("Device", back_populates="actions")
+
+    name_bi = db.Column(db.String(200), unique=False, nullable=True)  # Blind index for .name
 
     correctness_hash = db.Column(db.String(200), nullable=False)  # correctness_hash("name")
 

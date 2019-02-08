@@ -223,6 +223,12 @@ def decrypt_using_fernet_hex(h, ciphertext):
     return plaintext
 
 
+def encrypt_using_fernet_hex(h, plaintext):
+    fernet_key = hex_to_fernet(h)
+    ciphertext = fernet_key.encrypt(plaintext.encode())
+    return ciphertext
+
+
 def decrypt_using_ope_hex(h, ciphertext):
     cipher = hex_to_ope(h)
     plaintext = cipher.decrypt(int(ciphertext))

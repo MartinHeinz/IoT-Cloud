@@ -19,7 +19,7 @@ from app.app_setup import db, create_app
 from app.cli import populate
 import client.user.commands as cmd
 import client.device.commands as device_cmd
-from app.models.models import MQTTUser, User
+from app.models.models import MQTTUser, User, Action
 from crypto_utils import hash, check_correctness_hash, hex_to_fernet, hex_to_ope, decrypt_using_fernet_hex, \
     decrypt_using_ope_hex
 from utils import json_string_with_bytes_to_dict, get_tinydb_table, search_tinydb_doc, insert_into_tinydb
@@ -364,6 +364,7 @@ def test_register_to_broker(change_to_dev_db, runner, access_token_tree, reset_t
         assert len(creds_new.acls) == 2
         to_delete = db.session.query(MQTTUser).filter(MQTTUser.username == creds_new.username).first()
         db.session.delete(to_delete)
+        db.session.commit()
 
 
 def test_create_device_type(runner, access_token):
@@ -378,6 +379,28 @@ def test_create_device(runner, access_token):  # TODO this inserts record to dev
     result = runner.invoke(cmd.create_device, [type_id, "1", "CLITest", "test_pass", '--token', access_token])
     assert "\"success\": true" in result.output
     assert "\"id\": " in result.output
+
+
+@pytest.mark.parametrize('reset_tiny_db', [cmd.path], indirect=True)
+def test_set_action(runner, access_token, reset_tiny_db, change_to_dev_db, col_keys):
+    device_id = 23
+    name = "test"
+    user_id = 1
+    result = runner.invoke(cmd.set_action, [str(device_id), name, str(user_id), '--token', access_token])
+    assert f"Keys for device {device_id} not present, please use:" in result.output
+
+    insert_into_tinydb(cmd.path, 'device_keys', col_keys)
+    result = runner.invoke(cmd.set_action, [str(device_id), name, str(user_id), '--token', access_token])
+    assert "\"success\": true" in result.output
+
+    app, ctx = change_to_dev_db
+    with app.app_context():
+        ac = db.session.query(Action).filter(Action.name_bi == hash(name, str(user_id))).first()
+        decrypted_name = decrypt_using_fernet_hex(col_keys["action:name"], ac.name.decode())
+        assert decrypted_name.decode() == name
+
+        db.session.delete(ac)  # Clean up
+        db.session.commit()
 
 
 @pytest.mark.parametrize('reset_tiny_db', [cmd.path], indirect=True)
@@ -557,12 +580,13 @@ def test_aa_encrypt(runner, attr_auth_access_token_one):
 
 @pytest.mark.parametrize('reset_tiny_db', [device_cmd.path], indirect=True)
 def test_device_init(runner, reset_tiny_db):
-    runner.invoke(device_cmd.init, ["23", "test_password"])
+    runner.invoke(device_cmd.init, ["23", "test_password", "name_1", "name_2", "name_3", "name_4"])
     table = get_tinydb_table(device_cmd.path, 'device')
     doc = table.search(where('id').exists())
     assert doc is not None, "Keys not present in DB."
     assert len(doc) == 1
     assert int(doc[0]['id']) == 23
+    assert len(doc[0]['actions']) == 4
 
 
 @pytest.mark.parametrize('reset_tiny_db', [device_cmd.path], indirect=True)

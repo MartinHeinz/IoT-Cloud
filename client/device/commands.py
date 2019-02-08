@@ -38,9 +38,10 @@ def device():
 @device.command()
 @click.argument('device_id')
 @click.argument('password')
-def init(device_id, password):
+@click.argument('action_names', nargs=-1)
+def init(device_id, password, action_names):
     table = get_tinydb_table(path, 'device')
-    table.upsert({'id': device_id, 'password': password}, Query().id.exists())
+    table.upsert({'id': device_id, 'password': password, "actions": action_names}, Query().id.exists())
 
 
 @device.command()

@@ -11,8 +11,9 @@ from app.consts import DEVICE_TYPE_ID_MISSING_ERROR_MSG, DEVICE_TYPE_ID_INCORREC
     DEVICE_NAME_BI_MISSING_ERROR_MSG, DEVICE_NAME_MISSING_ERROR_MSG, \
     DATA_RANGE_MISSING_ERROR_MSG, DATA_OUT_OF_OUTPUT_RANGE_ERROR_MSG, CORRECTNESS_HASH_MISSING_ERROR_MSG, \
     SOMETHING_WENT_WRONG_MSG, DEVICE_ID_MISSING_ERROR_MSG, \
-    DEVICE_NAME_INVALID_ERROR_MSG, DEVICE_PASSWORD_MISSING_ERROR_MSG, USER_MISSING_PASSWORD_HASH
-from app.models.models import DeviceType, Device, User
+    DEVICE_NAME_INVALID_ERROR_MSG, DEVICE_PASSWORD_MISSING_ERROR_MSG, USER_MISSING_PASSWORD_HASH, ACTION_NAME_MISSING_ERROR_MSG, \
+    ACTION_NAME_BI_MISSING_ERROR_MSG, UNAUTHORIZED_USER_ERROR_MSG
+from app.models.models import DeviceType, Device, User, Action
 from app.app_setup import client as mqtt_client
 from app.utils import is_valid_uuid, bytes_to_json
 from client.crypto_utils import encrypt, hash, correctness_hash, triangle_wave, sawtooth_wave, square_wave, sine_wave, generate, fake_tuple_to_hash, \
@@ -222,6 +223,56 @@ def test_api_dv_create(client, app_and_ctx, access_token):
         device_owner = User.get_by_access_token(access_token)
         new_acl = next((acl for acl in device_owner.mqtt_creds.acls if acl.topic == f"u:1/d:{json_data['id']}"), None)
         assert new_acl is not None, "New ACL for device was not inserted."
+
+
+def test_api_set_action(client, app_and_ctx, access_token):
+    device_id = 23
+    data = {
+        "device_id": str(device_id),
+        "access_token": access_token,
+        "correctness_hash": '$2b$12$WCDgDQQwfA2UtS7qk5eiO.W23sRkaHjKSBWrkhB8Q9VGPUnMUKtye',
+    }
+    response = client.post('/api/device/set_action', query_string=data, follow_redirects=True)
+    assert response.status_code == 400
+    json_data = json.loads(response.data.decode("utf-8"))
+    assert (json_data["error"]) == ACTION_NAME_MISSING_ERROR_MSG
+
+    data = {
+        "device_id": str(device_id),
+        "access_token": access_token,
+        "correctness_hash": '$2b$12$WCDgDQQwfA2UtS7qk5eiO.W23sRkaHjKSBWrkhB8Q9VGPUnMUKtye',
+        "name": b'gAAAAABcXV0zhCvu8mmTemaNja01bGK5fIuFjXo-8CpKS96_JTQdD-H-9l_0lwZAyGXp4khjscTC7HMTYL3KL5kuGw6kkJ3XOQ=='.decode("utf-8"),  # cipher.encrypt(b"test_action")
+    }
+    response = client.post('/api/device/set_action', query_string=data, follow_redirects=True)
+    assert response.status_code == 400
+    json_data = json.loads(response.data.decode("utf-8"))
+    assert (json_data["error"]) == ACTION_NAME_BI_MISSING_ERROR_MSG
+
+    data = {
+        "device_id": "9999",  # invalid
+        "access_token": access_token,
+        "correctness_hash": '$2b$12$WCDgDQQwfA2UtS7qk5eiO.W23sRkaHjKSBWrkhB8Q9VGPUnMUKtye',
+        "name": b'gAAAAABcXV0zhCvu8mmTemaNja01bGK5fIuFjXo-8CpKS96_JTQdD-H-9l_0lwZAyGXp4khjscTC7HMTYL3KL5kuGw6kkJ3XOQ=='.decode("utf-8"),  # cipher.encrypt(b"test_action")
+        "name_bi": '$2b$12$1xxxxxxxxxxxxxxxxxxxxudvkMvF2EyHEYeqT1nCqu.XhAt3J3XQ2'  # hash("test_action", str(1))
+    }
+    response = client.post('/api/device/set_action', query_string=data, follow_redirects=True)
+    assert response.status_code == 400
+    json_data = json.loads(response.data.decode("utf-8"))
+    assert (json_data["error"]) == UNAUTHORIZED_USER_ERROR_MSG
+
+    data["device_id"] = str(device_id)
+    response = client.post('/api/device/set_action', query_string=data, follow_redirects=True)
+    assert response.status_code == 200
+
+    app, ctx = app_and_ctx
+
+    with app.app_context():
+        ac = db.session.query(Action).filter(Action.name_bi == data["name_bi"]).first()
+        assert ac.name.decode("utf-8") == data["name"]
+        assert ac.correctness_hash == data["correctness_hash"]
+
+        db.session.delete(ac)
+        db.session.commit()
 
 
 def test_api_get_device_by_name(client, app_and_ctx, access_token):
