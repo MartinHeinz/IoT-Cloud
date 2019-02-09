@@ -28,7 +28,7 @@ cmd.path = '/tmp/keystore.json'
 
 # NOTE: These values are necessary here, because global vars are not properly initialized when using Click Test runner
 cmd.VERIFY_CERTS = False
-cmd.MQTT_BROKER = "172.22.0.3"
+cmd.MQTT_BROKER = "172.26.0.8"
 cmd.MQTT_PORT = 8883
 
 device_cmd.path = '/tmp/data.json'

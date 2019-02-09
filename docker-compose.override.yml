@@ -53,7 +53,8 @@ services:
     - ./mosquitto/certs:/mosquitto/certs
     command: ["mosquitto", "-c", "/etc/mosquitto/mosquitto.conf"]
     networks:
-    - shared_net
+      shared_net:
+        ipv4_address: 172.26.0.8
   nginx:
     container_name: iot_cloud_nginx
     ports:
@@ -90,3 +91,6 @@ volumes:
 networks:
   shared_net:
     driver: bridge
+    ipam:
+      config:
+      - subnet: 172.26.0.0/16
