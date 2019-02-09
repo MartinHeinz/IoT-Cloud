@@ -1,10 +1,8 @@
-import json
 from contextlib import suppress
 from flask import request
 from sqlalchemy import and_
 
 from app.api import api
-from app.api.utils import is_number
 from app.app_setup import client, db
 from app.auth.utils import require_api_token
 from app.consts import DEVICE_TYPE_ID_MISSING_ERROR_MSG, DEVICE_TYPE_ID_INCORRECT_ERROR_MSG, \
@@ -14,10 +12,10 @@ from app.consts import DEVICE_TYPE_ID_MISSING_ERROR_MSG, DEVICE_TYPE_ID_INCORREC
     CORRECTNESS_HASH_MISSING_ERROR_MSG, DEVICE_ID_MISSING_ERROR_MSG, PUBLIC_KEY_MISSING_ERROR_MSG, \
     UNAUTHORIZED_USER_ERROR_MSG, NO_PUBLIC_KEY_ERROR_MSG, \
     DEVICE_NAME_INVALID_ERROR_MSG, DEVICE_PASSWORD_MISSING_ERROR_MSG, USER_MISSING_PASSWORD_HASH, ACTION_NAME_MISSING_ERROR_MSG, \
-    ACTION_NAME_BI_MISSING_ERROR_MSG, ACTION_BI_INVALID_ERROR_MSG
+    ACTION_NAME_BI_MISSING_ERROR_MSG, ACTION_BI_INVALID_ERROR_MSG, NOT_REGISTERED_WITH_BROKER_ERROR_MSG, INVALID_BROKER_PASSWORD_ERROR_MSG
 from app.models.models import DeviceType, Device, DeviceData, UserDevice, User
 from app.mqtt.utils import Payload
-from app.utils import http_json_response, check_missing_request_argument, is_valid_uuid, format_topic
+from app.utils import http_json_response, check_missing_request_argument, is_valid_uuid, format_topic, validate_broker_password, is_number, create_payload
 
 
 @api.route('/publish', methods=['POST'])
@@ -37,6 +35,9 @@ def register_to_broker():
         (password_hash, USER_MISSING_PASSWORD_HASH))
     if arg_check is not True:
         return arg_check
+
+    if not validate_broker_password(password_hash):
+        return http_json_response(False, 400, **{"error": INVALID_BROKER_PASSWORD_ERROR_MSG})
 
     user.create_mqtt_creds_for_user(password_hash, db.session)
     db.session.commit()
@@ -63,12 +64,12 @@ def create_device_type():
 
 @api.route('/device/create', methods=['POST'])
 @require_api_token()
-def create_device():  # TODO check if user is registered to Broker before allowing him to create device
+def create_device():
     device_type_id = request.args.get("type_id", None)
     correctness_hash = request.args.get("correctness_hash", None)
     name = request.args.get("name", None)
     name_bi = request.args.get("name_bi", None)
-    password_hash = request.args.get("password", None)  # TODO check if its correct format
+    password_hash = request.args.get("password", None)
     user = User.get_by_access_token(request.args.get("access_token", ""))
     arg_check = check_missing_request_argument(
         (device_type_id, DEVICE_TYPE_ID_MISSING_ERROR_MSG),
@@ -85,6 +86,11 @@ def create_device():  # TODO check if user is registered to Broker before allowi
     finally:
         if dt is None:
             return http_json_response(False, 400, **{"error": DEVICE_TYPE_ID_INCORRECT_ERROR_MSG})
+
+    if not user.is_registered_with_broker:
+        return http_json_response(False, 400, **{"error": NOT_REGISTERED_WITH_BROKER_ERROR_MSG})
+    if not validate_broker_password(password_hash):
+        return http_json_response(False, 400, **{"error": INVALID_BROKER_PASSWORD_ERROR_MSG})
     ud = UserDevice()
     # noinspection PyArgumentList
     dv = Device(device_type_id=device_type_id,
@@ -106,12 +112,14 @@ def create_device():  # TODO check if user is registered to Broker before allowi
 
 @api.route('/device/set_action', methods=['POST'])
 @require_api_token()
-def set_device_action():  # TODO check if user is registered to Broker before allowing him to create device?
+def set_device_action():
     device_id = request.args.get("device_id", None)
     correctness_hash = request.args.get("correctness_hash", None)
     name = request.args.get("name", None)
     name_bi = request.args.get("name_bi", None)
     access_token = request.args.get("access_token", "")
+    user = User.get_by_access_token(access_token)
+
     arg_check = check_missing_request_argument(
         (device_id, DEVICE_ID_MISSING_ERROR_MSG),
         (correctness_hash, CORRECTNESS_HASH_MISSING_ERROR_MSG),
@@ -120,6 +128,8 @@ def set_device_action():  # TODO check if user is registered to Broker before al
     if arg_check is not True:
         return arg_check
 
+    if not user.is_registered_with_broker:
+        return http_json_response(False, 400, **{"error": NOT_REGISTERED_WITH_BROKER_ERROR_MSG})
     if not User.can_use_device(access_token, device_id):
         return http_json_response(False, 400, **{"error": UNAUTHORIZED_USER_ERROR_MSG})
 
@@ -289,7 +299,7 @@ def retrieve_public_key():
 
 @api.route('/device/action', methods=['POST'])
 @require_api_token()
-def trigger_action():  # TODO error when triggered with ./cli.py -b "172.26.0.8" user trigger-action device1 On MartinHeinz
+def trigger_action():
     device_id = request.args.get("device_id", None)
     name_bi = request.args.get("name_bi", None)
     access_token = request.args.get("access_token", "")
@@ -309,11 +319,6 @@ def trigger_action():  # TODO error when triggered with ./cli.py -b "172.26.0.8"
     ac = Device.get_action_by_bi(device_id, name_bi)
     if ac is None:
         return http_json_response(False, 400, **{"error": ACTION_BI_INVALID_ERROR_MSG})
-    pairs = {"action": ac.name.decode("utf-8")}
-    payload = {}
-    for k, v in pairs.items():
-        payload[f'"{k}"'] = f'"{pairs[k]}"'
-    payload['"user_id"'] = f'"{user.mqtt_creds.username}"'
-    payload = f'"{json.dumps(payload)}"'
-    client.publish(topic, payload)  # TODO encrypt with `shared key`, use _create_payload
+    payload = create_payload(user.mqtt_creds.username, {"action": ac.name.decode("utf-8")})
+    client.publish(topic, payload)  # TODO encrypt with `shared key`
     return http_json_response()

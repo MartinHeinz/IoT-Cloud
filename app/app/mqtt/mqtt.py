@@ -1,10 +1,8 @@
 from flask import current_app
-from sqlalchemy import and_
 
-from app.api.utils import is_number
 from app.models.models import Device, DeviceData, User
 from app.mqtt.utils import Payload
-from app.utils import bytes_to_json
+from app.utils import bytes_to_json, is_number
 
 
 # The callback for when the client receives a CONNACK response from the server.
@@ -59,7 +57,7 @@ def _edit_device_data(device_id, action, msg, app, db):
         if device is not None:
             if action == "save_data":
                 # noinspection PyArgumentList
-                db.session.add(DeviceData(  # TODO extract this to Model class
+                db.session.add(DeviceData(
                         tid=str.encode(msg.payload["tid"]),
                         tid_bi=msg.payload["tid_bi"],
                         data=str.encode(msg.payload["data"]),
@@ -69,11 +67,7 @@ def _edit_device_data(device_id, action, msg, app, db):
                         added=int(msg.payload["added"])
                     ))
             else:
-                db.session.query(DeviceData)\
-                    .filter(and_(
-                        DeviceData.tid_bi == msg.payload["tid_bi"],
-                        DeviceData.device_id == device_id,
-                    )).delete()  # TODO extract this to Model class
+                DeviceData.delete_by_tid_bi(msg.payload["tid_bi"], device_id)
             db.session.commit()
         else:
             print(f"Device with id: {device_id} doesn't exist.", flush=True)

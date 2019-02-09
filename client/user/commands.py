@@ -20,8 +20,8 @@ from passlib.hash import bcrypt
 
 sys.stdout = open(os.devnull, 'w')
 sys.path.insert(0, '../app')
-from app.api.utils import is_number
-from app.utils import bytes_to_json
+from app.utils import bytes_to_json, is_number
+
 sys.stdout = sys.__stdout__
 
 try:  # for packaged CLI (setup.py)

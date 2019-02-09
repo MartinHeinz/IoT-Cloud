@@ -1,4 +1,5 @@
 import json
+import re
 from uuid import UUID
 
 from flask import jsonify
@@ -39,3 +40,23 @@ def format_topic(src, dest, sender):
         return f"d:{src}/u:{dest}/"
     else:
         raise Exception("Invalid sender type.")
+
+
+def validate_broker_password(pass_hash):
+    return re.match(r'PBKDF2\$sha256\$\d+\$.{16}\$.{32}', pass_hash) is not None
+
+
+def is_number(s):
+    try:
+        int(s)
+        return True
+    except ValueError:
+        return False
+
+
+def create_payload(user_id, pairs):
+    payload = {}
+    for k, v in pairs.items():
+        payload[f'"{k}"'] = f'"{pairs[k]}"'
+    payload['"user_id"'] = f'"{user_id}"'
+    return f'"{json.dumps(payload)}"'

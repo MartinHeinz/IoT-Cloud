@@ -5,6 +5,7 @@ from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.ext.hybrid import hybrid_property
 from sqlalchemy.orm import relationship
 
+from app.utils import is_number
 from app.app_setup import db
 from app.models.mixins import MixinGetById, MixinAsDict, MixinGetByAccessToken
 
@@ -47,6 +48,8 @@ class User(MixinGetByAccessToken, MixinGetById, db.Model):
 
     @classmethod
     def can_use_device(cls, user_access_token, device_id):
+        if not is_number(device_id):
+            return False
         q = db.session.query(
             db.session.query(User).
             join(UserDevice).
@@ -80,6 +83,10 @@ class User(MixinGetByAccessToken, MixinGetById, db.Model):
             ACL(username=self.id, topic=f"d:{device_id}/u:{self.id}/", acc=4)  # NOTE: seems to be necessary because of the way paho.mqtt connects to broker
         ])
 
+    @hybrid_property
+    def is_registered_with_broker(self):
+        return self.mqtt_creds is not None
+
 
 class DeviceType(db.Model):
     __tablename__ = 'device_type'
@@ -103,8 +110,8 @@ class Device(MixinGetById, MixinAsDict, db.Model):
     status = db.Column(db.LargeBinary, default=b'0')  # NOTE: This could use OPE but domain is too small
     device_type = relationship("DeviceType", back_populates="devices")
     device_type_id = db.Column(db.Integer, db.ForeignKey('device_type.id'))
-    users = relationship("UserDevice", back_populates="device")
-    data = relationship("DeviceData", back_populates="device")
+    users = relationship("UserDevice", back_populates="device", cascade='all,delete-orphan')
+    data = relationship("DeviceData", back_populates="device", cascade='all,delete-orphan')
     actions = relationship("Action", back_populates="device")
     scenes = relationship(
         "Scene",
@@ -112,7 +119,7 @@ class Device(MixinGetById, MixinAsDict, db.Model):
         back_populates="devices")
     owner_id = db.Column(db.Integer, db.ForeignKey('user.id'))
     owner = relationship("User", back_populates="owned_devices")
-    mqtt_creds = relationship("MQTTUser", uselist=False, back_populates="device")
+    mqtt_creds = relationship("MQTTUser", uselist=False, back_populates="device", cascade='all,delete-orphan')
 
     name = db.Column(db.LargeBinary, nullable=False)
     name_bi = db.Column(db.String(200), unique=False, nullable=True)  # Blind index for .name
@@ -196,6 +203,14 @@ class DeviceData(MixinAsDict, db.Model):
     tid_bi = db.Column(db.String(200), unique=False, nullable=True)  # Blind index for .tid
 
     correctness_hash = db.Column(db.String(200), nullable=False)  # correctness_hash(str(985734000), b'\\001'.decode("utf-8"), str(66988873), str(tid))
+
+    @classmethod
+    def delete_by_tid_bi(cls, tid_bi, device_id):
+        db.session.query(DeviceData) \
+            .filter(and_(
+                DeviceData.tid_bi == tid_bi,
+                DeviceData.device_id == device_id,
+            )).delete()
 
 
 class Action(MixinGetById, db.Model):

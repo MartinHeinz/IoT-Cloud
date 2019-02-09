@@ -13,10 +13,11 @@ from app.consts import DEVICE_TYPE_ID_MISSING_ERROR_MSG, DEVICE_TYPE_ID_INCORREC
     DATA_RANGE_MISSING_ERROR_MSG, DATA_OUT_OF_OUTPUT_RANGE_ERROR_MSG, CORRECTNESS_HASH_MISSING_ERROR_MSG, \
     SOMETHING_WENT_WRONG_MSG, DEVICE_ID_MISSING_ERROR_MSG, \
     DEVICE_NAME_INVALID_ERROR_MSG, DEVICE_PASSWORD_MISSING_ERROR_MSG, USER_MISSING_PASSWORD_HASH, ACTION_NAME_MISSING_ERROR_MSG, \
-    ACTION_NAME_BI_MISSING_ERROR_MSG, UNAUTHORIZED_USER_ERROR_MSG, ACTION_BI_INVALID_ERROR_MSG
+    ACTION_NAME_BI_MISSING_ERROR_MSG, UNAUTHORIZED_USER_ERROR_MSG, ACTION_BI_INVALID_ERROR_MSG, NOT_REGISTERED_WITH_BROKER_ERROR_MSG, \
+    INVALID_BROKER_PASSWORD_ERROR_MSG
 from app.models.models import DeviceType, Device, User, Action
 from app.app_setup import client as mqtt_client
-from app.utils import is_valid_uuid, bytes_to_json, format_topic
+from app.utils import is_valid_uuid, bytes_to_json, format_topic, validate_broker_password
 from client.crypto_utils import encrypt, hash, correctness_hash, triangle_wave, sawtooth_wave, square_wave, sine_wave, generate, fake_tuple_to_hash, \
     encrypt_fake_tuple, instantiate_ope_cipher, decrypt_using_fernet_hex, decrypt_using_ope_hex
 
@@ -71,10 +72,10 @@ def test_api_publish(client):
     assert response.status_code == 200
 
 
-def test_api_user_register_broker(client, app_and_ctx, access_token_tree):
+def test_api_user_register_broker(client, app_and_ctx, access_token_three):
     data = {
         "not-password": "non-empty",
-        "access_token": access_token_tree
+        "access_token": access_token_three
     }
     response = client.post('/api/user/broker_register', query_string=data, follow_redirects=True)
     assert response.status_code == 400
@@ -83,7 +84,7 @@ def test_api_user_register_broker(client, app_and_ctx, access_token_tree):
 
     data = {
         "password": "PBKDF2$sha256$10000$+Ezww8vsOcflcODC$OTlWyBkxSHptuqv/glKuu1soqM3W+NNR",  # some_pass
-        "access_token": access_token_tree
+        "access_token": access_token_three
     }
     response = client.post('/api/user/broker_register', query_string=data, follow_redirects=True)
     assert response.status_code == 200
@@ -125,7 +126,7 @@ def test_api_dt_create(client, app_and_ctx, access_token):
         assert inserted_dt.correctness_hash == '$2b$12$.Jk4ruyYVQuMcMxpDODfQuV/1NJiLHWDcF15CE9g2OKmCmuSMzU8q'
 
 
-def test_api_dv_create(client, app_and_ctx, access_token):
+def test_api_dv_create(client, app_and_ctx, access_token, access_token_four):
     data = {
         "not-type_id": "non-empty",
         "access_token": access_token
@@ -198,13 +199,25 @@ def test_api_dv_create(client, app_and_ctx, access_token):
         db.session.commit()
         data = {
             "type_id": str(dt.type_id),
-            "access_token": access_token,
+            "access_token": access_token_four,
             "correctness_hash": '$2b$12$WCDgDQQwfA2UtS7qk5eiO.W23sRkaHjKSBWrkhB8Q9VGPUnMUKtye',
             "name": "test",
-            "password": "PBKDF2$sha256$10000$qu5hXEoBLNeKuzR7$rdth45656456456564",
+            "password": "PBKDF2$sha1$10000$qu5hXEoBLNeKuzR7$rdth45656456564",  # invalid
             "name_bi": "$2b$12$1xxxxxxxxxxxxxxxxxxxxuDUX01AKuyu/3/PdSxQT4qMDVTUawIUq"
         }
 
+    response = client.post('/api/device/create', query_string=data, follow_redirects=True)
+    assert response.status_code == 400
+    json_data = json.loads(response.data.decode("utf-8"))
+    assert (json_data["error"]) == NOT_REGISTERED_WITH_BROKER_ERROR_MSG
+
+    data["access_token"] = access_token
+    response = client.post('/api/device/create', query_string=data, follow_redirects=True)
+    assert response.status_code == 400
+    json_data = json.loads(response.data.decode("utf-8"))
+    assert (json_data["error"]) == INVALID_BROKER_PASSWORD_ERROR_MSG
+
+    data["password"] = 'PBKDF2$sha256$10000$9tPL2IDSekCbDADg$McfGrlUVABIVQ8mlwBMPtrLH5BemxT5A'
     response = client.post('/api/device/create', query_string=data, follow_redirects=True)
     assert response.status_code == 200
     json_data = json.loads(response.data.decode("utf-8"))
@@ -226,7 +239,7 @@ def test_api_dv_create(client, app_and_ctx, access_token):
         assert new_acl is not None, "New ACL for device was not inserted."
 
 
-def test_api_set_action(client, app_and_ctx, access_token):
+def test_api_set_action(client, app_and_ctx, access_token, access_token_four):
     device_id = 23
     data = {
         "device_id": str(device_id),
@@ -262,6 +275,14 @@ def test_api_set_action(client, app_and_ctx, access_token):
     assert (json_data["error"]) == UNAUTHORIZED_USER_ERROR_MSG
 
     data["device_id"] = str(device_id)
+    data["access_token"] = access_token_four
+
+    response = client.post('/api/device/set_action', query_string=data, follow_redirects=True)
+    assert response.status_code == 400
+    json_data = json.loads(response.data.decode("utf-8"))
+    assert (json_data["error"]) == NOT_REGISTERED_WITH_BROKER_ERROR_MSG
+
+    data["access_token"] = access_token
     response = client.post('/api/device/set_action', query_string=data, follow_redirects=True)
     assert response.status_code == 200
 
@@ -556,3 +577,23 @@ def test_format_topic():
     assert format_topic(5, 23, "device") == f"d:5/u:23/"
     with pytest.raises(Exception):
         assert format_topic(5, 23, "invalid")
+
+
+def test_validate_broker_password():
+    invalid = 'PBKD2$sha256$10000$m0FVLYZC1DcwZQFy$MPYAEv8i7rTIsPfgbeV9eJch/h03tK41'
+    assert not validate_broker_password(invalid)
+
+    invalid = 'PBKDF2$sha1$10000$m0FVLYZC1DcwZQFy$MPYAEv8i7rTIsPfgbeV9eJch/h03tK41'
+    assert not validate_broker_password(invalid)
+
+    invalid = 'PBKDF2$sha256$1k000$m0FVLYZC1DcwZQFy$MPYAEv8i7rTIsPfgbeV9eJch/h03tK41'
+    assert not validate_broker_password(invalid)
+
+    invalid = 'PBKDF2$sha256$10000$m0FVLYZC1DcwZQF$MPYAEv8i7rTIsPfgbeV9eJch/h03tK41'
+    assert not validate_broker_password(invalid)
+
+    invalid = 'PBKDF2$sha256$10000$m0FVLYZC1DcwZQFy$MPYAEv8i7rTIsPfgbeV9eJch/h03tK4'
+    assert not validate_broker_password(invalid)
+
+    valid = 'PBKDF2$sha256$10000$m0FVLYZC1DcwZQFy$MPYAEv8i7rTIsPfgbeV9eJch/h03tK41'
+    assert validate_broker_password(valid)

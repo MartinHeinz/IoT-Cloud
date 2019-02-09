@@ -50,8 +50,13 @@ def access_token_two():
 
 
 @pytest.fixture(scope="session")
-def access_token_tree():
+def access_token_three():
     return '5c36ab84439c55a3c196f4csd9bd7b3d9291f39g'
+
+
+@pytest.fixture(scope="session")
+def access_token_four():
+    return '5c36ab84439gden3c196f4csd9bd7b3d9291f39g'
 
 
 @pytest.fixture(scope="session")

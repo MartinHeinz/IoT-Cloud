@@ -19,11 +19,12 @@ def test_can_use_device(app_and_ctx, access_token_two):
     app, ctx = app_and_ctx
 
     with app.app_context():
+        assert not User.can_use_device(access_token_two, "not_a_number")
         assert not User.can_use_device(access_token_two, 23)
         assert User.can_use_device(access_token_two, 34)
 
 
-def test_get_action_by_bitest_get_action_by_bi(app_and_ctx):
+def test_get_action_by_bi(app_and_ctx):
     app, ctx = app_and_ctx
 
     with app.app_context():
@@ -37,3 +38,11 @@ def test_is_device():
 
     user.device = Device()
     assert user.is_device
+
+
+def test_is_registered_with_broker():
+    user = User(mqtt_creds=MQTTUser())
+    assert user.is_registered_with_broker
+
+    user = User()
+    assert not user.is_registered_with_broker

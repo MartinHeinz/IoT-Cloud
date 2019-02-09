@@ -1,6 +1,5 @@
 from flask import request
 
-from app.api.utils import is_number
 from app.attribute_authority.utils import already_has_key_from_owner, replace_existing_key, create_attributes, parse_attr_list, get_private_key_based_on_owner
 from app.app_setup import db
 from app.attribute_authority import attr_authority
@@ -10,7 +9,7 @@ from app.consts import MASTER_KEY_MISSING_ERROR_MSG, ATTR_LIST_MISSING_ERROR_MSG
     INVALID_ATTR_LIST_ERROR_MSG, MESSAGE_MISSING_ERROR_MSG, POLICY_STRING_MISSING_ERROR_MSG, CIPHERTEXT_MISSING_ERROR_MSG, COULD_NOT_DECRYPT_ERROR_MSG, \
     INVALID_OWNER_API_USERNAME_ERROR_MSG, OWNER_API_USERNAME_MISSING_ERROR_MSG, API_USERNAME_MISSING_ERROR_MSG
 from app.models.models import AttrAuthUser, PublicKey, PrivateKey
-from app.utils import http_json_response, check_missing_request_argument
+from app.utils import http_json_response, check_missing_request_argument, is_number
 
 """
 NOTES:

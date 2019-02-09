@@ -19,7 +19,7 @@ from app.app_setup import db, create_app
 from app.cli import populate
 import client.user.commands as cmd
 import client.device.commands as device_cmd
-from app.models.models import MQTTUser, User, Action
+from app.models.models import MQTTUser, User, Action, Device, DeviceType
 from crypto_utils import hash, check_correctness_hash, hex_to_fernet, hex_to_ope, decrypt_using_fernet_hex, \
     decrypt_using_ope_hex
 from utils import json_string_with_bytes_to_dict, get_tinydb_table, search_tinydb_doc, insert_into_tinydb
@@ -345,13 +345,13 @@ def test_save_column_keys(runner, reset_tiny_db):
 
 
 @pytest.mark.parametrize('reset_tiny_db', [cmd.path], indirect=True)
-def test_register_to_broker(change_to_dev_db, runner, access_token_tree, reset_tiny_db):
+def test_register_to_broker(change_to_dev_db, runner, access_token_three, reset_tiny_db):
     password = "some_bad_pass"
     app, ctx = change_to_dev_db
     with app.app_context():
-        creds = db.session.query(User).filter(User.access_token == access_token_tree).first().mqtt_creds
+        creds = db.session.query(User).filter(User.access_token == access_token_three).first().mqtt_creds
 
-    runner.invoke(cmd.register_to_broker, [password, '--token', access_token_tree])
+    runner.invoke(cmd.register_to_broker, [password, '--token', access_token_three])
     table = get_tinydb_table(cmd.path, 'credentials')
     doc = table.search(where('broker_id').exists() & where('broker_password').exists())
     assert doc is not None, "Keys not present in DB."
@@ -359,7 +359,7 @@ def test_register_to_broker(change_to_dev_db, runner, access_token_tree, reset_t
     assert doc[0]["broker_password"] == password
 
     with app.app_context():
-        creds_new = db.session.query(User).filter(User.access_token == access_token_tree).first().mqtt_creds
+        creds_new = db.session.query(User).filter(User.access_token == access_token_three).first().mqtt_creds
         assert creds is None
         assert len(creds_new.acls) == 2
         to_delete = db.session.query(MQTTUser).filter(MQTTUser.username == creds_new.username).first()
@@ -373,12 +373,23 @@ def test_create_device_type(runner, access_token):
     assert "\"type_id\": " in result.output
 
 
-def test_create_device(runner, access_token):  # TODO this inserts record to dev DB - do clean-up with `change_to_dev_db`
+def test_create_device(runner, access_token, change_to_dev_db):
     result = runner.invoke(cmd.create_device_type, ["description-again", '--token', access_token])
     type_id = re.search('type_id": "(.+)"', result.output, re.IGNORECASE).group(1)
     result = runner.invoke(cmd.create_device, [type_id, "1", "CLITest", "test_pass", '--token', access_token])
     assert "\"success\": true" in result.output
     assert "\"id\": " in result.output
+
+    app, ctx = change_to_dev_db
+    with app.app_context():
+        dv = db.session.query(Device).filter(Device.name_bi == hash("1", "CLITest")).first()
+        dt = db.session.query(DeviceType).filter(DeviceType.type_id == type_id).first()
+
+        assert dv is not None
+
+        db.session.delete(dv)  # Clean up
+        db.session.delete(dt)
+        db.session.commit()
 
 
 @pytest.mark.parametrize('reset_tiny_db', [cmd.path], indirect=True)

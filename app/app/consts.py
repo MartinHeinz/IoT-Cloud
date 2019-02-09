@@ -16,6 +16,8 @@ NO_PUBLIC_KEY_ERROR_MSG = 'No public key available for this device.'
 ACTION_NAME_MISSING_ERROR_MSG = 'Missing action Name.'
 ACTION_NAME_BI_MISSING_ERROR_MSG = 'Missing device Blind Index.'
 ACTION_BI_INVALID_ERROR_MSG = 'Action Blind Index is invalid.'
+NOT_REGISTERED_WITH_BROKER_ERROR_MSG = 'User needs to register to MQTT broker first.'
+INVALID_BROKER_PASSWORD_ERROR_MSG = 'Provided password hash is not valid PBKDF2 hash.'
 
 MASTER_KEY_MISSING_ERROR_MSG = 'Missing serialized master key argument.'
 ATTR_LIST_MISSING_ERROR_MSG = 'Missing attribute list argument.'
