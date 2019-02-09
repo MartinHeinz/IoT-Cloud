@@ -5,8 +5,8 @@ class MixinGetById:
     id = db.Column(db.Integer, primary_key=True)
 
     @classmethod
-    def get_by_id(cls, device_id):
-        return db.session.query(cls).filter(cls.id == device_id).first()
+    def get_by_id(cls, id_):
+        return db.session.query(cls).filter(cls.id == id_).first()
 
 
 class MixinGetByAccessToken:

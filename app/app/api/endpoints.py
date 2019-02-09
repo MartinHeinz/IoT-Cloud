@@ -1,3 +1,4 @@
+import json
 from contextlib import suppress
 from flask import request
 from sqlalchemy import and_
@@ -13,10 +14,10 @@ from app.consts import DEVICE_TYPE_ID_MISSING_ERROR_MSG, DEVICE_TYPE_ID_INCORREC
     CORRECTNESS_HASH_MISSING_ERROR_MSG, DEVICE_ID_MISSING_ERROR_MSG, PUBLIC_KEY_MISSING_ERROR_MSG, \
     UNAUTHORIZED_USER_ERROR_MSG, NO_PUBLIC_KEY_ERROR_MSG, \
     DEVICE_NAME_INVALID_ERROR_MSG, DEVICE_PASSWORD_MISSING_ERROR_MSG, USER_MISSING_PASSWORD_HASH, ACTION_NAME_MISSING_ERROR_MSG, \
-    ACTION_NAME_BI_MISSING_ERROR_MSG
+    ACTION_NAME_BI_MISSING_ERROR_MSG, ACTION_BI_INVALID_ERROR_MSG
 from app.models.models import DeviceType, Device, DeviceData, UserDevice, User
 from app.mqtt.utils import Payload
-from app.utils import http_json_response, check_missing_request_argument, is_valid_uuid
+from app.utils import http_json_response, check_missing_request_argument, is_valid_uuid, format_topic
 
 
 @api.route('/publish', methods=['POST'])
@@ -253,7 +254,7 @@ def exchange_session_keys():
         user_public_key=user_public_key_bytes,
         user_id=user.id
     ))
-    client.publish(f'server/d:{device_id}', f'"{payload_bytes.decode("utf-8")}"'.encode())
+    client.publish(f'server/d:{device_id}/', f'"{payload_bytes.decode("utf-8")}"'.encode())
     return http_json_response()
 
 
@@ -284,3 +285,35 @@ def retrieve_public_key():
         db.session.commit()
         return http_json_response(**{'device_public_key': public_key})
     return http_json_response(False, 400, **{"error": NO_PUBLIC_KEY_ERROR_MSG})
+
+
+@api.route('/device/action', methods=['POST'])
+@require_api_token()
+def trigger_action():  # TODO error when triggered with ./cli.py -b "172.26.0.8" user trigger-action device1 On MartinHeinz
+    device_id = request.args.get("device_id", None)
+    name_bi = request.args.get("name_bi", None)
+    access_token = request.args.get("access_token", "")
+    user = User.get_by_access_token(access_token)
+
+    arg_check = check_missing_request_argument(
+        (device_id, DEVICE_ID_MISSING_ERROR_MSG),
+        (name_bi, ACTION_NAME_BI_MISSING_ERROR_MSG))
+    if arg_check is not True:
+        return arg_check
+
+    if not User.can_use_device(access_token, device_id):
+        return http_json_response(False, 400, **{"error": UNAUTHORIZED_USER_ERROR_MSG})
+
+    dv = Device.get_by_id(device_id)
+    topic = format_topic(user.mqtt_creds.username, dv.mqtt_creds.username, "user")
+    ac = Device.get_action_by_bi(device_id, name_bi)
+    if ac is None:
+        return http_json_response(False, 400, **{"error": ACTION_BI_INVALID_ERROR_MSG})
+    pairs = {"action": ac.name.decode("utf-8")}
+    payload = {}
+    for k, v in pairs.items():
+        payload[f'"{k}"'] = f'"{pairs[k]}"'
+    payload['"user_id"'] = f'"{user.mqtt_creds.username}"'
+    payload = f'"{json.dumps(payload)}"'
+    client.publish(topic, payload)  # TODO encrypt with `shared key`, use _create_payload
+    return http_json_response()

@@ -2,6 +2,7 @@
 import base64
 import json
 import types
+from unittest import mock
 from uuid import UUID
 
 import pytest
@@ -12,10 +13,10 @@ from app.consts import DEVICE_TYPE_ID_MISSING_ERROR_MSG, DEVICE_TYPE_ID_INCORREC
     DATA_RANGE_MISSING_ERROR_MSG, DATA_OUT_OF_OUTPUT_RANGE_ERROR_MSG, CORRECTNESS_HASH_MISSING_ERROR_MSG, \
     SOMETHING_WENT_WRONG_MSG, DEVICE_ID_MISSING_ERROR_MSG, \
     DEVICE_NAME_INVALID_ERROR_MSG, DEVICE_PASSWORD_MISSING_ERROR_MSG, USER_MISSING_PASSWORD_HASH, ACTION_NAME_MISSING_ERROR_MSG, \
-    ACTION_NAME_BI_MISSING_ERROR_MSG, UNAUTHORIZED_USER_ERROR_MSG
+    ACTION_NAME_BI_MISSING_ERROR_MSG, UNAUTHORIZED_USER_ERROR_MSG, ACTION_BI_INVALID_ERROR_MSG
 from app.models.models import DeviceType, Device, User, Action
 from app.app_setup import client as mqtt_client
-from app.utils import is_valid_uuid, bytes_to_json
+from app.utils import is_valid_uuid, bytes_to_json, format_topic
 from client.crypto_utils import encrypt, hash, correctness_hash, triangle_wave, sawtooth_wave, square_wave, sine_wave, generate, fake_tuple_to_hash, \
     encrypt_fake_tuple, instantiate_ope_cipher, decrypt_using_fernet_hex, decrypt_using_ope_hex
 
@@ -221,7 +222,7 @@ def test_api_dv_create(client, app_and_ctx, access_token):
         assert len(inserted_dv.mqtt_creds.acls) == 5
 
         device_owner = User.get_by_access_token(access_token)
-        new_acl = next((acl for acl in device_owner.mqtt_creds.acls if acl.topic == f"u:1/d:{json_data['id']}"), None)
+        new_acl = next((acl for acl in device_owner.mqtt_creds.acls if acl.topic == f"u:1/d:{json_data['id']}/"), None)
         assert new_acl is not None, "New ACL for device was not inserted."
 
 
@@ -427,6 +428,36 @@ def test_api_get_device_data(client, app_and_ctx, access_token_two):
     assert len(json_data["device_data"]) == 2
 
 
+def test_api_trigger_action(client, app_and_ctx, access_token):
+    device_id = "23"
+    data = {
+        "device_id": device_id,
+        "name_bi": '$2b$12$1xxxxxxxxxxxxxxxxxxxxuz5Jia.EInvalid6Nte',
+        "access_token": access_token
+    }
+    response = client.post('/api/device/action', query_string=data, follow_redirects=True)
+    assert response.status_code == 400
+    json_data = json.loads(response.data.decode("utf-8"))
+    assert json_data["error"] == ACTION_BI_INVALID_ERROR_MSG
+
+    data = {
+        "device_id": device_id,
+        "name_bi": '$2b$12$1xxxxxxxxxxxxxxxxxxxxuz5Jia.EDkTwFaphV2YY8UhBMcuo6Nte',
+        "access_token": access_token
+    }
+
+    app, ctx = app_and_ctx
+    with app.app_context():
+        ac_name_string = Action.get_by_id(2).name.decode("utf-8")
+        with mock.patch('app.app_setup.client.publish') as publish:
+            response = client.post('/api/device/action', query_string=data, follow_redirects=True)
+            assert response.status_code == 200
+
+            publish.assert_called_once()
+            args = publish.call_args
+            assert args == ((f"u:1/d:23/", f'"{{"\\"action\\"": "\\"{ac_name_string}\\"", "\\"user_id\\"": "\\"1\\""}}"'),)
+
+
 def test_hash_bcrypt():
     assert hash("raspberry", "1234srfh") == "$2b$12$1234srfhxxxxxxxxxxxxxu9oRez2BjitmNvretimcFcTsuR/HtxQa"
     with pytest.raises(Exception):
@@ -517,3 +548,11 @@ def test_bytes_to_json():
 
     result = bytes_to_json(val)
     assert isinstance(result, dict)
+
+
+def test_format_topic():
+
+    assert format_topic(1, 4, "user") == f"u:1/d:4/"
+    assert format_topic(5, 23, "device") == f"d:5/u:23/"
+    with pytest.raises(Exception):
+        assert format_topic(5, 23, "invalid")

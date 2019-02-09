@@ -23,6 +23,8 @@ def handle_on_message(client, userdata, msg, app, db):
     except:
         print("Received invalid message '" + str(msg.payload) + "' on topic '" + msg.topic + "' with QoS " + str(msg.qos), flush=True)
         return
+    if msg.topic.endswith("/"):
+        msg.topic = msg.topic[:-1].encode()
     topic = msg.topic.split("/")
     if len(topic) >= 2 and topic[1] == "server":
         t, sender_id = topic[0].split(":")

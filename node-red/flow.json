@@ -77,7 +77,7 @@
         "type": "mqtt in",
         "z": "f1dd4598.5b0fa8",
         "name": "ec_pk_receive",
-        "topic": "server/d:23",
+        "topic": "server/d:23/",
         "qos": "2",
         "broker": "mqtt-broker-tls",
         "x": 210,
@@ -130,7 +130,7 @@
         "type": "mqtt out",
         "z": "f1dd4598.5b0fa8",
         "name": "ec_pk_send",
-        "topic": "d:23/server",
+        "topic": "d:23/server/",
         "qos": "",
         "retain": "",
         "broker": "mqtt-broker-tls",
@@ -143,7 +143,7 @@
         "type": "mqtt in",
         "z": "f1dd4598.5b0fa8",
         "name": "Log",
-        "topic": "+/d:23",
+        "topic": "+/d:23/",
         "qos": "2",
         "broker": "mqtt-broker-tls",
         "x": 130,
@@ -463,7 +463,7 @@
         "type": "mqtt in",
         "z": "f1dd4598.5b0fa8",
         "name": "get_tuple_data_receive",
-        "topic": "+/d:23",
+        "topic": "+/d:23/",
         "qos": "2",
         "broker": "mqtt-broker-tls",
         "x": 160,
@@ -517,7 +517,7 @@
         "type": "mqtt out",
         "z": "f1dd4598.5b0fa8",
         "name": "ec_pk_send",
-        "topic": "d:23/u:1",
+        "topic": "d:23/u:1/",
         "qos": "",
         "retain": "",
         "broker": "mqtt-broker-tls",
@@ -540,11 +540,111 @@
         "wires": []
     },
     {
+        "id": "ea52e919.e2b448",
+        "type": "exec",
+        "z": "f1dd4598.5b0fa8",
+        "command": "python3 /home/martin/Projects/diplomovka/IoT-Cloud/client/cli.py --no-debug device process-action ",
+        "addpay": true,
+        "append": "",
+        "useSpawn": "false",
+        "timer": "5",
+        "oldrc": false,
+        "name": "Process Actions Msg",
+        "x": 420,
+        "y": 1360,
+        "wires": [
+            [
+                "ea1344eb.a51d98"
+            ],
+            [],
+            []
+        ]
+    },
+    {
+        "id": "8ded5f3d.54aeb",
+        "type": "mqtt in",
+        "z": "f1dd4598.5b0fa8",
+        "name": "process_action",
+        "topic": "+/d:23/",
+        "qos": "2",
+        "broker": "mqtt-broker-tls",
+        "x": 180,
+        "y": 1360,
+        "wires": [
+            [
+                "ea52e919.e2b448"
+            ]
+        ]
+    },
+    {
+        "id": "ea1344eb.a51d98",
+        "type": "switch",
+        "z": "f1dd4598.5b0fa8",
+        "name": "Choose Action",
+        "property": "payload",
+        "propertyType": "msg",
+        "rules": [
+            {
+                "t": "regex",
+                "v": "On\\n",
+                "vt": "str",
+                "case": false
+            },
+            {
+                "t": "regex",
+                "v": "Off\\n",
+                "vt": "str",
+                "case": false
+            }
+        ],
+        "checkall": "true",
+        "repair": false,
+        "outputs": 2,
+        "x": 660,
+        "y": 1360,
+        "wires": [
+            [
+                "8f510fae.df1b9"
+            ],
+            [
+                "405e4cbb.28cc44"
+            ]
+        ]
+    },
+    {
+        "id": "8f510fae.df1b9",
+        "type": "debug",
+        "z": "f1dd4598.5b0fa8",
+        "name": "On",
+        "active": true,
+        "tosidebar": true,
+        "console": false,
+        "tostatus": false,
+        "complete": "payload",
+        "x": 850,
+        "y": 1320,
+        "wires": []
+    },
+    {
+        "id": "405e4cbb.28cc44",
+        "type": "debug",
+        "z": "f1dd4598.5b0fa8",
+        "name": "Off",
+        "active": true,
+        "tosidebar": true,
+        "console": false,
+        "tostatus": false,
+        "complete": "payload",
+        "x": 850,
+        "y": 1400,
+        "wires": []
+    },
+    {
         "id": "mqtt-broker-tls",
         "type": "mqtt-broker",
         "z": "",
         "name": "Local MQTT Broker",
-        "broker": "172.22.0.3",
+        "broker": "172.26.0.8",
         "port": "8883",
         "tls": "ec6f7e8b.9cb98",
         "clientid": "",

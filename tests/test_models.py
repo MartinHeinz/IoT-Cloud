@@ -23,6 +23,14 @@ def test_can_use_device(app_and_ctx, access_token_two):
         assert User.can_use_device(access_token_two, 34)
 
 
+def test_get_action_by_bitest_get_action_by_bi(app_and_ctx):
+    app, ctx = app_and_ctx
+
+    with app.app_context():
+        ac = Device.get_action_by_bi(23, '$2b$12$1xxxxxxxxxxxxxxxxxxxxuz5Jia.EDkTwFaphV2YY8UhBMcuo6Nte')
+        assert ac.correctness_hash == '$2b$12$yMwIDET0kTtYqHCJUWCXXu3Bks7v8BkIXmpk3XCyMZ7KjfNVGmaBi'
+
+
 def test_is_device():
     user = MQTTUser()
     assert not user.is_device

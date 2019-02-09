@@ -59,7 +59,7 @@ def test_mqtt_handle_on_message_receive_pk(app_and_ctx):
     pk = b'-----BEGIN PUBLIC KEY-----\\nMHYwEAYHKoZIzj0CAQYFK4EEACIDYgAE2rD6Bhju8WSEFogdBxZt/N+n7ziUPi5C\\nQU1gSQQDNm57fdDuYNDOR7Wwb1fq5tSl2TC1D6WRTIt1gzzCsApGpZ3PIs7Wdbil\\neJL/ETGa2Sqwav7JDH4r0V30sF4NqDok\\n-----END PUBLIC KEY-----\\n'
     user_id = 1
     device_id = 23
-    msg = MQTTMessage(topic=b"d:%a/server" % device_id)
+    msg = MQTTMessage(topic=b"d:%a/server/" % device_id)
     msg.payload = b"{'user_id': %a, " \
                   b"'device_public_key': '%b'}" % (user_id, pk)
     from app.mqtt.mqtt import handle_on_message
@@ -84,7 +84,7 @@ def test_mqtt_handle_on_message_receive_pk_invalid_device_id(app_and_ctx, capsys
     pk = b'-----BEGIN PUBLIC KEY-----\\nMHYwEAYHKoZIzj0CAQYFK4EEACIDYgAE2rD6Bhju8WSEFogdBxZt/N+n7ziUPi5C\\nQU1gSQQDNm57fdDuYNDOR7Wwb1fq5tSl2TC1D6WRTIt1gzzCsApGpZ3PIs7Wdbil\\neJL/ETGa2Sqwav7JDH4r0V30sF4NqDok\\n-----END PUBLIC KEY-----\\n'
     user_id = 1
     device_id = "invalid"
-    msg = MQTTMessage(topic=b"d:%b/server" % device_id.encode())
+    msg = MQTTMessage(topic=b"d:%b/server/" % device_id.encode())
     msg.payload = b"{'user_id': %a, " \
                   b"'device_public_key': '%b'}" % (user_id, pk)
     from app.mqtt.mqtt import handle_on_message
@@ -99,7 +99,7 @@ def test_mqtt_handle_on_message_receive_pk_user_doesnt_have_this_device(app_and_
     pk = b'-----BEGIN PUBLIC KEY-----\\nMHYwEAYHKoZIzj0CAQYFK4EEACIDYgAE2rD6Bhju8WSEFogdBxZt/N+n7ziUPi5C\\nQU1gSQQDNm57fdDuYNDOR7Wwb1fq5tSl2TC1D6WRTIt1gzzCsApGpZ3PIs7Wdbil\\neJL/ETGa2Sqwav7JDH4r0V30sF4NqDok\\n-----END PUBLIC KEY-----\\n'
     user_id = 1
     device_id = 34
-    msg = MQTTMessage(topic=b"d:%a/server" % device_id)
+    msg = MQTTMessage(topic=b"d:%a/server/" % device_id)
     msg.payload = b"{'user_id': %a, " \
                   b"'device_public_key': '%b'}" % (user_id, pk)
     from app.mqtt.mqtt import handle_on_message

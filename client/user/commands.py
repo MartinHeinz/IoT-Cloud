@@ -40,6 +40,7 @@ URL_PUBLISH = URL_BASE + "publish"
 URL_CREATE_DEVICE_TYPE = URL_BASE + "device_type/create"
 URL_CREATE_DEVICE = URL_BASE + "device/create"
 URL_SET_ACTION = URL_BASE + "device/set_action"
+URL_TRIGGER_ACTION = URL_BASE + "device/action"
 URL_GET_DEVICE = URL_BASE + "device/get"
 URL_GET_DEVICE_DATA_BY_RANGE = URL_BASE + "data/get_by_num_range"
 URL_GET_DEVICE_DATA = URL_BASE + "data/get_device_data"
@@ -89,7 +90,7 @@ def send_message(user_id, device_id, data):
     client = _setup_client(user_id)
 
     payload = _create_payload(user_id, {"ciphertext": token.decode()})
-    ret = client.publish(f"u:{user_id}/d:{device_id}", payload)  # TODO change payload to json and parse it as JSON on device end
+    ret = client.publish(f"u:{user_id}/d:{device_id}/", payload)  # TODO change payload to json and parse it as JSON on device end
     click.echo(f"RC and MID = {ret}")
 
 
@@ -158,6 +159,21 @@ def set_action(device_id, name, user_id, token):
         "access_token": token
     }
     r = requests.post(URL_SET_ACTION, params=data, verify=VERIFY_CERTS)
+    click.echo(r.content.decode('unicode-escape'))
+
+
+@user.command()
+@click.argument('device_id')
+@click.argument('name')
+@click.argument('user_id')
+@click.option('--token', envvar='ACCESS_TOKEN')
+def trigger_action(device_id, name, user_id, token):
+    data = {
+        "device_id": device_id,
+        "name_bi": hash(name, user_id),
+        "access_token": token
+    }
+    r = requests.post(URL_TRIGGER_ACTION, params=data, verify=VERIFY_CERTS)
     click.echo(r.content.decode('unicode-escape'))
 
 
@@ -337,7 +353,7 @@ def send_column_keys(user_id, device_id):
 
     client = _setup_client(user_id)
     payload = _create_payload(user_id, payload_keys)
-    ret = client.publish(f"u:{user_id}/d:{device_id}", payload)
+    ret = client.publish(f"u:{user_id}/d:{device_id}/", payload)
     click.echo(f"RC and MID = {ret}")
 
 
@@ -392,9 +408,9 @@ def _get_fake_tuple_data(user_id, device_id):
 
     client = _setup_client(str({user_id}))
     payload = _create_payload(user_id, payload_dict)
-    sub_topic = f"d:{device_id}/u:{user_id}"
+    sub_topic = f"d:{device_id}/u:{user_id}/"
     client.subscribe(sub_topic)
-    client.publish(f"u:{user_id}/d:{device_id}", payload)
+    client.publish(f"u:{user_id}/d:{device_id}/", payload)
     client.on_message = on_message
     click.echo(f"Subscribed to {sub_topic}")
     click.echo("Waiting for response, CTRL-C to terminate...")

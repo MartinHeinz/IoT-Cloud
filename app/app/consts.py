@@ -15,6 +15,7 @@ UNAUTHORIZED_USER_ERROR_MSG = 'Specified user is not authorized to use this devi
 NO_PUBLIC_KEY_ERROR_MSG = 'No public key available for this device.'
 ACTION_NAME_MISSING_ERROR_MSG = 'Missing action Name.'
 ACTION_NAME_BI_MISSING_ERROR_MSG = 'Missing device Blind Index.'
+ACTION_BI_INVALID_ERROR_MSG = 'Action Blind Index is invalid.'
 
 MASTER_KEY_MISSING_ERROR_MSG = 'Missing serialized master key argument.'
 ATTR_LIST_MISSING_ERROR_MSG = 'Missing attribute list argument.'

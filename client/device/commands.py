@@ -192,6 +192,25 @@ def get_fake_tuple_info(data):
         click.echo(f"{repr(e)} at line: {line}")
 
 
+@device.command()
+@click.argument('data')
+def process_action(data):
+    try:
+        data = json.loads(data)
+        if "action" in data:
+            doc = search_tinydb_doc(path, 'users', Query().id == int(data["user_id"]))
+            if doc is None:
+                raise Exception(f"No user with ID {data['user_id']}")
+
+            action_name = decrypt_using_fernet_hex(doc["action:name"], data["action"])
+            click.echo(action_name)
+
+    except Exception as e:
+        _, _, exc_tb = sys.exc_info()
+        line = exc_tb.tb_lineno
+        click.echo(f"{repr(e)} at line: {line}")
+
+
 def dict_to_payload(**kwargs):
     result = "{"
     for col, val in kwargs.items():

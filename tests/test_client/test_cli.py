@@ -161,7 +161,7 @@ def test_get_fake_tuple_data(capsys):
     captured = capsys.readouterr()
     assert f"Received invalid topic: {invalid_msg.topic}" in captured.out
 
-    msg = MQTTMessage(topic=b"d:%a/u:%a" % (device_id, user_id))
+    msg = MQTTMessage(topic=b"d:%a/u:%a/" % (device_id, user_id))
     msg.payload = b'{"device_data": {"added": { ... Invalid payload'
 
     cmd._handle_on_message(mqtt_client, None, msg, device_id, user_id)
@@ -401,6 +401,14 @@ def test_set_action(runner, access_token, reset_tiny_db, change_to_dev_db, col_k
 
         db.session.delete(ac)  # Clean up
         db.session.commit()
+
+
+def test_trigger_action(runner, access_token, col_keys):
+    device_id = 23
+    name = "On"
+    user_id = 1
+    result = runner.invoke(cmd.trigger_action, [str(device_id), name, str(user_id), '--token', access_token])
+    assert "\"success\": true" in result.output
 
 
 @pytest.mark.parametrize('reset_tiny_db', [cmd.path], indirect=True)
@@ -794,3 +802,17 @@ def test_get_fake_tuple_info(runner, reset_tiny_db):
     expected = '{"device_data": {"added": {"function_name": "triangle_wave", "lower_bound": 12, "upper_bound": 11, "is_numeric": true}, "num_data": {"function_name": "sawtooth_wave", "lower_bound": 12, "upper_bound": 11, "is_numeric": true}, "data": {"function_name": "square_wave", "lower_bound": 12, "upper_bound": 11, "is_numeric": false}}}'
 
     assert expected in result.output
+
+
+@pytest.mark.parametrize('reset_tiny_db', [device_cmd.path], indirect=True)
+def test_process_action(runner, reset_tiny_db, col_keys):
+    payload_no_user = '{"not_user_id": 99}'
+    payload = '{"user_id": 1, "action": "gAAAAABcXcF9yNe9emKXALJImsb7v4meic8cR6YnEulQSi8xOxF8d33scDotxPKQBTC80r-QolW2mRroUZOfLuqAqr20Z5333A=="}'  # b'On' encrypted with col_keys["action:name"]
+    insert_into_tinydb(device_cmd.path, 'users', {"id": 1, "action:name": "a70c6a23f6b0ef9163040f4cc02819c22d7e35de6469672d250519077b36fe4d"})
+
+    with pytest.raises(Exception) as e:
+        runner.invoke(device_cmd.process_action, [payload_no_user])
+        assert e.value.message == "No user with ID 99"
+
+    result = runner.invoke(device_cmd.process_action, [payload])
+    assert "On" in result.output
