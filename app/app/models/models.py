@@ -9,9 +9,9 @@ from app.utils import is_number
 from app.app_setup import db
 from app.models.mixins import MixinGetById, MixinAsDict, MixinGetByAccessToken
 
-scene_device_table = db.Table('scene_device',
+scene_action_table = db.Table('scene_action',
                               db.Column("scene_id", db.Integer, db.ForeignKey('scene.id')),
-                              db.Column('device_id', db.Integer, db.ForeignKey('device.id')),
+                              db.Column('action_id', db.Integer, db.ForeignKey('action.id')),
                               extend_existing=True
                               )
 
@@ -113,10 +113,7 @@ class Device(MixinGetById, MixinAsDict, db.Model):
     users = relationship("UserDevice", back_populates="device", cascade='all,delete-orphan')
     data = relationship("DeviceData", back_populates="device", cascade='all,delete-orphan')
     actions = relationship("Action", back_populates="device")
-    scenes = relationship(
-        "Scene",
-        secondary=scene_device_table,
-        back_populates="devices")
+
     owner_id = db.Column(db.Integer, db.ForeignKey('user.id'))
     owner = relationship("User", back_populates="owned_devices")
     mqtt_creds = relationship("MQTTUser", uselist=False, back_populates="device", cascade='all,delete-orphan')
@@ -226,6 +223,15 @@ class Action(MixinGetById, db.Model):
 
     correctness_hash = db.Column(db.String(200), nullable=False)  # correctness_hash("name")
 
+    scenes = relationship(
+        "Scene",
+        secondary=scene_action_table,
+        back_populates="actions")
+
+    @classmethod
+    def get_by_name_bi(cls, bi):
+        return db.session.query(Action).filter(Action.name_bi == bi).first()
+
 
 class Scene(db.Model):
     __tablename__ = 'scene'
@@ -234,12 +240,27 @@ class Scene(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     name = db.Column(db.LargeBinary, nullable=False)
     description = db.Column(db.LargeBinary, nullable=False)
-    devices = relationship(
-        "Device",
-        secondary=scene_device_table,
+    actions = relationship(
+        "Action",
+        secondary=scene_action_table,
         back_populates="scenes")
 
     correctness_hash = db.Column(db.String(200), nullable=False)  # correctness_hash("name", "description")
+
+    name_bi = db.Column(db.String(200), unique=False, nullable=True)  # Blind index for .name
+
+    @hybrid_property
+    def owner(self):
+        if self.actions is not None and len(self.actions) > 0:
+            return self.actions[0].device.owner
+        return None
+
+    @classmethod
+    def get_by_name_bi(cls, bi):
+        return db.session.query(Scene).filter(Scene.name_bi == bi).first()
+
+    def already_present(self, action):
+        return action in self.actions
 
 
 class AttrAuthUser(MixinGetByAccessToken, MixinGetById, db.Model):
