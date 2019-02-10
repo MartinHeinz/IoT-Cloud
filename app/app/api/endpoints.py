@@ -12,8 +12,10 @@ from app.consts import DEVICE_TYPE_ID_MISSING_ERROR_MSG, DEVICE_TYPE_ID_INCORREC
     CORRECTNESS_HASH_MISSING_ERROR_MSG, DEVICE_ID_MISSING_ERROR_MSG, PUBLIC_KEY_MISSING_ERROR_MSG, \
     UNAUTHORIZED_USER_ERROR_MSG, NO_PUBLIC_KEY_ERROR_MSG, \
     DEVICE_NAME_INVALID_ERROR_MSG, DEVICE_PASSWORD_MISSING_ERROR_MSG, USER_MISSING_PASSWORD_HASH, ACTION_NAME_MISSING_ERROR_MSG, \
-    ACTION_NAME_BI_MISSING_ERROR_MSG, ACTION_BI_INVALID_ERROR_MSG, NOT_REGISTERED_WITH_BROKER_ERROR_MSG, INVALID_BROKER_PASSWORD_ERROR_MSG
-from app.models.models import DeviceType, Device, DeviceData, UserDevice, User
+    ACTION_NAME_BI_MISSING_ERROR_MSG, ACTION_BI_INVALID_ERROR_MSG, NOT_REGISTERED_WITH_BROKER_ERROR_MSG, INVALID_BROKER_PASSWORD_ERROR_MSG, \
+    SCENE_DESC_MISSING_ERROR_MSG, SCENE_NAME_MISSING_ERROR_MSG, SCENE_NAME_BI_MISSING_ERROR_MSG, INVALID_SCENE_OR_ACTION_BI_ERROR_MSG, \
+    UNAUTHORIZED_USER_SCENE_ERROR_MSG, ACTION_ALREADY_PRESENT_ERROR_MSG
+from app.models.models import DeviceType, Device, DeviceData, UserDevice, User, Scene, Action
 from app.mqtt.utils import Payload
 from app.utils import http_json_response, check_missing_request_argument, is_valid_uuid, format_topic, validate_broker_password, is_number, create_payload
 
@@ -108,6 +110,64 @@ def create_device():
     db.session.add(dv)
     db.session.commit()
     return http_json_response(**{'id': dv.id})
+
+
+@api.route('/scene/create', methods=['POST'])
+@require_api_token()
+def create_scene():
+    name = request.args.get("name", None)
+    description = request.args.get("description", None)
+    name_bi = request.args.get("name_bi", None)
+    correctness_hash = request.args.get("correctness_hash", None)
+    arg_check = check_missing_request_argument(
+        (name, SCENE_NAME_MISSING_ERROR_MSG),
+        (description, SCENE_DESC_MISSING_ERROR_MSG),
+        (name_bi, SCENE_NAME_BI_MISSING_ERROR_MSG),
+        (correctness_hash, CORRECTNESS_HASH_MISSING_ERROR_MSG))
+    if arg_check is not True:
+        return arg_check
+    sc = Scene(name=name.encode(),
+               name_bi=name_bi,
+               description=description.encode(),
+               correctness_hash=correctness_hash)
+    db.session.add(sc)
+    db.session.commit()
+    return http_json_response()
+
+
+@api.route('/scene/add_action', methods=['POST'])
+@require_api_token()
+def add_scene_action():
+    scene_name_bi = request.args.get("scene_name_bi", None)
+    action_name_bi = request.args.get("action_name_bi", None)
+    access_token = request.args.get("access_token", "")
+    user = User.get_by_access_token(access_token)
+
+    arg_check = check_missing_request_argument(
+        (scene_name_bi, SCENE_NAME_BI_MISSING_ERROR_MSG),
+        (action_name_bi, ACTION_NAME_BI_MISSING_ERROR_MSG))
+    if arg_check is not True:
+        return arg_check
+
+    sc = Scene.get_by_name_bi(scene_name_bi)
+    ac = Action.get_by_name_bi(action_name_bi)
+
+    if sc is None or ac is None:
+        return http_json_response(False, 400, **{"error": INVALID_SCENE_OR_ACTION_BI_ERROR_MSG})
+
+    if not User.can_use_device(access_token, ac.device_id):
+        return http_json_response(False, 400, **{"error": UNAUTHORIZED_USER_ERROR_MSG})
+
+    if sc.owner is not None and sc.owner != user:
+        return http_json_response(False, 400, **{"error": UNAUTHORIZED_USER_SCENE_ERROR_MSG})
+
+    if sc.already_present(ac):
+        return http_json_response(False, 400, **{"error": ACTION_ALREADY_PRESENT_ERROR_MSG})
+    sc.actions.append(ac)
+    db.session.add(sc)
+    db.session.commit()
+
+    return http_json_response()
 
 
 @api.route('/device/set_action', methods=['POST'])

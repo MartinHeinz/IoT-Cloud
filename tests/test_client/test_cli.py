@@ -19,7 +19,7 @@ from app.app_setup import db, create_app
 from app.cli import populate
 import client.user.commands as cmd
 import client.device.commands as device_cmd
-from app.models.models import MQTTUser, User, Action, Device, DeviceType
+from app.models.models import MQTTUser, User, Action, Device, DeviceType, Scene
 from crypto_utils import hash, check_correctness_hash, hex_to_fernet, hex_to_ope, decrypt_using_fernet_hex, \
     decrypt_using_ope_hex
 from utils import json_string_with_bytes_to_dict, get_tinydb_table, search_tinydb_doc, insert_into_tinydb
@@ -106,7 +106,7 @@ def test_send_column_keys(runner, access_token, reset_tiny_db):
 
     doc = search_tinydb_doc(cmd.path, 'device_keys', Query().device_id == device_id)
     assert "action:name" in doc
-    assert len(doc) == 12
+    assert len(doc) == 10
 
     fernet_key = hex_to_fernet(doc["device:name"])
     assert isinstance(fernet_key, Fernet)
@@ -390,6 +390,44 @@ def test_create_device(runner, access_token, change_to_dev_db):
         db.session.delete(dv)  # Clean up
         db.session.delete(dt)
         db.session.commit()
+
+
+def test_create_scene(runner, access_token):
+    result = runner.invoke(cmd.create_scene, ["scene_name", "scene_desc", "1", '--token', access_token])
+    assert "\"success\": true" in result.output
+
+
+def test_add_scene_action(runner, access_token_two, change_to_dev_db):
+    scene_name = "Home"
+    action_name = "Stat"
+    scene_name_bi = '$2b$12$2xxxxxxxxxxxxxxxxxxxxuwsiAgo8fzpMIz1qcBwfHAl71etW9umO'
+    action_name_bi = '$2b$12$2xxxxxxxxxxxxxxxxxxxxuX8WVpwRXwSKCMut/AzDWhKdjjjSz7VS'
+    result = runner.invoke(cmd.add_scene_action, [scene_name, action_name, "2", '--token', access_token_two])
+    assert "\"success\": true" in result.output
+
+    app, ctx = change_to_dev_db
+    with app.app_context():
+        sc = Scene.get_by_name_bi(scene_name_bi)
+        ac = Action.get_by_name_bi(action_name_bi)
+
+        assert ac in sc.actions
+
+        sc.actions.remove(ac)  # Clean up
+        db.session.commit()
+
+
+@pytest.mark.parametrize('reset_tiny_db', [cmd.path], indirect=True)
+def test_init_scene_keys(reset_tiny_db):
+    cmd.init_scene_keys()
+    table = get_tinydb_table(cmd.path, 'scene_keys')
+    records = table.all()
+    assert len(table) == 1
+    assert "name" in records[0]
+    assert "description" in records[0]
+
+    cmd.init_scene_keys()
+    table = get_tinydb_table(cmd.path, 'scene_keys')
+    assert len(table) == 1
 
 
 @pytest.mark.parametrize('reset_tiny_db', [cmd.path], indirect=True)

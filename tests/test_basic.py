@@ -14,8 +14,9 @@ from app.consts import DEVICE_TYPE_ID_MISSING_ERROR_MSG, DEVICE_TYPE_ID_INCORREC
     SOMETHING_WENT_WRONG_MSG, DEVICE_ID_MISSING_ERROR_MSG, \
     DEVICE_NAME_INVALID_ERROR_MSG, DEVICE_PASSWORD_MISSING_ERROR_MSG, USER_MISSING_PASSWORD_HASH, ACTION_NAME_MISSING_ERROR_MSG, \
     ACTION_NAME_BI_MISSING_ERROR_MSG, UNAUTHORIZED_USER_ERROR_MSG, ACTION_BI_INVALID_ERROR_MSG, NOT_REGISTERED_WITH_BROKER_ERROR_MSG, \
-    INVALID_BROKER_PASSWORD_ERROR_MSG
-from app.models.models import DeviceType, Device, User, Action
+    INVALID_BROKER_PASSWORD_ERROR_MSG, SCENE_NAME_MISSING_ERROR_MSG, SCENE_DESC_MISSING_ERROR_MSG, SCENE_NAME_BI_MISSING_ERROR_MSG, \
+    INVALID_SCENE_OR_ACTION_BI_ERROR_MSG, ACTION_ALREADY_PRESENT_ERROR_MSG, UNAUTHORIZED_USER_SCENE_ERROR_MSG
+from app.models.models import DeviceType, Device, User, Action, Scene
 from app.app_setup import client as mqtt_client
 from app.utils import is_valid_uuid, bytes_to_json, format_topic, validate_broker_password
 from client.crypto_utils import encrypt, hash, correctness_hash, triangle_wave, sawtooth_wave, square_wave, sine_wave, generate, fake_tuple_to_hash, \
@@ -237,6 +238,129 @@ def test_api_dv_create(client, app_and_ctx, access_token, access_token_four):
         device_owner = User.get_by_access_token(access_token)
         new_acl = next((acl for acl in device_owner.mqtt_creds.acls if acl.topic == f"u:1/d:{json_data['id']}/"), None)
         assert new_acl is not None, "New ACL for device was not inserted."
+
+
+def test_api_sc_create(client, app_and_ctx, access_token):
+    data = {
+        "access_token": access_token,
+    }
+    response = client.post('/api/scene/create', query_string=data, follow_redirects=True)
+    assert response.status_code == 400
+    json_data = json.loads(response.data.decode("utf-8"))
+    assert (json_data["error"]) == SCENE_NAME_MISSING_ERROR_MSG
+
+    data = {
+        "access_token": access_token,
+        "name": "test_name"
+    }
+    response = client.post('/api/scene/create', query_string=data, follow_redirects=True)
+    assert response.status_code == 400
+    json_data = json.loads(response.data.decode("utf-8"))
+    assert (json_data["error"]) == SCENE_DESC_MISSING_ERROR_MSG
+
+    data = {
+        "access_token": access_token,
+        "name": "test_name",
+        "description": "test_desc"
+    }
+    response = client.post('/api/scene/create', query_string=data, follow_redirects=True)
+    assert response.status_code == 400
+    json_data = json.loads(response.data.decode("utf-8"))
+    assert (json_data["error"]) == SCENE_NAME_BI_MISSING_ERROR_MSG
+
+    data = {
+        "access_token": access_token,
+        "name": "test_name",
+        "description": "test_desc",
+        "name_bi": '$2b$12$1xxxxxxxxxxxxxxxxxxxxunmNPfsvRYyz8jVe6tU38FrJIHJJo9C.'
+    }
+    response = client.post('/api/scene/create', query_string=data, follow_redirects=True)
+    assert response.status_code == 400
+    json_data = json.loads(response.data.decode("utf-8"))
+    assert (json_data["error"]) == CORRECTNESS_HASH_MISSING_ERROR_MSG
+
+    data = {
+        "access_token": access_token,
+        "name": "test_name",
+        "description": "test_desc",
+        "name_bi": '$2b$12$1xxxxxxxxxxxxxxxxxxxxunmNPfsvRYyz8jVe6tU38FrJIHJJo9C.',
+        "correctness_hash": '$2b$12$zElcacWWB.qvf5dEiwkTM.7CNpXchiUXu5y23dajUkGXhSQ1MAH4e'
+    }
+    response = client.post('/api/scene/create', query_string=data, follow_redirects=True)
+    assert response.status_code == 200
+
+    app, ctx = app_and_ctx
+
+    with app.app_context():
+        inserted_sc = db.session.query(Scene).filter(Scene.name_bi == data["name_bi"]).first()
+        assert inserted_sc.correctness_hash == '$2b$12$zElcacWWB.qvf5dEiwkTM.7CNpXchiUXu5y23dajUkGXhSQ1MAH4e'
+
+
+def test_api_add_scene_action(client, app_and_ctx, access_token):
+    data = {
+        "access_token": access_token,
+    }
+    response = client.post('/api/scene/add_action', query_string=data, follow_redirects=True)
+    assert response.status_code == 400
+    json_data = json.loads(response.data.decode("utf-8"))
+    assert (json_data["error"]) == SCENE_NAME_BI_MISSING_ERROR_MSG
+
+    data = {
+        "access_token": access_token,
+        "scene_name_bi": "something",
+    }
+    response = client.post('/api/scene/add_action', query_string=data, follow_redirects=True)
+    assert response.status_code == 400
+    json_data = json.loads(response.data.decode("utf-8"))
+    assert (json_data["error"]) == ACTION_NAME_BI_MISSING_ERROR_MSG
+
+    data = {
+        "access_token": access_token,
+        "scene_name_bi": "something",
+        "action_name_bi": "something",
+    }
+    response = client.post('/api/scene/add_action', query_string=data, follow_redirects=True)
+    assert response.status_code == 400
+    json_data = json.loads(response.data.decode("utf-8"))
+    assert (json_data["error"]) == INVALID_SCENE_OR_ACTION_BI_ERROR_MSG
+
+    data = {
+        "access_token": access_token,
+        "scene_name_bi": '$2b$12$1xxxxxxxxxxxxxxxxxxxxuu6vgMFXlStkb/wcrduAWfPJXkjFPowS',  # valid
+        "action_name_bi": '$2b$12$2xxxxxxxxxxxxxxxxxxxxuX8WVpwRXwSKCMut/AzDWhKdjjjSz7VS',  # unauthorized
+    }
+    response = client.post('/api/scene/add_action', query_string=data, follow_redirects=True)
+    assert response.status_code == 400
+    json_data = json.loads(response.data.decode("utf-8"))
+    assert (json_data["error"]) == UNAUTHORIZED_USER_ERROR_MSG
+
+    data = {
+        "access_token": access_token,
+        "scene_name_bi": '$2b$12$1xxxxxxxxxxxxxxxxxxxxuu6vgMFXlStkb/wcrduAWfPJXkjFPowS',  # valid
+        "action_name_bi": '$2b$12$1xxxxxxxxxxxxxxxxxxxxuz5Jia.EDkTwFaphV2YY8UhBMcuo6Nte',  # valid
+    }
+    response = client.post('/api/scene/add_action', query_string=data, follow_redirects=True)
+    assert response.status_code == 200
+
+    data = {
+        "access_token": access_token,
+        "scene_name_bi": '$2b$12$1xxxxxxxxxxxxxxxxxxxxuu6vgMFXlStkb/wcrduAWfPJXkjFPowS',  # valid
+        "action_name_bi": '$2b$12$1xxxxxxxxxxxxxxxxxxxxuz5Jia.EDkTwFaphV2YY8UhBMcuo6Nte',  # already added
+    }
+    response = client.post('/api/scene/add_action', query_string=data, follow_redirects=True)
+    assert response.status_code == 400
+    json_data = json.loads(response.data.decode("utf-8"))
+    assert (json_data["error"]) == ACTION_ALREADY_PRESENT_ERROR_MSG
+
+    data = {
+        "access_token": access_token,
+        "scene_name_bi": '$2b$12$2xxxxxxxxxxxxxxxxxxxxuFf6FbODZ2N76WZRFjGnVHEA8kZXP.U2',  # other user
+        "action_name_bi": '$2b$12$1xxxxxxxxxxxxxxxxxxxxuz5Jia.EDkTwFaphV2YY8UhBMcuo6Nte',
+    }
+    response = client.post('/api/scene/add_action', query_string=data, follow_redirects=True)
+    assert response.status_code == 400
+    json_data = json.loads(response.data.decode("utf-8"))
+    assert (json_data["error"]) == UNAUTHORIZED_USER_SCENE_ERROR_MSG
 
 
 def test_api_set_action(client, app_and_ctx, access_token, access_token_four):

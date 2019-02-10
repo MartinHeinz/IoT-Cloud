@@ -39,6 +39,8 @@ URL_BASE = "https://localhost/api/"
 URL_PUBLISH = URL_BASE + "publish"
 URL_CREATE_DEVICE_TYPE = URL_BASE + "device_type/create"
 URL_CREATE_DEVICE = URL_BASE + "device/create"
+URL_CREATE_SCENE = URL_BASE + "scene/create"
+URL_ADD_ACTION_TO_SCENE = URL_BASE + "scene/add_action"
 URL_SET_ACTION = URL_BASE + "device/set_action"
 URL_TRIGGER_ACTION = URL_BASE + "device/action"
 URL_GET_DEVICE = URL_BASE + "device/get"
@@ -124,7 +126,7 @@ def create_device_type(description, token):
 @click.argument('user_id')
 @click.argument('password')
 @click.option('--token', envvar='ACCESS_TOKEN')
-def create_device(device_type_id, user_id, device_name, password, token):
+def create_device(device_type_id, user_id, device_name, password, token):  # TODO missing device name encryption
     password_hash = pbkdf2_hash(password)
     data = {
         "type_id": device_type_id,
@@ -135,6 +137,51 @@ def create_device(device_type_id, user_id, device_name, password, token):
         "password": password_hash
     }
     r = requests.post(URL_CREATE_DEVICE, params=data, verify=VERIFY_CERTS)
+    click.echo(r.content.decode('unicode-escape'))
+
+
+@user.command()
+@click.argument('name')
+@click.argument('description')
+@click.argument('user_id')
+@click.option('--token', envvar='ACCESS_TOKEN')
+def create_scene(name, description, user_id, token):
+    init_scene_keys()
+    table = get_tinydb_table(path, 'scene_keys')
+    doc = table.all()[0]
+    name_ciphertext = encrypt_using_fernet_hex(doc["name"], name)
+    desc_ciphertext = encrypt_using_fernet_hex(doc["description"], description)
+    data = {
+        "access_token": token,
+        "name": name_ciphertext,
+        "correctness_hash": correctness_hash(name),
+        "name_bi": hash(name, user_id),
+        "description": desc_ciphertext
+    }
+    r = requests.post(URL_CREATE_SCENE, params=data, verify=VERIFY_CERTS)
+    click.echo(r.content.decode('unicode-escape'))
+
+
+def init_scene_keys():
+    table = get_tinydb_table(path, 'scene_keys')
+    table.upsert({
+        'name': key_to_hex(os.urandom(32)),
+        'description': key_to_hex(os.urandom(32))
+    }, where('name').exists() & where('description').exists())
+
+
+@user.command()
+@click.argument('scene_name')
+@click.argument('action_name')
+@click.argument('user_id')
+@click.option('--token', envvar='ACCESS_TOKEN')
+def add_scene_action(scene_name, action_name, user_id, token):
+    data = {
+        "access_token": token,
+        "scene_name_bi": hash(scene_name, user_id),
+        "action_name_bi": hash(action_name, user_id)
+    }
+    r = requests.post(URL_ADD_ACTION_TO_SCENE, params=data, verify=VERIFY_CERTS)
     click.echo(r.content.decode('unicode-escape'))
 
 
@@ -337,9 +384,7 @@ def send_column_keys(user_id, device_id):
         "device_data:added": None,
         "device_data:num_data": None,
         "device_data:data": None,
-        "device_data:tid": None,
-        "scene:name": None,
-        "scene:description": None
+        "device_data:tid": None
     }
 
     payload_keys = {}
