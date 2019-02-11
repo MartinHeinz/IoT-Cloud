@@ -11,10 +11,13 @@ from app.consts import DEVICE_TYPE_ID_MISSING_ERROR_MSG, DEVICE_TYPE_ID_INCORREC
     DATA_OUT_OF_OUTPUT_RANGE_ERROR_MSG, \
     CORRECTNESS_HASH_MISSING_ERROR_MSG, DEVICE_ID_MISSING_ERROR_MSG, PUBLIC_KEY_MISSING_ERROR_MSG, \
     UNAUTHORIZED_USER_ERROR_MSG, NO_PUBLIC_KEY_ERROR_MSG, \
-    DEVICE_NAME_INVALID_ERROR_MSG, DEVICE_PASSWORD_MISSING_ERROR_MSG, USER_MISSING_PASSWORD_HASH, ACTION_NAME_MISSING_ERROR_MSG, \
-    ACTION_NAME_BI_MISSING_ERROR_MSG, ACTION_BI_INVALID_ERROR_MSG, NOT_REGISTERED_WITH_BROKER_ERROR_MSG, INVALID_BROKER_PASSWORD_ERROR_MSG, \
-    SCENE_DESC_MISSING_ERROR_MSG, SCENE_NAME_MISSING_ERROR_MSG, SCENE_NAME_BI_MISSING_ERROR_MSG, INVALID_SCENE_OR_ACTION_BI_ERROR_MSG, \
-    UNAUTHORIZED_USER_SCENE_ERROR_MSG, ACTION_ALREADY_PRESENT_ERROR_MSG
+    DEVICE_NAME_INVALID_ERROR_MSG, DEVICE_PASSWORD_MISSING_ERROR_MSG, USER_MISSING_PASSWORD_HASH, \
+    ACTION_NAME_MISSING_ERROR_MSG, \
+    ACTION_NAME_BI_MISSING_ERROR_MSG, ACTION_BI_INVALID_ERROR_MSG, NOT_REGISTERED_WITH_BROKER_ERROR_MSG, \
+    INVALID_BROKER_PASSWORD_ERROR_MSG, \
+    SCENE_DESC_MISSING_ERROR_MSG, SCENE_NAME_MISSING_ERROR_MSG, SCENE_NAME_BI_MISSING_ERROR_MSG, \
+    INVALID_SCENE_OR_ACTION_BI_ERROR_MSG, \
+    UNAUTHORIZED_USER_SCENE_ERROR_MSG, ACTION_ALREADY_PRESENT_ERROR_MSG, INVALID_SCENE_BI_ERROR_MSG
 from app.models.models import DeviceType, Device, DeviceData, UserDevice, User, Scene, Action
 from app.mqtt.utils import Payload
 from app.utils import http_json_response, check_missing_request_argument, is_valid_uuid, format_topic, validate_broker_password, is_number, create_payload
@@ -381,4 +384,34 @@ def trigger_action():
         return http_json_response(False, 400, **{"error": ACTION_BI_INVALID_ERROR_MSG})
     payload = create_payload(user.mqtt_creds.username, {"action": ac.name.decode("utf-8")})
     client.publish(topic, payload)  # TODO encrypt with `shared key`
+    return http_json_response()
+
+
+@api.route('/scene/trigger', methods=['POST'])
+@require_api_token()
+def trigger_scene():
+    name_bi = request.args.get("name_bi", None)
+    access_token = request.args.get("access_token", "")
+    user = User.get_by_access_token(access_token)
+
+    arg_check = check_missing_request_argument(
+        (name_bi, ACTION_NAME_BI_MISSING_ERROR_MSG))
+    if arg_check is not True:
+        return arg_check
+
+    if not user.is_registered_with_broker:
+        return http_json_response(False, 400, **{"error": NOT_REGISTERED_WITH_BROKER_ERROR_MSG})
+
+    sc = Scene.get_by_name_bi(name_bi)
+    if sc is None:
+        return http_json_response(False, 400, **{"error": INVALID_SCENE_BI_ERROR_MSG})
+
+    if sc.owner is not None and sc.owner != user:
+        return http_json_response(False, 400, **{"error": UNAUTHORIZED_USER_SCENE_ERROR_MSG})
+
+    for ac in sc.actions:
+        payload = create_payload(user.mqtt_creds.username, {"action": ac.name.decode("utf-8")})
+        topic = format_topic(user.mqtt_creds.username, ac.device.mqtt_creds.username, "user")
+        client.publish(topic, payload)
+
     return http_json_response()

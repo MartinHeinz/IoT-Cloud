@@ -18,11 +18,11 @@ INSERT INTO public.mqtt_user (id, username, password_hash, superuser, user_id, d
 INSERT INTO public.mqtt_user (id, username, password_hash, superuser, user_id, device_id) VALUES (3, '34', 'PBKDF2$sha256$10000$+tYVrce5IvbOPREB$haW4Atpabx2giJEeDBwaMIvKf3KNNop0', 0, NULL, 34);  -- device3_pass
 INSERT INTO public.mqtt_user (id, username, password_hash, superuser, user_id, device_id) VALUES (4, '37', 'PBKDF2$sha256$10000$1RDrXIISPQKSfLvh$HXv5bYEQe7NepGBLmdp6rOydxuETaWNb', 0, NULL, 37);  -- device4_pass
 INSERT INTO public.mqtt_user (id, username, password_hash, superuser, user_id, device_id) VALUES (5, '45', 'PBKDF2$sha256$10000$kOVrAa3VULOtlcxS$BP686anaevC7t2hwxCzfvo5UaxOp1+YA', 0, NULL, 45);  -- device2_pass
-INSERT INTO public.mqtt_user (id, username, password_hash, superuser, user_id, device_id) VALUES (6, '8', 'PBKDF2$sha256$10000$NsPHhalfv7Asj8mw$jRzH8ZEMh0B5oKPo2vRhcwhvmk0UIPgC', 0, 2, NULL);  -- password2
+INSERT INTO public.mqtt_user (id, username, password_hash, superuser, user_id, device_id) VALUES (6, '2', 'PBKDF2$sha256$10000$NsPHhalfv7Asj8mw$jRzH8ZEMh0B5oKPo2vRhcwhvmk0UIPgC', 0, 2, NULL);  -- password2
 
 -- FOR SERVER USER AND DEBUGGING
 INSERT INTO public.mqtt_user (id, username, password_hash, superuser) VALUES (7, 'admin', 'PBKDF2$sha256$10000$J8N0E3qluPAwm8uN$n8jehANuh+6ddOtNmopG0Jem79LzV+X4', 1);  -- password
-INSERT INTO public.mqtt_user (id, username, password_hash, superuser, user_id) VALUES (8, 'testuser', 'PBKDF2$sha256$10000$qu5hXEoBLNeKuzR7$koo7Ozny5dpZE8Vy8GZVi6kcMvWVPrs6', 0, 2);  -- testuser
+INSERT INTO public.mqtt_user (id, username, password_hash, superuser) VALUES (8, 'testuser', 'PBKDF2$sha256$10000$qu5hXEoBLNeKuzR7$koo7Ozny5dpZE8Vy8GZVi6kcMvWVPrs6', 0);  -- testuser
 
 INSERT INTO acl (id, mqtt_user_id, username, topic, acc) VALUES (17, 8, 'testuser', 'read', 1);
 INSERT INTO acl (id, mqtt_user_id, username, topic, acc) VALUES (18, 8, 'testuser', 'write', 2);
@@ -40,10 +40,10 @@ INSERT INTO public.acl (id, mqtt_user_id, username, topic, acc) VALUES (9, 5, '4
 INSERT INTO public.acl (id, mqtt_user_id, username, topic, acc) VALUES (10, 5, '45', 'd:45/u:2/+', 2);
 INSERT INTO public.acl (id, mqtt_user_id, username, topic, acc) VALUES (11, 5, '45', 'd:45/server/+', 2);
 INSERT INTO public.acl (id, mqtt_user_id, username, topic, acc) VALUES (12, 5, '45', 'server/d:45/+', 1);
-INSERT INTO public.acl (id, mqtt_user_id, username, topic, acc) VALUES (13, 6, '8', 'u:2/d:45/+', 2);
-INSERT INTO public.acl (id, mqtt_user_id, username, topic, acc) VALUES (14, 6, '8', 'd:45/u:2/+', 1);
-INSERT INTO public.acl (id, mqtt_user_id, username, topic, acc) VALUES (15, 6, '8', 'u:2/server/+', 2);
-INSERT INTO public.acl (id, mqtt_user_id, username, topic, acc) VALUES (16, 6, '8', 'server/u:2/+', 1);
+INSERT INTO public.acl (id, mqtt_user_id, username, topic, acc) VALUES (13, 6, '2', 'u:2/d:45/+', 2);
+INSERT INTO public.acl (id, mqtt_user_id, username, topic, acc) VALUES (14, 6, '2', 'd:45/u:2/+', 1);
+INSERT INTO public.acl (id, mqtt_user_id, username, topic, acc) VALUES (15, 6, '2', 'u:2/server/+', 2);
+INSERT INTO public.acl (id, mqtt_user_id, username, topic, acc) VALUES (16, 6, '2', 'server/u:2/+', 1);
 
 INSERT INTO public.action (id, name, device_id, name_bi, correctness_hash) VALUES (1, '\x674141414141426359414a716a5a794d7451516962474941394e6f5377466b664859594265776a2d6b6c77726754726246676d446c6e38756b37344636546d694c535854514f536262495564307579666166653975385363757a744d635f796859773d3d', 23, '$2b$12$1xxxxxxxxxxxxxxxxxxxxu0K.5ax3yJ0v/fpl9vxvL75NlyxqIOxG', '$2b$12$HhRXtnwZO8yc2DSdHgjL.ORok98m6.3sF6yDhI.uokJSKGoA7uEGC');
 INSERT INTO public.action (id, name, device_id, name_bi, correctness_hash) VALUES (2, '\x674141414141426359414a715361557a4872486655397a5751742d394e4b646a4174724358536549505f6a504c6169694b576a414772773972736631546157724d353949427833775445477175564a50646e3972365a66534c763941446c656241413d3d', 23, '$2b$12$1xxxxxxxxxxxxxxxxxxxxuz5Jia.EDkTwFaphV2YY8UhBMcuo6Nte', '$2b$12$o/H4BWhAHD678EHuAYCWB.DkLglRvPML6xhraF37WCD5vW7M8HOTK');

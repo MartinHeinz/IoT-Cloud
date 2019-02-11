@@ -460,6 +460,13 @@ def test_trigger_action(runner, access_token, col_keys):
     assert "\"success\": true" in result.output
 
 
+def test_trigger_scene(runner, access_token_two, col_keys):
+    name = "Home"
+    user_id = 2
+    result = runner.invoke(cmd.trigger_scene, [name, str(user_id), '--token', access_token_two])
+    assert "\"success\": true" in result.output
+
+
 @pytest.mark.parametrize('reset_tiny_db', [cmd.path], indirect=True)
 def test_get_device(runner, client, access_token, reset_tiny_db, col_keys):
     device_name = "my_raspberry"

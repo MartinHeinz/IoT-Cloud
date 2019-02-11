@@ -3,6 +3,7 @@ import base64
 import json
 import types
 from unittest import mock
+from unittest.mock import call
 from uuid import UUID
 
 import pytest
@@ -12,10 +13,14 @@ from app.consts import DEVICE_TYPE_ID_MISSING_ERROR_MSG, DEVICE_TYPE_ID_INCORREC
     DEVICE_NAME_BI_MISSING_ERROR_MSG, DEVICE_NAME_MISSING_ERROR_MSG, \
     DATA_RANGE_MISSING_ERROR_MSG, DATA_OUT_OF_OUTPUT_RANGE_ERROR_MSG, CORRECTNESS_HASH_MISSING_ERROR_MSG, \
     SOMETHING_WENT_WRONG_MSG, DEVICE_ID_MISSING_ERROR_MSG, \
-    DEVICE_NAME_INVALID_ERROR_MSG, DEVICE_PASSWORD_MISSING_ERROR_MSG, USER_MISSING_PASSWORD_HASH, ACTION_NAME_MISSING_ERROR_MSG, \
-    ACTION_NAME_BI_MISSING_ERROR_MSG, UNAUTHORIZED_USER_ERROR_MSG, ACTION_BI_INVALID_ERROR_MSG, NOT_REGISTERED_WITH_BROKER_ERROR_MSG, \
-    INVALID_BROKER_PASSWORD_ERROR_MSG, SCENE_NAME_MISSING_ERROR_MSG, SCENE_DESC_MISSING_ERROR_MSG, SCENE_NAME_BI_MISSING_ERROR_MSG, \
-    INVALID_SCENE_OR_ACTION_BI_ERROR_MSG, ACTION_ALREADY_PRESENT_ERROR_MSG, UNAUTHORIZED_USER_SCENE_ERROR_MSG
+    DEVICE_NAME_INVALID_ERROR_MSG, DEVICE_PASSWORD_MISSING_ERROR_MSG, USER_MISSING_PASSWORD_HASH, \
+    ACTION_NAME_MISSING_ERROR_MSG, \
+    ACTION_NAME_BI_MISSING_ERROR_MSG, UNAUTHORIZED_USER_ERROR_MSG, ACTION_BI_INVALID_ERROR_MSG, \
+    NOT_REGISTERED_WITH_BROKER_ERROR_MSG, \
+    INVALID_BROKER_PASSWORD_ERROR_MSG, SCENE_NAME_MISSING_ERROR_MSG, SCENE_DESC_MISSING_ERROR_MSG, \
+    SCENE_NAME_BI_MISSING_ERROR_MSG, \
+    INVALID_SCENE_OR_ACTION_BI_ERROR_MSG, ACTION_ALREADY_PRESENT_ERROR_MSG, UNAUTHORIZED_USER_SCENE_ERROR_MSG, \
+    INVALID_SCENE_BI_ERROR_MSG
 from app.models.models import DeviceType, Device, User, Action, Scene
 from app.app_setup import client as mqtt_client
 from app.utils import is_valid_uuid, bytes_to_json, format_topic, validate_broker_password
@@ -601,6 +606,46 @@ def test_api_trigger_action(client, app_and_ctx, access_token):
             publish.assert_called_once()
             args = publish.call_args
             assert args == ((f"u:1/d:23/", f'"{{"\\"action\\"": "\\"{ac_name_string}\\"", "\\"user_id\\"": "\\"1\\""}}"'),)
+
+
+def test_api_trigger_scene(client, app_and_ctx, access_token, access_token_two):
+    data = {
+        "access_token": access_token,
+        "name_bi": "something"
+    }
+    response = client.post('/api/scene/trigger', query_string=data, follow_redirects=True)
+    assert response.status_code == 400
+    json_data = json.loads(response.data.decode("utf-8"))
+    assert (json_data["error"]) == INVALID_SCENE_BI_ERROR_MSG
+
+    data = {
+        "access_token": access_token,
+        "name_bi": '$2b$12$2xxxxxxxxxxxxxxxxxxxxuFf6FbODZ2N76WZRFjGnVHEA8kZXP.U2',  # other user
+    }
+    response = client.post('/api/scene/trigger', query_string=data, follow_redirects=True)
+    assert response.status_code == 400
+    json_data = json.loads(response.data.decode("utf-8"))
+    assert (json_data["error"]) == UNAUTHORIZED_USER_SCENE_ERROR_MSG
+
+    data = {
+        "access_token": access_token_two,
+        "name_bi": '$2b$12$2xxxxxxxxxxxxxxxxxxxxuFf6FbODZ2N76WZRFjGnVHEA8kZXP.U2',
+    }
+
+    app, ctx = app_and_ctx
+    with app.app_context():
+        with mock.patch('app.app_setup.client.publish') as publish:
+            response = client.post('/api/scene/trigger', query_string=data, follow_redirects=True)
+            assert response.status_code == 200
+
+            expected_calls = [
+                call('u:2/d:45/', '"{"\\"action\\"": "\\"gAAAAABcYAJr_P_8E4S0nWTFU-uyGk8t3MDexB5LzNGHKB6rd_pwKwY41bTMYYqAvuxcrCp3BBYwh7FI4F6fkswMM5JAFMcmqQ==\\"", "\\"user_id\\"": "\\"2\\""}"'),
+                call('u:2/d:34/', '"{"\\"action\\"": "\\"gAAAAABcYAJs8wCzyfEdHGO3TUjK-EeSxD-wFEgCGY8XF_kExmttrzUjM-YFKUaySrc8yLJG8UXe2zLtGr7LPAl5xyW756XscA==\\"", "\\"user_id\\"": "\\"2\\""}"'),
+                call('u:2/d:37/', '"{"\\"action\\"": "\\"gAAAAABcYAJsJHci8zzKE232PYIX-Hw74lYNEt_f7EceuroDqp0pWHGD96_baLE2tlQeFlFRenmpmFwtBZQbLIyBfAPaBXnl-A==\\"", "\\"user_id\\"": "\\"2\\""}"')
+            ]
+
+            assert all(v in expected_calls for v in publish.mock_calls)
+            assert publish.call_count == 3
 
 
 def test_hash_bcrypt():
