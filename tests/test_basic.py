@@ -20,7 +20,8 @@ from app.consts import DEVICE_TYPE_ID_MISSING_ERROR_MSG, DEVICE_TYPE_ID_INCORREC
     INVALID_BROKER_PASSWORD_ERROR_MSG, SCENE_NAME_MISSING_ERROR_MSG, SCENE_DESC_MISSING_ERROR_MSG, \
     SCENE_NAME_BI_MISSING_ERROR_MSG, \
     INVALID_SCENE_OR_ACTION_BI_ERROR_MSG, ACTION_ALREADY_PRESENT_ERROR_MSG, UNAUTHORIZED_USER_SCENE_ERROR_MSG, \
-    INVALID_SCENE_BI_ERROR_MSG
+    INVALID_SCENE_BI_ERROR_MSG, AUTH_USER_ID_INVALID_ERROR_MSG, AUTH_USER_ID_MISSING_ERROR_MSG, \
+    AUTH_USER_ALREADY_AUTHORIZED_ERROR_MSG
 from app.models.models import DeviceType, Device, User, Action, Scene
 from app.app_setup import client as mqtt_client
 from app.utils import is_valid_uuid, bytes_to_json, format_topic, validate_broker_password
@@ -646,6 +647,80 @@ def test_api_trigger_scene(client, app_and_ctx, access_token, access_token_two):
 
             assert all(v in expected_calls for v in publish.mock_calls)
             assert publish.call_count == 3
+
+
+def test_api_authorize_user(client, app_and_ctx, access_token, access_token_two):
+    data = {
+        "access_token": access_token,
+    }
+    response = client.post('/api/device/authorize', query_string=data, follow_redirects=True)
+    assert response.status_code == 400
+    json_data = json.loads(response.data.decode("utf-8"))
+    assert (json_data["error"]) == DEVICE_ID_MISSING_ERROR_MSG
+
+    data = {
+        "access_token": access_token,
+        "device_id": "something",
+    }
+    response = client.post('/api/device/authorize', query_string=data, follow_redirects=True)
+    assert response.status_code == 400
+    json_data = json.loads(response.data.decode("utf-8"))
+    assert (json_data["error"]) == AUTH_USER_ID_MISSING_ERROR_MSG
+
+    data = {
+        "access_token": access_token,
+        "device_id": "something",
+        "auth_user_id": "invalid",
+    }
+    response = client.post('/api/device/authorize', query_string=data, follow_redirects=True)
+    assert response.status_code == 400
+    json_data = json.loads(response.data.decode("utf-8"))
+    assert (json_data["error"]) == AUTH_USER_ID_INVALID_ERROR_MSG
+    data = {
+        "access_token": access_token,
+        "device_id": "something",
+        "auth_user_id": 1,  # Can't authorize self
+    }
+    response = client.post('/api/device/authorize', query_string=data, follow_redirects=True)
+    assert response.status_code == 400
+    json_data = json.loads(response.data.decode("utf-8"))
+    assert (json_data["error"]) == AUTH_USER_ID_INVALID_ERROR_MSG
+
+    data = {
+        "access_token": access_token,
+        "device_id": 45,  # Belongs to other user
+        "auth_user_id": 2,
+    }
+    response = client.post('/api/device/authorize', query_string=data, follow_redirects=True)
+    assert response.status_code == 400
+    json_data = json.loads(response.data.decode("utf-8"))
+    assert (json_data["error"]) == UNAUTHORIZED_USER_ERROR_MSG
+
+    data = {
+        "access_token": access_token,
+        "device_id": 23,
+        "auth_user_id": 2,
+    }
+    response = client.post('/api/device/authorize', query_string=data, follow_redirects=True)
+    assert response.status_code == 200
+
+    app, ctx = app_and_ctx
+    with app.app_context():
+        auth_user = User.get_by_access_token(access_token_two)
+        auth_device = Device.get_by_id(45)
+
+        assert next((ud for ud in auth_device.users if ud.user_id == auth_user.id), None) is not None
+        assert next((ud for ud in auth_user.devices if ud.device_id == auth_device.id), None) is not None
+
+    data = {
+        "access_token": access_token,
+        "device_id": 23,
+        "auth_user_id": 2,  # already authorized
+    }
+    response = client.post('/api/device/authorize', query_string=data, follow_redirects=True)
+    assert response.status_code == 400
+    json_data = json.loads(response.data.decode("utf-8"))
+    assert (json_data["error"]) == AUTH_USER_ALREADY_AUTHORIZED_ERROR_MSG
 
 
 def test_hash_bcrypt():

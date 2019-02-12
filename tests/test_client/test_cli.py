@@ -452,7 +452,7 @@ def test_set_action(runner, access_token, reset_tiny_db, change_to_dev_db, col_k
         db.session.commit()
 
 
-def test_trigger_action(runner, access_token, col_keys):
+def test_trigger_action(runner, access_token):
     device_id = 23
     name = "On"
     user_id = 1
@@ -460,10 +460,17 @@ def test_trigger_action(runner, access_token, col_keys):
     assert "\"success\": true" in result.output
 
 
-def test_trigger_scene(runner, access_token_two, col_keys):
+def test_trigger_scene(runner, access_token_two):
     name = "Home"
     user_id = 2
     result = runner.invoke(cmd.trigger_scene, [name, str(user_id), '--token', access_token_two])
+    assert "\"success\": true" in result.output
+
+
+def test_authorize_user(runner, access_token_two):
+    device_id = "45"
+    auth_user_id = "1"
+    result = runner.invoke(cmd.authorize_user, [device_id, auth_user_id, '--token', access_token_two])
     assert "\"success\": true" in result.output
 
 

@@ -1,4 +1,5 @@
 from app.app_setup import db
+from app.utils import is_number
 
 
 class MixinGetById:
@@ -6,7 +7,9 @@ class MixinGetById:
 
     @classmethod
     def get_by_id(cls, id_):
-        return db.session.query(cls).filter(cls.id == id_).first()
+        if is_number(id_):
+            return db.session.query(cls).filter(cls.id == id_).first()
+        return None
 
 
 class MixinGetByAccessToken:

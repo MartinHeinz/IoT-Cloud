@@ -44,6 +44,7 @@ URL_ADD_ACTION_TO_SCENE = URL_BASE + "scene/add_action"
 URL_SET_ACTION = URL_BASE + "device/set_action"
 URL_TRIGGER_ACTION = URL_BASE + "device/action"
 URL_TRIGGER_SCENE = URL_BASE + "scene/trigger"
+URL_AUTHORIZE_USER = URL_BASE + "device/authorize"
 URL_GET_DEVICE = URL_BASE + "device/get"
 URL_GET_DEVICE_DATA_BY_RANGE = URL_BASE + "data/get_by_num_range"
 URL_GET_DEVICE_DATA = URL_BASE + "data/get_device_data"
@@ -235,6 +236,20 @@ def trigger_scene(name, user_id, token):
         "access_token": token
     }
     r = requests.post(URL_TRIGGER_SCENE, params=data, verify=VERIFY_CERTS)
+    click.echo(r.content.decode('unicode-escape'))
+
+
+@user.command()
+@click.argument('device_id')
+@click.argument('auth_user_id')
+@click.option('--token', envvar='ACCESS_TOKEN')
+def authorize_user(device_id, auth_user_id, token):
+    data = {
+        "device_id": device_id,
+        "auth_user_id": auth_user_id,
+        "access_token": token
+    }
+    r = requests.post(URL_AUTHORIZE_USER, params=data, verify=VERIFY_CERTS)
     click.echo(r.content.decode('unicode-escape'))
 
 
