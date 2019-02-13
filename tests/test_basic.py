@@ -29,7 +29,7 @@ from app.utils import is_valid_uuid, bytes_to_json, format_topic, validate_broke
 from client.crypto_utils import encrypt, hash, correctness_hash, triangle_wave, sawtooth_wave, square_wave, sine_wave, generate, fake_tuple_to_hash, \
     encrypt_fake_tuple, instantiate_ope_cipher, decrypt_using_fernet_hex, decrypt_using_ope_hex
 
-from .conftest import db
+from .conftest import db, assert_got_error_from_post, assert_got_data_from_post, get_data_from_post
 
 
 def test_mqtt_client(app_and_ctx):
@@ -85,19 +85,13 @@ def test_api_user_register_broker(client, app_and_ctx, access_token_three):
         "not-password": "non-empty",
         "access_token": access_token_three
     }
-    response = client.post('/api/user/broker_register', query_string=data, follow_redirects=True)
-    assert response.status_code == 400
-    json_data = json.loads(response.data.decode("utf-8"))
-    assert (json_data["error"]) == USER_MISSING_PASSWORD_HASH
+    assert_got_error_from_post(client, '/api/user/broker_register', data, 400, USER_MISSING_PASSWORD_HASH)
 
     data = {
         "password": "PBKDF2$sha256$10000$+Ezww8vsOcflcODC$OTlWyBkxSHptuqv/glKuu1soqM3W+NNR",  # some_pass
         "access_token": access_token_three
     }
-    response = client.post('/api/user/broker_register', query_string=data, follow_redirects=True)
-    assert response.status_code == 200
-    json_data = json.loads(response.data.decode("utf-8"))
-    assert (json_data["broker_id"]) == "3"
+    assert_got_data_from_post(client, '/api/user/broker_register', data, broker_id="3")
 
 
 def test_api_dt_create(client, app_and_ctx, access_token):
@@ -106,30 +100,27 @@ def test_api_dt_create(client, app_and_ctx, access_token):
         "access_token": access_token,
         "correctness_hash": '$2b$12$.Jk4ruyYVQuMcMxpDODfQuV/1NJiLHWDcF15CE9g2OKmCmuSMzU8q'
     }
-    response = client.post('/api/device_type/create', query_string=data, follow_redirects=True)
-    assert response.status_code == 200
-    json_data = json.loads(response.data.decode("utf-8"))
-    assert is_valid_uuid(json_data["type_id"])
+    status_code, data_out = get_data_from_post(client, '/api/device_type/create', data)
+    assert status_code == 200
+    assert is_valid_uuid(data_out["type_id"])
 
     data = {
         "not-description": "non-empty",
         "access_token": access_token,
         "correctness_hash": '$2b$12$EhN.T.Ll2sas/rE34/lkOeyMKzoGZM6SlJoS5xhRUGkkm8T3GAg5O'
     }
-    response = client.post('/api/device_type/create', query_string=data, follow_redirects=True)
-    assert response.status_code == 400
+    assert_got_error_from_post(client, '/api/device_type/create', data, 400)
 
     data = {
         "description": "non-empty",
         "access_token": access_token
     }
-    response = client.post('/api/device_type/create', query_string=data, follow_redirects=True)
-    assert response.status_code == 400
+    assert_got_error_from_post(client, '/api/device_type/create', data, 400)
 
     app, ctx = app_and_ctx
 
     with app.app_context():
-        inserted_dt = db.session.query(DeviceType).filter(DeviceType.type_id == UUID(json_data["type_id"])).first()
+        inserted_dt = db.session.query(DeviceType).filter(DeviceType.type_id == UUID(data_out["type_id"])).first()
         assert inserted_dt.owner.access_token == "5c36ab84439c45a3719644c0d9bd7b31929afd9f"
         assert inserted_dt.correctness_hash == '$2b$12$.Jk4ruyYVQuMcMxpDODfQuV/1NJiLHWDcF15CE9g2OKmCmuSMzU8q'
 
@@ -139,29 +130,20 @@ def test_api_dv_create(client, app_and_ctx, access_token, access_token_four):
         "not-type_id": "non-empty",
         "access_token": access_token
     }
-    response = client.post('/api/device/create', query_string=data, follow_redirects=True)
-    assert response.status_code == 400
-    json_data = json.loads(response.data.decode("utf-8"))
-    assert (json_data["error"]) == DEVICE_TYPE_ID_MISSING_ERROR_MSG
+    assert_got_error_from_post(client, '/api/device/create', data, 400, DEVICE_TYPE_ID_MISSING_ERROR_MSG)
 
     data = {
         "type_id": "doesnt matter",
         "access_token": access_token
     }
-    response = client.post('/api/device/create', query_string=data, follow_redirects=True)
-    assert response.status_code == 400
-    json_data = json.loads(response.data.decode("utf-8"))
-    assert (json_data["error"]) == CORRECTNESS_HASH_MISSING_ERROR_MSG
+    assert_got_error_from_post(client, '/api/device/create', data, 400, CORRECTNESS_HASH_MISSING_ERROR_MSG)
 
     data = {
         "type_id": "anything",
         "access_token": access_token,
         "correctness_hash": '$2b$12$EhN.T.Ll2sas/rE34/lkOeyMKzoGZM6SlJoS5xhRUGkkm8T3GAg5O'
     }
-    response = client.post('/api/device/create', query_string=data, follow_redirects=True)
-    assert response.status_code == 400
-    json_data = json.loads(response.data.decode("utf-8"))
-    assert (json_data["error"]) == DEVICE_NAME_MISSING_ERROR_MSG
+    assert_got_error_from_post(client, '/api/device/create', data, 400, DEVICE_NAME_MISSING_ERROR_MSG)
 
     data = {
         "type_id": "anything",
@@ -169,10 +151,7 @@ def test_api_dv_create(client, app_and_ctx, access_token, access_token_four):
         "correctness_hash": '$2b$12$WCDgDQQwfA2UtS7qk5eiO.W23sRkaHjKSBWrkhB8Q9VGPUnMUKtye',
         "name": "test"
     }
-    response = client.post('/api/device/create', query_string=data, follow_redirects=True)
-    assert response.status_code == 400
-    json_data = json.loads(response.data.decode("utf-8"))
-    assert (json_data["error"]) == DEVICE_PASSWORD_MISSING_ERROR_MSG
+    assert_got_error_from_post(client, '/api/device/create', data, 400, DEVICE_PASSWORD_MISSING_ERROR_MSG)
 
     data = {
         "type_id": "anything",
@@ -181,10 +160,7 @@ def test_api_dv_create(client, app_and_ctx, access_token, access_token_four):
         "name": "test",
         "password": "PBKDF2$sha256$10000$qu5hXEoBLNeKuzR7$rdth45656456456564"
     }
-    response = client.post('/api/device/create', query_string=data, follow_redirects=True)
-    assert response.status_code == 400
-    json_data = json.loads(response.data.decode("utf-8"))
-    assert (json_data["error"]) == DEVICE_NAME_BI_MISSING_ERROR_MSG
+    assert_got_error_from_post(client, '/api/device/create', data, 400, DEVICE_NAME_BI_MISSING_ERROR_MSG)
 
     data = {
         "type_id": "non-valid",
@@ -194,10 +170,7 @@ def test_api_dv_create(client, app_and_ctx, access_token, access_token_four):
         "password": "PBKDF2$sha256$10000$qu5hXEoBLNeKuzR7$rdth45656456456564",
         "name_bi": "$2b$12$1xxxxxxxxxxxxxxxxxxxxuDUX01AKuyu/3/PdSxQT4qMDVTUawIUq"
     }
-    response = client.post('/api/device/create', query_string=data, follow_redirects=True)
-    assert response.status_code == 400
-    json_data = json.loads(response.data.decode("utf-8"))
-    assert (json_data["error"]) == DEVICE_TYPE_ID_INCORRECT_ERROR_MSG
+    assert_got_error_from_post(client, '/api/device/create', data, 400, DEVICE_TYPE_ID_INCORRECT_ERROR_MSG)
 
     app, ctx = app_and_ctx
 
@@ -213,37 +186,29 @@ def test_api_dv_create(client, app_and_ctx, access_token, access_token_four):
             "password": "PBKDF2$sha1$10000$qu5hXEoBLNeKuzR7$rdth45656456564",  # invalid
             "name_bi": "$2b$12$1xxxxxxxxxxxxxxxxxxxxuDUX01AKuyu/3/PdSxQT4qMDVTUawIUq"
         }
-
-    response = client.post('/api/device/create', query_string=data, follow_redirects=True)
-    assert response.status_code == 400
-    json_data = json.loads(response.data.decode("utf-8"))
-    assert (json_data["error"]) == NOT_REGISTERED_WITH_BROKER_ERROR_MSG
+    assert_got_error_from_post(client, '/api/device/create', data, 400, NOT_REGISTERED_WITH_BROKER_ERROR_MSG)
 
     data["access_token"] = access_token
-    response = client.post('/api/device/create', query_string=data, follow_redirects=True)
-    assert response.status_code == 400
-    json_data = json.loads(response.data.decode("utf-8"))
-    assert (json_data["error"]) == INVALID_BROKER_PASSWORD_ERROR_MSG
+    assert_got_error_from_post(client, '/api/device/create', data, 400, INVALID_BROKER_PASSWORD_ERROR_MSG)
 
     data["password"] = 'PBKDF2$sha256$10000$9tPL2IDSekCbDADg$McfGrlUVABIVQ8mlwBMPtrLH5BemxT5A'
-    response = client.post('/api/device/create', query_string=data, follow_redirects=True)
-    assert response.status_code == 200
-    json_data = json.loads(response.data.decode("utf-8"))
-    assert "id" in json_data
+    status, data_out = get_data_from_post(client, '/api/device/create', data)
+    assert status == 200
+    assert "id" in data_out
 
     with app.app_context():
-        inserted_dv = db.session.query(Device).filter(Device.id == json_data["id"]).first()
+        inserted_dv = db.session.query(Device).filter(Device.id == data_out["id"]).first()
         assert inserted_dv.owner.access_token == data["access_token"]
         assert inserted_dv.name_bi == data["name_bi"]
         assert inserted_dv.users is not None
 
         assert inserted_dv.mqtt_creds is not None
-        assert inserted_dv.mqtt_creds.username == str(json_data["id"])
+        assert inserted_dv.mqtt_creds.username == str(data_out["id"])
         assert inserted_dv.mqtt_creds.password_hash == data["password"]
         assert len(inserted_dv.mqtt_creds.acls) == 5
 
         device_owner = User.get_by_access_token(access_token)
-        new_acl = next((acl for acl in device_owner.mqtt_creds.acls if acl.topic == f"u:1/d:{json_data['id']}/"), None)
+        new_acl = next((acl for acl in device_owner.mqtt_creds.acls if acl.topic == f"u:1/d:{data_out['id']}/"), None)
         assert new_acl is not None, "New ACL for device was not inserted."
 
 
@@ -251,29 +216,20 @@ def test_api_sc_create(client, app_and_ctx, access_token):
     data = {
         "access_token": access_token,
     }
-    response = client.post('/api/scene/create', query_string=data, follow_redirects=True)
-    assert response.status_code == 400
-    json_data = json.loads(response.data.decode("utf-8"))
-    assert (json_data["error"]) == SCENE_NAME_MISSING_ERROR_MSG
+    assert_got_error_from_post(client, '/api/scene/create', data, 400, SCENE_NAME_MISSING_ERROR_MSG)
 
     data = {
         "access_token": access_token,
         "name": "test_name"
     }
-    response = client.post('/api/scene/create', query_string=data, follow_redirects=True)
-    assert response.status_code == 400
-    json_data = json.loads(response.data.decode("utf-8"))
-    assert (json_data["error"]) == SCENE_DESC_MISSING_ERROR_MSG
+    assert_got_error_from_post(client, '/api/scene/create', data, 400, SCENE_DESC_MISSING_ERROR_MSG)
 
     data = {
         "access_token": access_token,
         "name": "test_name",
         "description": "test_desc"
     }
-    response = client.post('/api/scene/create', query_string=data, follow_redirects=True)
-    assert response.status_code == 400
-    json_data = json.loads(response.data.decode("utf-8"))
-    assert (json_data["error"]) == SCENE_NAME_BI_MISSING_ERROR_MSG
+    assert_got_error_from_post(client, '/api/scene/create', data, 400, SCENE_NAME_BI_MISSING_ERROR_MSG)
 
     data = {
         "access_token": access_token,
@@ -281,10 +237,7 @@ def test_api_sc_create(client, app_and_ctx, access_token):
         "description": "test_desc",
         "name_bi": '$2b$12$1xxxxxxxxxxxxxxxxxxxxunmNPfsvRYyz8jVe6tU38FrJIHJJo9C.'
     }
-    response = client.post('/api/scene/create', query_string=data, follow_redirects=True)
-    assert response.status_code == 400
-    json_data = json.loads(response.data.decode("utf-8"))
-    assert (json_data["error"]) == CORRECTNESS_HASH_MISSING_ERROR_MSG
+    assert_got_error_from_post(client, '/api/scene/create', data, 400, CORRECTNESS_HASH_MISSING_ERROR_MSG)
 
     data = {
         "access_token": access_token,
@@ -293,8 +246,7 @@ def test_api_sc_create(client, app_and_ctx, access_token):
         "name_bi": '$2b$12$1xxxxxxxxxxxxxxxxxxxxunmNPfsvRYyz8jVe6tU38FrJIHJJo9C.',
         "correctness_hash": '$2b$12$zElcacWWB.qvf5dEiwkTM.7CNpXchiUXu5y23dajUkGXhSQ1MAH4e'
     }
-    response = client.post('/api/scene/create', query_string=data, follow_redirects=True)
-    assert response.status_code == 200
+    assert_got_data_from_post(client, '/api/scene/create', data)
 
     app, ctx = app_and_ctx
 
@@ -307,67 +259,48 @@ def test_api_add_scene_action(client, app_and_ctx, access_token):
     data = {
         "access_token": access_token,
     }
-    response = client.post('/api/scene/add_action', query_string=data, follow_redirects=True)
-    assert response.status_code == 400
-    json_data = json.loads(response.data.decode("utf-8"))
-    assert (json_data["error"]) == SCENE_NAME_BI_MISSING_ERROR_MSG
+    assert_got_error_from_post(client, '/api/scene/add_action', data, 400, SCENE_NAME_BI_MISSING_ERROR_MSG)
 
     data = {
         "access_token": access_token,
         "scene_name_bi": "something",
     }
-    response = client.post('/api/scene/add_action', query_string=data, follow_redirects=True)
-    assert response.status_code == 400
-    json_data = json.loads(response.data.decode("utf-8"))
-    assert (json_data["error"]) == ACTION_NAME_BI_MISSING_ERROR_MSG
+    assert_got_error_from_post(client, '/api/scene/add_action', data, 400, ACTION_NAME_BI_MISSING_ERROR_MSG)
 
     data = {
         "access_token": access_token,
         "scene_name_bi": "something",
         "action_name_bi": "something",
     }
-    response = client.post('/api/scene/add_action', query_string=data, follow_redirects=True)
-    assert response.status_code == 400
-    json_data = json.loads(response.data.decode("utf-8"))
-    assert (json_data["error"]) == INVALID_SCENE_OR_ACTION_BI_ERROR_MSG
+    assert_got_error_from_post(client, '/api/scene/add_action', data, 400, INVALID_SCENE_OR_ACTION_BI_ERROR_MSG)
 
     data = {
         "access_token": access_token,
         "scene_name_bi": '$2b$12$1xxxxxxxxxxxxxxxxxxxxuu6vgMFXlStkb/wcrduAWfPJXkjFPowS',  # valid
         "action_name_bi": '$2b$12$2xxxxxxxxxxxxxxxxxxxxuX8WVpwRXwSKCMut/AzDWhKdjjjSz7VS',  # unauthorized
     }
-    response = client.post('/api/scene/add_action', query_string=data, follow_redirects=True)
-    assert response.status_code == 400
-    json_data = json.loads(response.data.decode("utf-8"))
-    assert (json_data["error"]) == UNAUTHORIZED_USER_ERROR_MSG
+    assert_got_error_from_post(client, '/api/scene/add_action', data, 400, UNAUTHORIZED_USER_ERROR_MSG)
 
     data = {
         "access_token": access_token,
         "scene_name_bi": '$2b$12$1xxxxxxxxxxxxxxxxxxxxuu6vgMFXlStkb/wcrduAWfPJXkjFPowS',  # valid
         "action_name_bi": '$2b$12$1xxxxxxxxxxxxxxxxxxxxuz5Jia.EDkTwFaphV2YY8UhBMcuo6Nte',  # valid
     }
-    response = client.post('/api/scene/add_action', query_string=data, follow_redirects=True)
-    assert response.status_code == 200
+    assert_got_data_from_post(client, '/api/scene/add_action', data)
 
     data = {
         "access_token": access_token,
         "scene_name_bi": '$2b$12$1xxxxxxxxxxxxxxxxxxxxuu6vgMFXlStkb/wcrduAWfPJXkjFPowS',  # valid
         "action_name_bi": '$2b$12$1xxxxxxxxxxxxxxxxxxxxuz5Jia.EDkTwFaphV2YY8UhBMcuo6Nte',  # already added
     }
-    response = client.post('/api/scene/add_action', query_string=data, follow_redirects=True)
-    assert response.status_code == 400
-    json_data = json.loads(response.data.decode("utf-8"))
-    assert (json_data["error"]) == ACTION_ALREADY_PRESENT_ERROR_MSG
+    assert_got_error_from_post(client, '/api/scene/add_action', data, 400, ACTION_ALREADY_PRESENT_ERROR_MSG)
 
     data = {
         "access_token": access_token,
         "scene_name_bi": '$2b$12$2xxxxxxxxxxxxxxxxxxxxuFf6FbODZ2N76WZRFjGnVHEA8kZXP.U2',  # other user
         "action_name_bi": '$2b$12$1xxxxxxxxxxxxxxxxxxxxuz5Jia.EDkTwFaphV2YY8UhBMcuo6Nte',
     }
-    response = client.post('/api/scene/add_action', query_string=data, follow_redirects=True)
-    assert response.status_code == 400
-    json_data = json.loads(response.data.decode("utf-8"))
-    assert (json_data["error"]) == UNAUTHORIZED_USER_SCENE_ERROR_MSG
+    assert_got_error_from_post(client, '/api/scene/add_action', data, 400, UNAUTHORIZED_USER_SCENE_ERROR_MSG)
 
 
 def test_api_set_action(client, app_and_ctx, access_token, access_token_four):
@@ -377,10 +310,7 @@ def test_api_set_action(client, app_and_ctx, access_token, access_token_four):
         "access_token": access_token,
         "correctness_hash": '$2b$12$WCDgDQQwfA2UtS7qk5eiO.W23sRkaHjKSBWrkhB8Q9VGPUnMUKtye',
     }
-    response = client.post('/api/device/set_action', query_string=data, follow_redirects=True)
-    assert response.status_code == 400
-    json_data = json.loads(response.data.decode("utf-8"))
-    assert (json_data["error"]) == ACTION_NAME_MISSING_ERROR_MSG
+    assert_got_error_from_post(client, '/api/device/set_action', data, 400, ACTION_NAME_MISSING_ERROR_MSG)
 
     data = {
         "device_id": str(device_id),
@@ -388,10 +318,7 @@ def test_api_set_action(client, app_and_ctx, access_token, access_token_four):
         "correctness_hash": '$2b$12$WCDgDQQwfA2UtS7qk5eiO.W23sRkaHjKSBWrkhB8Q9VGPUnMUKtye',
         "name": b'gAAAAABcXV0zhCvu8mmTemaNja01bGK5fIuFjXo-8CpKS96_JTQdD-H-9l_0lwZAyGXp4khjscTC7HMTYL3KL5kuGw6kkJ3XOQ=='.decode("utf-8"),  # cipher.encrypt(b"test_action")
     }
-    response = client.post('/api/device/set_action', query_string=data, follow_redirects=True)
-    assert response.status_code == 400
-    json_data = json.loads(response.data.decode("utf-8"))
-    assert (json_data["error"]) == ACTION_NAME_BI_MISSING_ERROR_MSG
+    assert_got_error_from_post(client, '/api/device/set_action', data, 400, ACTION_NAME_BI_MISSING_ERROR_MSG)
 
     data = {
         "device_id": "9999",  # invalid
@@ -400,22 +327,15 @@ def test_api_set_action(client, app_and_ctx, access_token, access_token_four):
         "name": b'gAAAAABcXV0zhCvu8mmTemaNja01bGK5fIuFjXo-8CpKS96_JTQdD-H-9l_0lwZAyGXp4khjscTC7HMTYL3KL5kuGw6kkJ3XOQ=='.decode("utf-8"),  # cipher.encrypt(b"test_action")
         "name_bi": '$2b$12$1xxxxxxxxxxxxxxxxxxxxudvkMvF2EyHEYeqT1nCqu.XhAt3J3XQ2'  # hash("test_action", str(1))
     }
-    response = client.post('/api/device/set_action', query_string=data, follow_redirects=True)
-    assert response.status_code == 400
-    json_data = json.loads(response.data.decode("utf-8"))
-    assert (json_data["error"]) == UNAUTHORIZED_USER_ERROR_MSG
+    assert_got_error_from_post(client, '/api/device/set_action', data, 400, UNAUTHORIZED_USER_ERROR_MSG)
 
     data["device_id"] = str(device_id)
     data["access_token"] = access_token_four
 
-    response = client.post('/api/device/set_action', query_string=data, follow_redirects=True)
-    assert response.status_code == 400
-    json_data = json.loads(response.data.decode("utf-8"))
-    assert (json_data["error"]) == NOT_REGISTERED_WITH_BROKER_ERROR_MSG
+    assert_got_error_from_post(client, '/api/device/set_action', data, 400, NOT_REGISTERED_WITH_BROKER_ERROR_MSG)
 
     data["access_token"] = access_token
-    response = client.post('/api/device/set_action', query_string=data, follow_redirects=True)
-    assert response.status_code == 200
+    assert_got_data_from_post(client, '/api/device/set_action', data)
 
     app, ctx = app_and_ctx
 
@@ -430,16 +350,10 @@ def test_api_set_action(client, app_and_ctx, access_token, access_token_four):
 
 def test_api_get_device_by_name(client, app_and_ctx, access_token):
     data = {"not-name_bi": "non-empty", "access_token": access_token}
-    response = client.post('/api/device/get', query_string=data, follow_redirects=True)
-    assert response.status_code == 400
-    json_data = json.loads(response.data.decode("utf-8"))
-    assert (json_data["error"]) == DEVICE_NAME_BI_MISSING_ERROR_MSG
+    assert_got_error_from_post(client, '/api/device/get', data, 400, DEVICE_NAME_BI_MISSING_ERROR_MSG)
 
     data = {"name_bi": "non-empty", "access_token": access_token}
-    response = client.post('/api/device/get', query_string=data, follow_redirects=True)
-    assert response.status_code == 200
-    json_data = json.loads(response.data.decode("utf-8"))
-    assert json_data["devices"] == []
+    assert_got_data_from_post(client, '/api/device/get', data, devices=[])
 
     app, ctx = app_and_ctx
 
@@ -457,10 +371,9 @@ def test_api_get_device_by_name(client, app_and_ctx, access_token):
         db.session.commit()
         data = {"name_bi": bi_hash, "access_token": access_token}
 
-    response = client.post('/api/device/get', query_string=data, follow_redirects=True)
-    assert response.status_code == 200
-    json_data = json.loads(response.data.decode("utf-8"))
-    devices = list(filter(lambda d: d["id"] == 23, json_data["devices"]))
+    status, data_out = get_data_from_post(client, '/api/device/get', data)
+    assert status == 200
+    devices = list(filter(lambda d: d["id"] == 23, data_out["devices"]))
     assert len(devices) == 1
 
 
@@ -469,51 +382,38 @@ def test_api_get_device_by_name_foreign_device_hash(client, app_and_ctx, access_
         "name_bi": "$2b$12$2xxxxxxxxxxxxxxxxxxxxu9vIxS.wvIOPeYz88BA5e/t3FlezwvUm",
         "access_token": access_token
     }
-
-    response = client.post('/api/device/get', query_string=data, follow_redirects=True)
-    assert response.status_code == 200
-    json_data = json.loads(response.data.decode("utf-8"))
-    assert len(json_data["devices"]) == 0
+    assert_got_data_from_post(client, '/api/device/get', data, devices=[])
 
 
 def test_api_get_device_data_by_range_missing_device_id(client, app_and_ctx, access_token):
     data = {"not-upper-or-lower": "non-empty", "access_token": access_token}
-    response = client.post('/api/data/get_by_num_range', query_string=data, follow_redirects=True)
-    assert response.status_code == 400
-    json_data = json.loads(response.data.decode("utf-8"))
-    assert (json_data["error"]) == DEVICE_ID_MISSING_ERROR_MSG
+    assert_got_error_from_post(client, '/api/data/get_by_num_range', data, 400, DEVICE_ID_MISSING_ERROR_MSG)
 
 
 def test_api_get_device_data_by_range_missing_bounds(client, app_and_ctx, access_token):
     data = {"not-upper-or-lower": "non-empty", "access_token": access_token, "device_id": 23}
-    response = client.post('/api/data/get_by_num_range', query_string=data, follow_redirects=True)
-    assert response.status_code == 400
-    json_data = json.loads(response.data.decode("utf-8"))
-    assert (json_data["error"]) == DATA_RANGE_MISSING_ERROR_MSG
+    assert_got_error_from_post(client, '/api/data/get_by_num_range', data, 400, DATA_RANGE_MISSING_ERROR_MSG)
 
 
 def test_api_get_device_data_by_range_non_numeric_bound(client, app_and_ctx, access_token):
     data = {"lower": "non-numeric", "access_token": access_token, "device_id": 23}
-    response = client.post('/api/data/get_by_num_range', query_string=data, follow_redirects=True)
-    assert response.status_code == 400
-    json_data = json.loads(response.data.decode("utf-8"))
-    assert (json_data["error"]) == DATA_RANGE_MISSING_ERROR_MSG
+    assert_got_error_from_post(client, '/api/data/get_by_num_range', data, 400, DATA_RANGE_MISSING_ERROR_MSG)
 
 
 def test_api_get_device_data_by_range_with_only_lower_bound(client, app_and_ctx, access_token):
     data = {"lower": "467297", "access_token": access_token, "device_id": 23}  # 2500
-    response = client.post('/api/data/get_by_num_range', query_string=data, follow_redirects=True)
-    assert response.status_code == 200
-    json_data = json.loads(response.data.decode("utf-8"))
-    assert len(json_data["device_data"]) == 2
+    status_code, data_out = get_data_from_post(client, '/api/data/get_by_num_range', data)
+
+    assert status_code == 200
+    assert len(data_out["device_data"]) == 2
 
 
 def test_api_get_device_data_by_range_with_only_upper_bound(client, app_and_ctx, access_token):
     data = {"upper": "469439", "access_token": access_token, "device_id": 23}  # 3500
-    response = client.post('/api/data/get_by_num_range', query_string=data, follow_redirects=True)
-    assert response.status_code == 200
-    json_data = json.loads(response.data.decode("utf-8"))
-    assert len(json_data["device_data"]) == 3
+    status_code, data_out = get_data_from_post(client, '/api/data/get_by_num_range', data)
+
+    assert status_code == 200
+    assert len(data_out["device_data"]) == 3
 
 
 def test_api_get_device_data_by_range_with_both_bounds(client, app_and_ctx, access_token):
@@ -522,11 +422,11 @@ def test_api_get_device_data_by_range_with_both_bounds(client, app_and_ctx, acce
         "upper": "470477",  # 4000
         "access_token": access_token,
         "device_id": 23
-        }
-    response = client.post('/api/data/get_by_num_range', query_string=data, follow_redirects=True)
-    assert response.status_code == 200
-    json_data = json.loads(response.data.decode("utf-8"))
-    assert len(json_data["device_data"]) == 2
+    }
+    status_code, data_out = get_data_from_post(client, '/api/data/get_by_num_range', data)
+
+    assert status_code == 200
+    assert len(data_out["device_data"]) == 2
 
     data = {
         "lower": "472693",  # 5000
@@ -534,50 +434,38 @@ def test_api_get_device_data_by_range_with_both_bounds(client, app_and_ctx, acce
         "access_token": access_token,
         "device_id": 23
     }
-    response = client.post('/api/data/get_by_num_range', query_string=data, follow_redirects=True)
-    assert response.status_code == 200
-    json_data = json.loads(response.data.decode("utf-8"))
-    assert len(json_data["device_data"]) == 0
+    status_code, data_out = get_data_from_post(client, '/api/data/get_by_num_range', data)
+
+    assert status_code == 200
+    assert len(data_out["device_data"]) == 0
 
 
 def test_api_get_device_data_by_range_out_of_range(client, app_and_ctx, access_token):
+    device_id = 23
     cipher_range = instantiate_ope_cipher(b"").out_range
-    data = {"upper": str(cipher_range.end + 1), "access_token": access_token, "device_id": 23}
-    response = client.post('/api/data/get_by_num_range', query_string=data, follow_redirects=True)
-    assert response.status_code == 400
-    json_data = json.loads(response.data.decode("utf-8"))
-    assert json_data["error"] == DATA_OUT_OF_OUTPUT_RANGE_ERROR_MSG
-    data = {"lower": str(cipher_range.start - 1), "access_token": access_token, "device_id": 23}  # -1
-    response = client.post('/api/data/get_by_num_range', query_string=data, follow_redirects=True)
-    assert response.status_code == 400
-    json_data = json.loads(response.data.decode("utf-8"))
-    assert json_data["error"] == DATA_OUT_OF_OUTPUT_RANGE_ERROR_MSG
-    data = {"lower": "1", "upper": str(cipher_range.end + 1), "access_token": access_token, "device_id": 23}  # lower OK, upper not OK
-    response = client.post('/api/data/get_by_num_range', query_string=data, follow_redirects=True)
-    assert response.status_code == 400
-    json_data = json.loads(response.data.decode("utf-8"))
-    assert json_data["error"] == DATA_OUT_OF_OUTPUT_RANGE_ERROR_MSG
+    data = {"upper": str(cipher_range.end + 1), "access_token": access_token, "device_id": device_id}
+    assert_got_error_from_post(client, '/api/data/get_by_num_range', data, 400, DATA_OUT_OF_OUTPUT_RANGE_ERROR_MSG)
+
+    data = {"lower": str(cipher_range.start - 1), "access_token": access_token, "device_id": device_id}  # -1
+    assert_got_error_from_post(client, '/api/data/get_by_num_range', data, 400, DATA_OUT_OF_OUTPUT_RANGE_ERROR_MSG)
+
+    data = {"lower": "1", "upper": str(cipher_range.end + 1), "access_token": access_token, "device_id": device_id}  # lower OK, upper not OK
+    assert_got_error_from_post(client, '/api/data/get_by_num_range', data, 400, DATA_OUT_OF_OUTPUT_RANGE_ERROR_MSG)
 
 
 def test_api_get_device_data(client, app_and_ctx, access_token_two):
     data = {"not-device_id": "non-empty", "access_token": access_token_two}
-    response = client.post('/api/data/get_device_data', query_string=data, follow_redirects=True)
-    assert response.status_code == 400
-    json_data = json.loads(response.data.decode("utf-8"))
-    assert json_data["error"] == DEVICE_ID_MISSING_ERROR_MSG
+    assert_got_error_from_post(client, '/api/data/get_device_data', data, 400, DEVICE_ID_MISSING_ERROR_MSG)
 
     data = {"device_id": "not-a-number", "access_token": access_token_two}
-    response = client.post('/api/data/get_device_data', query_string=data, follow_redirects=True)
-    assert response.status_code == 400
-    json_data = json.loads(response.data.decode("utf-8"))
-    assert json_data["error"] == DEVICE_NAME_INVALID_ERROR_MSG
+    assert_got_error_from_post(client, '/api/data/get_device_data', data, 400, DEVICE_NAME_INVALID_ERROR_MSG)
 
     device_id = 45
     data = {"device_id": str(device_id), "access_token": access_token_two}
-    response = client.post('/api/data/get_device_data', query_string=data, follow_redirects=True)
-    assert response.status_code == 200
-    json_data = json.loads(response.data.decode("utf-8"))
-    assert len(json_data["device_data"]) == 2
+    status_code, data_out = get_data_from_post(client, '/api/data/get_device_data', data)
+
+    assert status_code == 200
+    assert len(data_out["device_data"]) == 2
 
 
 def test_api_trigger_action(client, app_and_ctx, access_token):
@@ -587,10 +475,7 @@ def test_api_trigger_action(client, app_and_ctx, access_token):
         "name_bi": '$2b$12$1xxxxxxxxxxxxxxxxxxxxuz5Jia.EInvalid6Nte',
         "access_token": access_token
     }
-    response = client.post('/api/device/action', query_string=data, follow_redirects=True)
-    assert response.status_code == 400
-    json_data = json.loads(response.data.decode("utf-8"))
-    assert json_data["error"] == ACTION_BI_INVALID_ERROR_MSG
+    assert_got_error_from_post(client, '/api/device/action', data, 400, ACTION_BI_INVALID_ERROR_MSG)
 
     data = {
         "device_id": device_id,
@@ -602,8 +487,7 @@ def test_api_trigger_action(client, app_and_ctx, access_token):
     with app.app_context():
         ac_name_string = Action.get_by_id(2).name.decode("utf-8")
         with mock.patch('app.app_setup.client.publish') as publish:
-            response = client.post('/api/device/action', query_string=data, follow_redirects=True)
-            assert response.status_code == 200
+            assert_got_data_from_post(client, '/api/device/action', data)
 
             publish.assert_called_once()
             args = publish.call_args
@@ -615,19 +499,13 @@ def test_api_trigger_scene(client, app_and_ctx, access_token, access_token_two):
         "access_token": access_token,
         "name_bi": "something"
     }
-    response = client.post('/api/scene/trigger', query_string=data, follow_redirects=True)
-    assert response.status_code == 400
-    json_data = json.loads(response.data.decode("utf-8"))
-    assert (json_data["error"]) == INVALID_SCENE_BI_ERROR_MSG
+    assert_got_error_from_post(client, '/api/scene/trigger', data, 400, INVALID_SCENE_BI_ERROR_MSG)
 
     data = {
         "access_token": access_token,
         "name_bi": '$2b$12$2xxxxxxxxxxxxxxxxxxxxuFf6FbODZ2N76WZRFjGnVHEA8kZXP.U2',  # other user
     }
-    response = client.post('/api/scene/trigger', query_string=data, follow_redirects=True)
-    assert response.status_code == 400
-    json_data = json.loads(response.data.decode("utf-8"))
-    assert (json_data["error"]) == UNAUTHORIZED_USER_SCENE_ERROR_MSG
+    assert_got_error_from_post(client, '/api/scene/trigger', data, 400, UNAUTHORIZED_USER_SCENE_ERROR_MSG)
 
     data = {
         "access_token": access_token_two,
@@ -637,8 +515,7 @@ def test_api_trigger_scene(client, app_and_ctx, access_token, access_token_two):
     app, ctx = app_and_ctx
     with app.app_context():
         with mock.patch('app.app_setup.client.publish') as publish:
-            response = client.post('/api/scene/trigger', query_string=data, follow_redirects=True)
-            assert response.status_code == 200
+            assert_got_data_from_post(client, '/api/scene/trigger', data)
 
             expected_calls = [
                 call('u:2/d:45/', '"{"\\"action\\"": "\\"gAAAAABcYAJr_P_8E4S0nWTFU-uyGk8t3MDexB5LzNGHKB6rd_pwKwY41bTMYYqAvuxcrCp3BBYwh7FI4F6fkswMM5JAFMcmqQ==\\"", "\\"user_id\\"": "\\"2\\""}"'),
@@ -654,56 +531,41 @@ def test_api_authorize_user(client, app_and_ctx, access_token, access_token_two)
     data = {
         "access_token": access_token,
     }
-    response = client.post('/api/device/authorize', query_string=data, follow_redirects=True)
-    assert response.status_code == 400
-    json_data = json.loads(response.data.decode("utf-8"))
-    assert (json_data["error"]) == DEVICE_ID_MISSING_ERROR_MSG
+    assert_got_error_from_post(client, '/api/device/authorize', data, 400, DEVICE_ID_MISSING_ERROR_MSG)
 
     data = {
         "access_token": access_token,
         "device_id": "something",
     }
-    response = client.post('/api/device/authorize', query_string=data, follow_redirects=True)
-    assert response.status_code == 400
-    json_data = json.loads(response.data.decode("utf-8"))
-    assert (json_data["error"]) == AUTH_USER_ID_MISSING_ERROR_MSG
+    assert_got_error_from_post(client, '/api/device/authorize', data, 400, AUTH_USER_ID_MISSING_ERROR_MSG)
 
     data = {
         "access_token": access_token,
         "device_id": "something",
         "auth_user_id": "invalid",
     }
-    response = client.post('/api/device/authorize', query_string=data, follow_redirects=True)
-    assert response.status_code == 400
-    json_data = json.loads(response.data.decode("utf-8"))
-    assert (json_data["error"]) == AUTH_USER_ID_INVALID_ERROR_MSG
+    assert_got_error_from_post(client, '/api/device/authorize', data, 400, AUTH_USER_ID_INVALID_ERROR_MSG)
+
     data = {
         "access_token": access_token,
         "device_id": "something",
         "auth_user_id": 1,  # Can't authorize self
     }
-    response = client.post('/api/device/authorize', query_string=data, follow_redirects=True)
-    assert response.status_code == 400
-    json_data = json.loads(response.data.decode("utf-8"))
-    assert (json_data["error"]) == AUTH_USER_ID_INVALID_ERROR_MSG
+    assert_got_error_from_post(client, '/api/device/authorize', data, 400, AUTH_USER_ID_INVALID_ERROR_MSG)
 
     data = {
         "access_token": access_token,
         "device_id": 45,  # Belongs to other user
         "auth_user_id": 2,
     }
-    response = client.post('/api/device/authorize', query_string=data, follow_redirects=True)
-    assert response.status_code == 400
-    json_data = json.loads(response.data.decode("utf-8"))
-    assert (json_data["error"]) == UNAUTHORIZED_USER_ERROR_MSG
+    assert_got_error_from_post(client, '/api/device/authorize', data, 400, UNAUTHORIZED_USER_ERROR_MSG)
 
     data = {
         "access_token": access_token,
         "device_id": 23,
         "auth_user_id": 2,
     }
-    response = client.post('/api/device/authorize', query_string=data, follow_redirects=True)
-    assert response.status_code == 200
+    assert_got_data_from_post(client, '/api/device/authorize', data)
 
     app, ctx = app_and_ctx
     with app.app_context():
@@ -718,66 +580,48 @@ def test_api_authorize_user(client, app_and_ctx, access_token, access_token_two)
         "device_id": 23,
         "auth_user_id": 2,  # already authorized
     }
-    response = client.post('/api/device/authorize', query_string=data, follow_redirects=True)
-    assert response.status_code == 400
-    json_data = json.loads(response.data.decode("utf-8"))
-    assert (json_data["error"]) == AUTH_USER_ALREADY_AUTHORIZED_ERROR_MSG
+    assert_got_error_from_post(client, '/api/device/authorize', data, 400, AUTH_USER_ALREADY_AUTHORIZED_ERROR_MSG)
 
 
 def test_api_revoke_user(client, app_and_ctx, access_token, access_token_two):
     data = {
         "access_token": access_token,
     }
-    response = client.post('/api/device/revoke', query_string=data, follow_redirects=True)
-    assert response.status_code == 400
-    json_data = json.loads(response.data.decode("utf-8"))
-    assert (json_data["error"]) == DEVICE_ID_MISSING_ERROR_MSG
+    assert_got_error_from_post(client, '/api/device/revoke', data, 400, DEVICE_ID_MISSING_ERROR_MSG)
 
     data = {
         "access_token": access_token,
         "device_id": "something",
     }
-    response = client.post('/api/device/revoke', query_string=data, follow_redirects=True)
-    assert response.status_code == 400
-    json_data = json.loads(response.data.decode("utf-8"))
-    assert (json_data["error"]) == REVOKE_USER_ID_MISSING_ERROR_MSG
+    assert_got_error_from_post(client, '/api/device/revoke', data, 400, REVOKE_USER_ID_MISSING_ERROR_MSG)
 
     data = {
         "access_token": access_token,
         "device_id": "something",
         "revoke_user_id": "invalid",
     }
-    response = client.post('/api/device/revoke', query_string=data, follow_redirects=True)
-    assert response.status_code == 400
-    json_data = json.loads(response.data.decode("utf-8"))
-    assert (json_data["error"]) == REVOKE_USER_ID_INVALID_ERROR_MSG
+    assert_got_error_from_post(client, '/api/device/revoke', data, 400, REVOKE_USER_ID_INVALID_ERROR_MSG)
+
     data = {
         "access_token": access_token,
         "device_id": "something",
         "revoke_user_id": 1,  # Can't revoke self
     }
-    response = client.post('/api/device/revoke', query_string=data, follow_redirects=True)
-    assert response.status_code == 400
-    json_data = json.loads(response.data.decode("utf-8"))
-    assert (json_data["error"]) == REVOKE_USER_ID_INVALID_ERROR_MSG
+    assert_got_error_from_post(client, '/api/device/revoke', data, 400, REVOKE_USER_ID_INVALID_ERROR_MSG)
 
     data = {
         "access_token": access_token,
         "device_id": 45,  # Belongs to other user
         "revoke_user_id": 2,
     }
-    response = client.post('/api/device/revoke', query_string=data, follow_redirects=True)
-    assert response.status_code == 400
-    json_data = json.loads(response.data.decode("utf-8"))
-    assert (json_data["error"]) == UNAUTHORIZED_USER_ERROR_MSG
+    assert_got_error_from_post(client, '/api/device/revoke', data, 400, UNAUTHORIZED_USER_ERROR_MSG)
 
     data = {
         "access_token": access_token,
         "device_id": 23,
         "revoke_user_id": 2,
     }
-    response = client.post('/api/device/revoke', query_string=data, follow_redirects=True)
-    assert response.status_code == 200
+    assert_got_data_from_post(client, '/api/device/revoke', data)
 
     app, ctx = app_and_ctx
     with app.app_context():
@@ -788,10 +632,7 @@ def test_api_revoke_user(client, app_and_ctx, access_token, access_token_two):
         "device_id": 45,
         "revoke_user_id": 1,  # not authorized
     }
-    response = client.post('/api/device/revoke', query_string=data, follow_redirects=True)
-    assert response.status_code == 400
-    json_data = json.loads(response.data.decode("utf-8"))
-    assert (json_data["error"]) == REVOKE_USER_NOT_AUTHORIZED_ERROR_MSG
+    assert_got_error_from_post(client, '/api/device/revoke', data, 400, REVOKE_USER_NOT_AUTHORIZED_ERROR_MSG)
 
 
 def test_hash_bcrypt():

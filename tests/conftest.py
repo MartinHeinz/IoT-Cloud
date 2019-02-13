@@ -1,3 +1,4 @@
+import json
 import os
 import re
 import warnings
@@ -134,3 +135,25 @@ def col_keys():
         "device:name": "ae89ebdb00d48b6e2aca3218213888aff3af9915831b9cdde8f82b709fd8802e",
     }
     return data
+
+
+def assert_got_error_from_post(client, url, data, error_code, error_string="", follow_redirects=True):
+    response = client.post(url, query_string=data, follow_redirects=follow_redirects)
+    assert response.status_code == error_code
+    json_data = json.loads(response.data.decode("utf-8"))
+    if error_string != "":
+        assert json_data["error"] == error_string
+
+
+def assert_got_data_from_post(client, url, data_in, follow_redirects=True, **data_out):
+    response = client.post(url, query_string=data_in, follow_redirects=follow_redirects)
+    assert response.status_code == 200
+    json_data = json.loads(response.data.decode("utf-8"))
+    for k, v in data_out.items():
+        assert json_data[k] == v
+
+
+def get_data_from_post(client, url, data, follow_redirects=True):
+    response = client.post(url, query_string=data, follow_redirects=follow_redirects)
+    json_data = json.loads(response.data.decode("utf-8"))
+    return response.status_code, json_data
