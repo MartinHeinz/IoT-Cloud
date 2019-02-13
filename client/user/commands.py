@@ -45,6 +45,7 @@ URL_SET_ACTION = URL_BASE + "device/set_action"
 URL_TRIGGER_ACTION = URL_BASE + "device/action"
 URL_TRIGGER_SCENE = URL_BASE + "scene/trigger"
 URL_AUTHORIZE_USER = URL_BASE + "device/authorize"
+URL_REVOKE_USER = URL_BASE + "device/revoke"
 URL_GET_DEVICE = URL_BASE + "device/get"
 URL_GET_DEVICE_DATA_BY_RANGE = URL_BASE + "data/get_by_num_range"
 URL_GET_DEVICE_DATA = URL_BASE + "data/get_device_data"
@@ -250,6 +251,20 @@ def authorize_user(device_id, auth_user_id, token):
         "access_token": token
     }
     r = requests.post(URL_AUTHORIZE_USER, params=data, verify=VERIFY_CERTS)
+    click.echo(r.content.decode('unicode-escape'))
+
+
+@user.command()
+@click.argument('device_id')
+@click.argument('revoke_user_id')
+@click.option('--token', envvar='ACCESS_TOKEN')
+def revoke_user(device_id, revoke_user_id, token):
+    data = {
+        "device_id": device_id,
+        "revoke_user_id": revoke_user_id,
+        "access_token": token
+    }
+    r = requests.post(URL_REVOKE_USER, params=data, verify=VERIFY_CERTS)
     click.echo(r.content.decode('unicode-escape'))
 
 

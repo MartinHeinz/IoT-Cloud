@@ -474,6 +474,13 @@ def test_authorize_user(runner, access_token_two):
     assert "\"success\": true" in result.output
 
 
+def test_revoke_user(runner, access_token_two):  # NOTE: this is dependant on previous test
+    device_id = "45"
+    revoke_user_id = "1"
+    result = runner.invoke(cmd.revoke_user, [device_id, revoke_user_id, '--token', access_token_two])
+    assert "\"success\": true" in result.output
+
+
 @pytest.mark.parametrize('reset_tiny_db', [cmd.path], indirect=True)
 def test_get_device(runner, client, access_token, reset_tiny_db, col_keys):
     device_name = "my_raspberry"

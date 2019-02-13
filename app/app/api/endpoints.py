@@ -18,7 +18,8 @@ from app.consts import DEVICE_TYPE_ID_MISSING_ERROR_MSG, DEVICE_TYPE_ID_INCORREC
     SCENE_DESC_MISSING_ERROR_MSG, SCENE_NAME_MISSING_ERROR_MSG, SCENE_NAME_BI_MISSING_ERROR_MSG, \
     INVALID_SCENE_OR_ACTION_BI_ERROR_MSG, \
     UNAUTHORIZED_USER_SCENE_ERROR_MSG, ACTION_ALREADY_PRESENT_ERROR_MSG, INVALID_SCENE_BI_ERROR_MSG, \
-    AUTH_USER_ID_MISSING_ERROR_MSG, AUTH_USER_ID_INVALID_ERROR_MSG, AUTH_USER_ALREADY_AUTHORIZED_ERROR_MSG
+    AUTH_USER_ID_MISSING_ERROR_MSG, AUTH_USER_ID_INVALID_ERROR_MSG, AUTH_USER_ALREADY_AUTHORIZED_ERROR_MSG, \
+    REVOKE_USER_ID_MISSING_ERROR_MSG, REVOKE_USER_ID_INVALID_ERROR_MSG, REVOKE_USER_NOT_AUTHORIZED_ERROR_MSG
 from app.models.models import DeviceType, Device, DeviceData, UserDevice, User, Scene, Action
 from app.mqtt.utils import Payload
 from app.utils import http_json_response, check_missing_request_argument, is_valid_uuid, format_topic, validate_broker_password, is_number, create_payload
@@ -441,11 +442,42 @@ def authorize_user():
     if next((ud for ud in device.users if ud.user_id == auth_user.id), None) is not None:
         return http_json_response(False, 400, **{"error": AUTH_USER_ALREADY_AUTHORIZED_ERROR_MSG})
 
-
     ud = UserDevice()
     ud.device = device
     ud.user = auth_user
     db.session.add(ud)
+    db.session.commit()
+
+    return http_json_response()
+
+
+@api.route('/device/revoke', methods=['POST'])
+@require_api_token()
+def revoke_user():
+    device_id = request.args.get("device_id", None)
+    revoke_user_id = request.args.get("revoke_user_id", None)  # ID of user to be revoked
+    access_token = request.args.get("access_token", "")
+    user_to_revoke = User.get_by_id(revoke_user_id)
+
+    arg_check = check_missing_request_argument(
+        (device_id, DEVICE_ID_MISSING_ERROR_MSG),
+        (revoke_user_id, REVOKE_USER_ID_MISSING_ERROR_MSG),
+        (None if user_to_revoke is None or user_to_revoke.access_token == access_token else user_to_revoke, REVOKE_USER_ID_INVALID_ERROR_MSG))
+    if arg_check is not True:
+        return arg_check
+
+    if not User.can_use_device(access_token, device_id):
+        return http_json_response(False, 400, **{"error": UNAUTHORIZED_USER_ERROR_MSG})
+
+    device = Device.get_by_id(device_id)
+
+    if next((ud for ud in device.users if ud.user_id == user_to_revoke.id), None) is None:
+        return http_json_response(False, 400, **{"error": REVOKE_USER_NOT_AUTHORIZED_ERROR_MSG})
+
+    ud_to_remove = UserDevice.get_by_ids(int(device_id), user_to_revoke.id)
+
+    device.users.remove(ud_to_remove)
+    db.session.add(device)
     db.session.commit()
 
     return http_json_response()
