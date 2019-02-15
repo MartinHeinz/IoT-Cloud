@@ -563,6 +563,13 @@ def test_api_authorize_user(client, app_and_ctx, access_token, access_token_two)
     data = {
         "access_token": access_token,
         "device_id": 23,
+        "auth_user_id": 4,  # Not registered with MQTT broker
+    }
+    assert_got_error_from_post(client, '/api/device/authorize', data, 400, NOT_REGISTERED_WITH_BROKER_ERROR_MSG)
+
+    data = {
+        "access_token": access_token,
+        "device_id": 23,
         "auth_user_id": 2,
     }
     assert_got_data_from_post(client, '/api/device/authorize', data)
@@ -574,6 +581,9 @@ def test_api_authorize_user(client, app_and_ctx, access_token, access_token_two)
 
         assert next((ud for ud in auth_device.users if ud.user_id == auth_user.id), None) is not None
         assert next((ud for ud in auth_user.devices if ud.device_id == auth_device.id), None) is not None
+
+        new_creds = [acl for acl in auth_user.mqtt_creds.acls if f"d:23" in acl.topic]
+        assert len(new_creds) == 3
 
     data = {
         "access_token": access_token,
@@ -625,7 +635,10 @@ def test_api_revoke_user(client, app_and_ctx, access_token, access_token_two):
 
     app, ctx = app_and_ctx
     with app.app_context():
+        auth_user = User.get_by_access_token(access_token_two)
         assert UserDevice.get_by_ids(23, 2) is None
+        removed_creds = [acl for acl in auth_user.mqtt_creds.acls if f"d:23" in acl.topic]
+        assert len(removed_creds) == 0
 
     data = {
         "access_token": access_token_two,

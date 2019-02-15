@@ -83,6 +83,9 @@ class User(MixinGetByAccessToken, MixinGetById, db.Model):
             ACL(username=self.id, topic=f"d:{device_id}/u:{self.id}/", acc=4)  # NOTE: seems to be necessary because of the way paho.mqtt connects to broker
         ])
 
+    def remove_acls_for_device(self, device_id):
+        self.mqtt_creds.acls[:] = [acl for acl in self.mqtt_creds.acls if f"d:{device_id}/" not in acl.topic]
+
     @hybrid_property
     def is_registered_with_broker(self):
         return self.mqtt_creds is not None

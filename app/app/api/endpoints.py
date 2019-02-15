@@ -439,6 +439,9 @@ def authorize_user():
 
     device = Device.get_by_id(device_id)
 
+    if not auth_user.is_registered_with_broker:
+        return http_json_response(False, 400, **{"error": NOT_REGISTERED_WITH_BROKER_ERROR_MSG})
+
     if next((ud for ud in device.users if ud.user_id == auth_user.id), None) is not None:
         return http_json_response(False, 400, **{"error": AUTH_USER_ALREADY_AUTHORIZED_ERROR_MSG})
 
@@ -446,6 +449,8 @@ def authorize_user():
     ud.device = device
     ud.user = auth_user
     db.session.add(ud)
+    auth_user.add_acls_for_device(device_id)
+
     db.session.commit()
 
     return http_json_response()
@@ -478,6 +483,8 @@ def revoke_user():
 
     device.users.remove(ud_to_remove)
     db.session.add(device)
+    user_to_revoke.remove_acls_for_device(device_id)
+    db.session.add(user_to_revoke)
     db.session.commit()
 
     return http_json_response()
