@@ -14,6 +14,7 @@ from app.attribute_authority.utils import create_pairing_group, create_cp_abe, s
     replace_existing_key, parse_attr_list, get_private_key_based_on_owner
 from app.auth.utils import INVALID_ACCESS_TOKEN_ERROR_MSG
 from app.models.models import AttrAuthUser, PrivateKey
+from tests.conftest import assert_got_error_from_post, assert_got_data_from_post, get_data_from_post
 
 
 def test_charm_crypto():
@@ -63,24 +64,17 @@ def test_serialize_and_deserialize_pk():
 
 def test_require_attr_auth_access_token_missing(client):
     data = {"access_token": "missing"}
-    response = client.post('/attr_auth/setup', query_string=data, follow_redirects=True)
-    assert response.status_code == 400
-    json_data = json.loads(response.data.decode("utf-8"))
-    assert (json_data["error"]) == INVALID_ACCESS_TOKEN_ERROR_MSG
+    assert_got_error_from_post(client, '/attr_auth/setup', data, 400, INVALID_ACCESS_TOKEN_ERROR_MSG)
 
 
 def test_set_username_missing_api_username(client, attr_auth_access_token_one):
     data = {"access_token": attr_auth_access_token_one}
-    response = client.post('/attr_auth/set_username', query_string=data, follow_redirects=True)
-    assert response.status_code == 400
-    json_data = json.loads(response.data.decode("utf-8"))
-    assert (json_data["error"]) == API_USERNAME_MISSING_ERROR_MSG
+    assert_got_error_from_post(client, '/attr_auth/set_username', data, 400, API_USERNAME_MISSING_ERROR_MSG)
 
 
 def test_set_username(client, app_and_ctx, attr_auth_access_token_one):
     data = {"access_token": attr_auth_access_token_one, "api_username": "Changed"}
-    response = client.post('/attr_auth/set_username', query_string=data, follow_redirects=True)
-    assert response.status_code == 200
+    assert_got_data_from_post(client, '/attr_auth/set_username', data)
 
     app, ctx = app_and_ctx
     with app.app_context():
@@ -88,9 +82,8 @@ def test_set_username(client, app_and_ctx, attr_auth_access_token_one):
         assert user.api_username == "Changed"
 
         data = {"access_token": attr_auth_access_token_one, "api_username": "MartinHeinz"}
-        response = client.post('/attr_auth/set_username', query_string=data, follow_redirects=True)
+        assert_got_data_from_post(client, '/attr_auth/set_username', data)
         user = AttrAuthUser.get_by_access_token(attr_auth_access_token_one)
-        assert response.status_code == 200
         assert user.api_username == "MartinHeinz"
 
 
@@ -125,10 +118,7 @@ def test_decrypt_missing_owner_api_username(client, attr_auth_access_token_one):
     data = {
         "access_token": attr_auth_access_token_one
     }
-    response = client.post('/attr_auth/decrypt', query_string=data, follow_redirects=True)
-    assert response.status_code == 400
-    json_data = json.loads(response.data.decode("utf-8"))
-    assert (json_data["error"]) == OWNER_API_USERNAME_MISSING_ERROR_MSG
+    assert_got_error_from_post(client, '/attr_auth/decrypt', data, 400, OWNER_API_USERNAME_MISSING_ERROR_MSG)
 
 
 def test_decrypt_missing_ciphertext(client, attr_auth_access_token_one):
@@ -136,10 +126,7 @@ def test_decrypt_missing_ciphertext(client, attr_auth_access_token_one):
         "access_token": attr_auth_access_token_one,
         "api_username": "MartinHeinz"
     }
-    response = client.post('/attr_auth/decrypt', query_string=data, follow_redirects=True)
-    assert response.status_code == 400
-    json_data = json.loads(response.data.decode("utf-8"))
-    assert (json_data["error"]) == CIPHERTEXT_MISSING_ERROR_MSG
+    assert_got_error_from_post(client, '/attr_auth/decrypt', data, 400, CIPHERTEXT_MISSING_ERROR_MSG)
 
 
 def test_decrypt_invalid_owner(client, attr_auth_access_token_one, attr_auth_access_token_two):
@@ -148,10 +135,7 @@ def test_decrypt_invalid_owner(client, attr_auth_access_token_one, attr_auth_acc
         "api_username": "INVALID",
         "ciphertext": "anything-doesnt-matter"
     }
-    response = client.post('/attr_auth/decrypt', query_string=data, follow_redirects=True)
-    assert response.status_code == 400
-    json_data = json.loads(response.data.decode("utf-8"))
-    assert (json_data["error"]) == INVALID_OWNER_API_USERNAME_ERROR_MSG
+    assert_got_error_from_post(client, '/attr_auth/decrypt', data, 400, INVALID_OWNER_API_USERNAME_ERROR_MSG)
 
 
 def test_decrypt_could_not_decrypt(client, attr_auth_access_token_one, attr_auth_access_token_two):
@@ -165,16 +149,11 @@ def test_decrypt_could_not_decrypt(client, attr_auth_access_token_one, attr_auth
         "message": plaintext,
         "policy_string": "(TODAY)"  # INVALID
     }
-    response = client.post('/attr_auth/encrypt', query_string=data_encrypt, follow_redirects=True)
-    assert response.status_code == 200
-    json_data = json.loads(response.data.decode("utf-8"))
-    assert (json_data["ciphertext"]) is not None
+    status_code, json_data = get_data_from_post(client, '/attr_auth/encrypt', data_encrypt)
+    assert json_data["ciphertext"] is not None
     data["ciphertext"] = json_data["ciphertext"]
 
-    response = client.post('/attr_auth/decrypt', query_string=data, follow_redirects=True)
-    assert response.status_code == 400
-    json_data = json.loads(response.data.decode("utf-8"))
-    assert (json_data["error"]) == COULD_NOT_DECRYPT_ERROR_MSG
+    assert_got_error_from_post(client, '/attr_auth/decrypt', data, 400, COULD_NOT_DECRYPT_ERROR_MSG)
 
 
 def test_decrypt_succesfull(client, attr_auth_access_token_one, attr_auth_access_token_two):
@@ -188,16 +167,14 @@ def test_decrypt_succesfull(client, attr_auth_access_token_one, attr_auth_access
         "message": plaintext,
         "policy_string": "(GUESTTODAY)"
     }
-    response = client.post('/attr_auth/encrypt', query_string=data_encrypt, follow_redirects=True)
-    assert response.status_code == 200
-    json_data = json.loads(response.data.decode("utf-8"))
-    assert (json_data["ciphertext"]) is not None
+    status_code, json_data = get_data_from_post(client, '/attr_auth/encrypt', data_encrypt)
+    assert status_code == 200
+    assert json_data["ciphertext"] is not None
     data["ciphertext"] = json_data["ciphertext"]
 
-    response = client.post('/attr_auth/decrypt', query_string=data, follow_redirects=True)
-    assert response.status_code == 200
-    json_data = json.loads(response.data.decode("utf-8"))
-    assert (json_data["plaintext"]) == plaintext
+    status_code, json_data = get_data_from_post(client, '/attr_auth/decrypt', data)
+    assert status_code == 200
+    assert json_data["plaintext"] == plaintext
 
 
 def test_keygen_invalid_receiver(client, master_key_user_one, attr_auth_access_token_one):
@@ -207,20 +184,14 @@ def test_keygen_invalid_receiver(client, master_key_user_one, attr_auth_access_t
         "attr_list": "TODAY_GUEST, ANOTHER",
         "receiver_id": "15"
     }
-    response = client.post('/attr_auth/keygen', query_string=data, follow_redirects=True)
-    assert response.status_code == 400
-    json_data = json.loads(response.data.decode("utf-8"))
-    assert (json_data["error"]) == INCORRECT_RECEIVER_ID_ERROR_MSG
+    assert_got_error_from_post(client, '/attr_auth/keygen', data, 400, INCORRECT_RECEIVER_ID_ERROR_MSG)
     data = {
         "access_token": attr_auth_access_token_one,
         "master_key": master_key_user_one,
         "attr_list": "TODAY_GUEST, ANOTHER",
         "receiver_id": "eth"
     }
-    response = client.post('/attr_auth/keygen', query_string=data, follow_redirects=True)
-    assert response.status_code == 400
-    json_data = json.loads(response.data.decode("utf-8"))
-    assert (json_data["error"]) == INCORRECT_RECEIVER_ID_ERROR_MSG
+    assert_got_error_from_post(client, '/attr_auth/keygen', data, 400, INCORRECT_RECEIVER_ID_ERROR_MSG)
 
 
 def test_keygen_invalid_attr_list(client, master_key_user_one, attr_auth_access_token_one):
@@ -230,10 +201,7 @@ def test_keygen_invalid_attr_list(client, master_key_user_one, attr_auth_access_
         "attr_list": "TODAY_GUEST, ANOTHER",
         "receiver_id": "2"
     }
-    response = client.post('/attr_auth/keygen', query_string=data, follow_redirects=True)
-    assert response.status_code == 400
-    json_data = json.loads(response.data.decode("utf-8"))
-    assert (json_data["error"]) == INVALID_ATTR_LIST_ERROR_MSG
+    assert_got_error_from_post(client, '/attr_auth/keygen', data, 400, INVALID_ATTR_LIST_ERROR_MSG)
 
 
 def test_keygen_already_has_key_from_owner(client, app_and_ctx, master_key_user_one, attr_auth_access_token_one, attr_auth_access_token_two):
@@ -250,8 +218,7 @@ def test_keygen_already_has_key_from_owner(client, app_and_ctx, master_key_user_
         old_private_key_data = old_private_key.data
         old_private_key_key_update = old_private_key.key_update
 
-        response = client.post('/attr_auth/keygen', query_string=data, follow_redirects=True)
-        assert response.status_code == 200
+        assert_got_data_from_post(client, '/attr_auth/keygen', data)
 
         receiver = AttrAuthUser.get_by_access_token(attr_auth_access_token_two)  # TestUser access_token
         new_private_key = next(key for key in receiver.private_keys if key.challenger_id == 1)
@@ -285,8 +252,7 @@ def test_keygen_doesnt_have_key_from_owner(client, app_and_ctx, master_key_user_
 
         num_of_old_keys = len(receiver.private_keys)
 
-        response = client.post('/attr_auth/keygen', query_string=data, follow_redirects=True)
-        assert response.status_code == 200
+        assert_got_data_from_post(client, '/attr_auth/keygen', data)
 
         receiver = AttrAuthUser.get_by_access_token(attr_auth_access_token_one)
         new_private_key = next(key for key in receiver.private_keys if key.challenger_id == 2)
@@ -336,9 +302,9 @@ def test_get_private_key_based_on_owner_missing():
 
 def test_key_setup(client, app_and_ctx, attr_auth_access_token_one):
     data = {"access_token": attr_auth_access_token_one}
-    response = client.post('/attr_auth/setup', query_string=data, follow_redirects=True)
-    assert response.status_code == 200
-    json_data = json.loads(response.data.decode("utf-8"))
+
+    status_code, json_data = get_data_from_post(client, '/attr_auth/setup', data)
+    assert status_code == 200
     serialized_public_key_response = json_data["public_key"]
 
     app, ctx = app_and_ctx
@@ -351,10 +317,7 @@ def test_encrypt_missing_plaintext(client, attr_auth_access_token_one):
     data = {
         "access_token": attr_auth_access_token_one
     }
-    response = client.post('/attr_auth/encrypt', query_string=data, follow_redirects=True)
-    assert response.status_code == 400
-    json_data = json.loads(response.data.decode("utf-8"))
-    assert (json_data["error"]) == MESSAGE_MISSING_ERROR_MSG
+    assert_got_error_from_post(client, '/attr_auth/encrypt', data, 400, MESSAGE_MISSING_ERROR_MSG)
 
 
 def test_encrypt_missing_policy_string(client, attr_auth_access_token_one):
@@ -362,10 +325,7 @@ def test_encrypt_missing_policy_string(client, attr_auth_access_token_one):
         "access_token": attr_auth_access_token_one,
         "message": "any text"
     }
-    response = client.post('/attr_auth/encrypt', query_string=data, follow_redirects=True)
-    assert response.status_code == 400
-    json_data = json.loads(response.data.decode("utf-8"))
-    assert (json_data["error"]) == POLICY_STRING_MISSING_ERROR_MSG
+    assert_got_error_from_post(client, '/attr_auth/encrypt', data, 400, POLICY_STRING_MISSING_ERROR_MSG)
 
 
 def test_encrypt_succesfull(client, attr_auth_access_token_one):
@@ -374,10 +334,9 @@ def test_encrypt_succesfull(client, attr_auth_access_token_one):
         "message": "any text",
         "policy_string": "(TODAY)"
     }
-    response = client.post('/attr_auth/encrypt', query_string=data, follow_redirects=True)
-    assert response.status_code == 200
-    json_data = json.loads(response.data.decode("utf-8"))
-    assert (json_data["ciphertext"]) is not None
+    status_code, json_data = get_data_from_post(client, '/attr_auth/encrypt', data)
+    assert status_code == 200
+    assert json_data["ciphertext"] is not None
 
 
 def test_replace_existing_key(app_and_ctx, attr_auth_access_token_one, attr_auth_access_token_two):
