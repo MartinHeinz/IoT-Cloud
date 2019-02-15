@@ -380,7 +380,7 @@ def trigger_action():
         return http_json_response(False, 400, **{"error": UNAUTHORIZED_USER_ERROR_MSG})
 
     dv = Device.get_by_id(device_id)
-    topic = format_topic(user.mqtt_creds.username, dv.mqtt_creds.username, "user")
+    topic = format_topic(user.mqtt_creds.username, dv.mqtt_creds.username)
     ac = Device.get_action_by_bi(device_id, name_bi)
     if ac is None:
         return http_json_response(False, 400, **{"error": ACTION_BI_INVALID_ERROR_MSG})
@@ -413,7 +413,7 @@ def trigger_scene():
 
     for ac in sc.actions:
         payload = create_payload(user.mqtt_creds.username, {"action": ac.name.decode("utf-8")})
-        topic = format_topic(user.mqtt_creds.username, ac.device.mqtt_creds.username, "user")
+        topic = format_topic(user.mqtt_creds.username, ac.device.mqtt_creds.username)
         client.publish(topic, payload)
 
     return http_json_response()

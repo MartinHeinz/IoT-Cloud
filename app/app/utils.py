@@ -33,13 +33,8 @@ def is_valid_uuid(uuid_to_test, version=4):
     return str(uuid_obj) == uuid_to_test
 
 
-def format_topic(src, dest, sender):
-    if sender == "user":
-        return f"u:{src}/d:{dest}/"
-    elif sender == "device":
-        return f"d:{src}/u:{dest}/"
-    else:
-        raise Exception("Invalid sender type.")
+def format_topic(src, dest):
+    return f"{src}/{dest}/"
 
 
 def validate_broker_password(pass_hash):

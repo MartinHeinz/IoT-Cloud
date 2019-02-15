@@ -67,7 +67,7 @@ class User(MixinGetByAccessToken, MixinGetById, db.Model):
         ]
         if self.mqtt_creds is None:
             self.mqtt_creds = MQTTUser(
-                username=self.id,
+                username=f"u:{self.id}",
                 password_hash=password,
                 user=self,
                 user_id=self.id,
@@ -126,7 +126,7 @@ class Device(MixinGetById, MixinAsDict, db.Model):
     def create_mqtt_creds_for_device(self, password, session):
         session.flush()
         self.mqtt_creds = MQTTUser(
-            username=self.id,
+            username=f"d:{self.id}",
             password_hash=password,
             device=self,
             acls=[

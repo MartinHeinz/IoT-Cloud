@@ -203,7 +203,7 @@ def test_api_dv_create(client, app_and_ctx, access_token, access_token_four):
         assert inserted_dv.users is not None
 
         assert inserted_dv.mqtt_creds is not None
-        assert inserted_dv.mqtt_creds.username == str(data_out["id"])
+        assert inserted_dv.mqtt_creds.username == f'd:{data_out["id"]}'
         assert inserted_dv.mqtt_creds.password_hash == data["password"]
         assert len(inserted_dv.mqtt_creds.acls) == 5
 
@@ -491,7 +491,7 @@ def test_api_trigger_action(client, app_and_ctx, access_token):
 
             publish.assert_called_once()
             args = publish.call_args
-            assert args == ((f"u:1/d:23/", f'"{{"\\"action\\"": "\\"{ac_name_string}\\"", "\\"user_id\\"": "\\"1\\""}}"'),)
+            assert args == ((f"u:1/d:23/", f'"{{"\\"action\\"": "\\"{ac_name_string}\\"", "\\"user_id\\"": "\\"u:1\\""}}"'),)
 
 
 def test_api_trigger_scene(client, app_and_ctx, access_token, access_token_two):
@@ -518,9 +518,9 @@ def test_api_trigger_scene(client, app_and_ctx, access_token, access_token_two):
             assert_got_data_from_post(client, '/api/scene/trigger', data)
 
             expected_calls = [
-                call('u:2/d:45/', '"{"\\"action\\"": "\\"gAAAAABcYAJr_P_8E4S0nWTFU-uyGk8t3MDexB5LzNGHKB6rd_pwKwY41bTMYYqAvuxcrCp3BBYwh7FI4F6fkswMM5JAFMcmqQ==\\"", "\\"user_id\\"": "\\"2\\""}"'),
-                call('u:2/d:34/', '"{"\\"action\\"": "\\"gAAAAABcYAJs8wCzyfEdHGO3TUjK-EeSxD-wFEgCGY8XF_kExmttrzUjM-YFKUaySrc8yLJG8UXe2zLtGr7LPAl5xyW756XscA==\\"", "\\"user_id\\"": "\\"2\\""}"'),
-                call('u:2/d:37/', '"{"\\"action\\"": "\\"gAAAAABcYAJsJHci8zzKE232PYIX-Hw74lYNEt_f7EceuroDqp0pWHGD96_baLE2tlQeFlFRenmpmFwtBZQbLIyBfAPaBXnl-A==\\"", "\\"user_id\\"": "\\"2\\""}"')
+                call('u:2/d:45/', '"{"\\"action\\"": "\\"gAAAAABcYAJr_P_8E4S0nWTFU-uyGk8t3MDexB5LzNGHKB6rd_pwKwY41bTMYYqAvuxcrCp3BBYwh7FI4F6fkswMM5JAFMcmqQ==\\"", "\\"user_id\\"": "\\"u:2\\""}"'),
+                call('u:2/d:34/', '"{"\\"action\\"": "\\"gAAAAABcYAJs8wCzyfEdHGO3TUjK-EeSxD-wFEgCGY8XF_kExmttrzUjM-YFKUaySrc8yLJG8UXe2zLtGr7LPAl5xyW756XscA==\\"", "\\"user_id\\"": "\\"u:2\\""}"'),
+                call('u:2/d:37/', '"{"\\"action\\"": "\\"gAAAAABcYAJsJHci8zzKE232PYIX-Hw74lYNEt_f7EceuroDqp0pWHGD96_baLE2tlQeFlFRenmpmFwtBZQbLIyBfAPaBXnl-A==\\"", "\\"user_id\\"": "\\"u:2\\""}"')
             ]
 
             assert all(v in expected_calls for v in publish.mock_calls)
@@ -728,11 +728,8 @@ def test_bytes_to_json():
 
 
 def test_format_topic():
-
-    assert format_topic(1, 4, "user") == f"u:1/d:4/"
-    assert format_topic(5, 23, "device") == f"d:5/u:23/"
-    with pytest.raises(Exception):
-        assert format_topic(5, 23, "invalid")
+    assert format_topic("u:1", "d:4") == f"u:1/d:4/"
+    assert format_topic("d:5", "u:23") == f"d:5/u:23/"
 
 
 def test_validate_broker_password():
