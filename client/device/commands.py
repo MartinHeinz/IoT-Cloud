@@ -12,22 +12,14 @@ from tinydb import Query
 
 try:  # for packaged CLI (setup.py)
     from client.crypto_utils import triangle_wave, sawtooth_wave, square_wave, sine_wave, generate, fake_tuple_to_hash, \
-    encrypt_fake_tuple, index_function, hash, hex_to_key, key_to_hex, hex_to_fernet, decrypt_using_fernet_hex
+    encrypt_fake_tuple, index_function, hash, hex_to_key, key_to_hex, hex_to_fernet, decrypt_using_fernet_hex, get_random_seed
     from client.utils import get_tinydb_table, search_tinydb_doc
 except ImportError:  # for un-packaged CLI
-    from crypto_utils import triangle_wave, sawtooth_wave, square_wave, sine_wave, generate, fake_tuple_to_hash, encrypt_fake_tuple, index_function, hash, hex_to_key, key_to_hex, hex_to_fernet, decrypt_using_fernet_hex
+    from crypto_utils import triangle_wave, sawtooth_wave, square_wave, sine_wave, generate, fake_tuple_to_hash, encrypt_fake_tuple, index_function, hash, hex_to_key, key_to_hex, hex_to_fernet, decrypt_using_fernet_hex, get_random_seed
     from utils import get_tinydb_table, search_tinydb_doc
 
 dir_path = os.path.dirname(os.path.realpath(__file__))
 path = f'{dir_path}/data.json'
-
-GENERATING_FUNCTIONS = {
-    "triangle_wave": triangle_wave,
-    "sawtooth_wave": sawtooth_wave,
-    "square_wave": square_wave,
-    "sine_wave": sine_wave,
-    "index_function": index_function,
-}
 
 
 @click.group()
@@ -227,25 +219,24 @@ def init_integrity_data():
     return {
         "device_data": {
             "added": {
-                "function_name": "triangle_wave",
+                "seed": get_random_seed(),
                 "lower_bound": 1,
                 "upper_bound": 1,
                 "is_numeric": True
             },
             "num_data": {
-                "function_name": "sawtooth_wave",
+                "seed": get_random_seed(),
                 "lower_bound": 1,
                 "upper_bound": 1,
                 "is_numeric": True
             },
             "data": {
-                "function_name": "square_wave",
+                "seed": get_random_seed(),
                 "lower_bound": 1,
                 "upper_bound": 1,
                 "is_numeric": False
             },
             "tid": {
-                "function_name": "index_function",
                 "lower_bound": 1,
                 "upper_bound": 1,
                 "is_numeric": False

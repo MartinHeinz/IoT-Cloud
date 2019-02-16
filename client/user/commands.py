@@ -26,12 +26,12 @@ sys.stdout = sys.__stdout__
 
 try:  # for packaged CLI (setup.py)
     from client.crypto_utils import hash, correctness_hash, check_correctness_hash, int_to_bytes, instantiate_ope_cipher, int_from_bytes, hex_to_key, key_to_hex, \
-    hex_to_fernet, hex_to_ope, decrypt_using_fernet_hex, decrypt_using_ope_hex, encrypt_using_fernet_hex
+    hex_to_fernet, hex_to_ope, decrypt_using_fernet_hex, decrypt_using_ope_hex, encrypt_using_fernet_hex, murmur_hash
     from client.utils import json_string_with_bytes_to_dict, _create_payload, search_tinydb_doc, get_tinydb_table, \
     insert_into_tinydb
     from client.password_hashing import pbkdf2_hash
 except ImportError:  # for un-packaged CLI
-    from crypto_utils import hash, correctness_hash, check_correctness_hash, instantiate_ope_cipher, int_from_bytes, hex_to_key, key_to_hex, hex_to_fernet, hex_to_ope, decrypt_using_fernet_hex, decrypt_using_ope_hex, encrypt_using_fernet_hex
+    from crypto_utils import hash, correctness_hash, check_correctness_hash, instantiate_ope_cipher, int_from_bytes, hex_to_key, key_to_hex, hex_to_fernet, hex_to_ope, decrypt_using_fernet_hex, decrypt_using_ope_hex, encrypt_using_fernet_hex, murmur_hash
     from utils import json_string_with_bytes_to_dict, _create_payload, search_tinydb_doc, get_tinydb_table, insert_into_tinydb
     from password_hashing import pbkdf2_hash
 
@@ -567,7 +567,7 @@ def get_col_encryption_type(col_name, integrity_info):
     :param integrity_info: {
             'device_data': {
                 'added': {
-                    'function_name': 'triangle_wave',
+                    'seed': 12312412,
                     'lower_bound': 1,
                     'upper_bound': 1,
                     'is_numeric': True
@@ -639,25 +639,23 @@ def generate_fake_tuples_in_range(fake_tuple_info):
     Generates all fake tuples in <"lower_bound", "upper_bound"> range and verifies them againts :param fake_rows.
     :param fake_tuple_info: example: {
                     "added": {
-                        "function_name": "triangle_wave",
+                        "seed": 4574675,
                         "lower_bound": 5,
                         "upper_bound": 11,
                         "is_numeric": True
                     }
     :return: list of dicts (each dict contains single tuple with keys as column names and values)
     """
-    try:
-        from client.device.commands import GENERATING_FUNCTIONS
-    except ImportError:
-        from device.commands import GENERATING_FUNCTIONS
     fake_tuple_col_values = {}
     fake_tuples = []
     lb, ub = 0, 0
     for col, val in fake_tuple_info.items():
         lb = fake_tuple_info[col]["lower_bound"]
         ub = fake_tuple_info[col]["upper_bound"] + 1
-        func_list = list(GENERATING_FUNCTIONS[val["function_name"]]())
-        fake_tuple_col_values[col] = func_list[lb:ub]
+        if "seed" in fake_tuple_info[col]:
+            fake_tuple_col_values[col] = [murmur_hash(str(i), fake_tuple_info[col]["seed"]) for i in range(lb, ub)]
+        else:
+            fake_tuple_col_values[col] = list(range(lb, ub))
     for no, i in enumerate(range(lb, ub)):
         fake_tuples.append({"added": fake_tuple_col_values["added"][no],
                             "num_data": fake_tuple_col_values["num_data"][no],

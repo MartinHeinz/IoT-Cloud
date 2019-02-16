@@ -1,4 +1,6 @@
 import base64
+import mmh3
+import os
 from binascii import a2b_hex, b2a_hex
 
 import click
@@ -137,7 +139,7 @@ def generate(columns, bound="upper_bound"):
     :param columns: example
         {
          "added": {
-            "function_name": "triangle_wave",
+            "seed": 3453657356745,
             "lower_bound": 1,
             "upper_bound": 1,
             "is_numeric": True
@@ -148,13 +150,12 @@ def generate(columns, bound="upper_bound"):
             "data": 1000,
         }
     """
-    try:
-        from client.device.commands import GENERATING_FUNCTIONS
-    except ImportError:
-        from device.commands import GENERATING_FUNCTIONS
     fake_tuple = {}
-    for col, val in columns.items():  # TODO if the index of upper_bound is greater then function range, we need to use mod
-        fake_tuple[col] = list(GENERATING_FUNCTIONS[val["function_name"]]())[val[bound]]
+    for col, val in columns.items():
+        if "seed" in val:
+            fake_tuple[col] = murmur_hash(val[bound], val["seed"])
+        else:
+            fake_tuple[col] = val[bound]
     return fake_tuple
 
 
@@ -185,6 +186,14 @@ def encrypt_fake_tuple(fake_tuple, keys):
 
 def fake_tuple_to_hash(values):
     return correctness_hash(*values, fake=True)
+
+
+def murmur_hash(val, seed):
+    return mmh3.hash(str(val), seed)
+
+
+def get_random_seed(size=8):
+    return int_from_bytes(os.urandom(size))
 
 
 def instantiate_ope_cipher(key):

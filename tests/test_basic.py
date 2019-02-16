@@ -671,25 +671,24 @@ def test_wave_func():
 def test_generate_fake_tuple_and_hash():
     columns = {
             "added": {
-                "function_name": "triangle_wave",
+                "seed": 345453,
                 "lower_bound": 0,
                 "upper_bound": 0,
                 "is_numeric": True
             },
             "num_data": {
-                "function_name": "sawtooth_wave",
+                "seed": 345236,
                 "lower_bound": 0,
                 "upper_bound": 0,
                 "is_numeric": True
             },
             "data": {
-                "function_name": "square_wave",
+                "seed": -2345625462,
                 "lower_bound": 0,
                 "upper_bound": 0,
                 "is_numeric": False
             },
             "tid": {
-                "function_name": "index_function",
                 "lower_bound": 0,
                 "upper_bound": 0,
                 "is_numeric": False
@@ -697,13 +696,13 @@ def test_generate_fake_tuple_and_hash():
         }
 
     d = generate(columns)
-    assert d["added"] == -1000
-    assert d["num_data"] == -1000
-    assert d["data"] == 1000
-    assert d["tid"] == 1
+    assert d["added"] == -168754978
+    assert d["num_data"] == 83924723
+    assert d["data"] == 2070235132
+    assert d["tid"] == 0
 
     fake_tuple_hash = fake_tuple_to_hash(d.values())
-    assert bcrypt.verify("-1000" + "-1000" + "1000" + "1" + "1", fake_tuple_hash)
+    assert bcrypt.verify("-168754978" + "83924723" + "2070235132" + "0" + "1", fake_tuple_hash)
 
 
 def test_encrypt_fake_tuple():
