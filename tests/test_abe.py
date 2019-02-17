@@ -250,6 +250,20 @@ def test_keygen_already_has_key_from_owner(client, app_and_ctx, master_key_user_
         assert plaintext == decrypted_msg.decode("utf-8")
 
 
+def test_retrieve_private_keys(client, attr_auth_access_token_one, attr_auth_access_token_two):
+    data = {
+        "access_token": attr_auth_access_token_one,
+    }
+    assert_got_data_from_post(client, '/attr_auth/user/retrieve_private_keys', data, private_keys=[])
+
+    data = {
+        "access_token": attr_auth_access_token_two,
+    }
+    status_code, json_data = get_data_from_post(client, '/attr_auth/user/retrieve_private_keys', data)
+    assert status_code == 200
+    assert len(json_data["private_keys"]) == 2
+
+
 def test_keygen_doesnt_have_key_from_owner(client, app_and_ctx, master_key_user_two, attr_auth_access_token_one, attr_auth_access_token_two):
     data = {
         "access_token": attr_auth_access_token_two,

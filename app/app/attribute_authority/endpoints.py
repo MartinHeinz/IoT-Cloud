@@ -136,6 +136,21 @@ def device_keygen():
     return http_json_response(private_key=serialized_private_key.decode("utf-8"))
 
 
+@attr_authority.route('/user/retrieve_private_keys', methods=['POST'])
+@require_api_token("attr_auth")
+def retrieve_private_keys():
+    user_access_token = request.args.get("access_token", "")
+    user = AttrAuthUser.get_by_access_token(user_access_token)
+    private_keys = [{
+        "data": key.data.decode("utf-8"),
+        "key_update": key.key_update,
+        "attributes": [a.value for a in key.attributes],
+        "challenger_id": key.challenger_id,
+
+    } for key in user.private_keys]
+    return http_json_response(**{'private_keys': private_keys})
+
+
 @attr_authority.route('/encrypt', methods=['POST'])
 @require_api_token("attr_auth")
 def encrypt():

@@ -58,6 +58,7 @@ AA_URL_SET_USERNAME = AA_URL_BASE + "set_username"
 AA_URL_SETUP = AA_URL_BASE + "setup"
 AA_URL_KEYGEN = AA_URL_BASE + "user/keygen"
 AA_URL_DEVICE_KEYGEN = AA_URL_BASE + "device/keygen"
+AA_URL_SK_RETRIEVE = AA_URL_BASE + "user/retrieve_private_keys"
 AA_URL_ENCRYPT = AA_URL_BASE + "encrypt"
 AA_URL_DECRYPT = AA_URL_BASE + "decrypt"
 
@@ -476,6 +477,14 @@ def attr_auth_device_keygen(attr_list, device_id, token):  # TODO check if attr_
         "attr_list": attr_list.split(),
     }
     t.update(set("device_data:data", device_data_doc), Query().device_id == device_id)
+
+
+@user.command()
+@click.option('--token', envvar='AA_ACCESS_TOKEN')
+def attr_auth_retrieve_private_keys(token):
+    data = {"access_token": token}
+    r = requests.post(AA_URL_SK_RETRIEVE, params=data, verify=VERIFY_CERTS)
+    click.echo(r.content.decode('unicode-escape'))
 
 
 @user.command()

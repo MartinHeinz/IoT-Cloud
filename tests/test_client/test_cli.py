@@ -118,6 +118,12 @@ def test_send_column_keys(runner, access_token, reset_tiny_db):
     assert isinstance(cipher, OPE)
 
 
+def test_aa_retrieve_private_keys(runner, attr_auth_access_token_two):
+    result = runner.invoke(cmd.attr_auth_retrieve_private_keys, ['--token', attr_auth_access_token_two])
+    assert "\"success\": true" in result.output
+    assert "\"private_keys\": " in result.output
+
+
 @pytest.mark.parametrize('reset_tiny_db', [cmd.path], indirect=True)
 def test_get_device_data(runner, access_token, app_and_ctx, reset_tiny_db, col_keys):
     device_id = 23
