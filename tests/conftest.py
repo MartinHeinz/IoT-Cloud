@@ -130,7 +130,7 @@ def col_keys():
         "device_type:description": "2c567c6fde8d29ee3c1ac15e74692089fdce507a43eb931be792ec3887968d33",
         "device_data:added": "8dabfaf75c380f03e95f55760af02dc84026654cf2019d6da44cc69f600ba8f7",
         "device_data:num_data": "3130d649f90006ef90f5c28fd486a6e748ffc35bad4981799708a411f7acaa60",
-        "device_data:data": "af785b829c4502286f5abec3403b43324971acfdb22fd80007216e8fa1abbf2e",
+        "device_data:data": "af785b829c4502286f5abec3403b43324971acfdb22fd80007216e8fa1abbf2e",  # TODO change to ABE Key
         "device_data:tid": "9692e6525c19e6fa37978626606534015cd120816a28b501bebec142d86002b2",
         "device:name": "ae89ebdb00d48b6e2aca3218213888aff3af9915831b9cdde8f82b709fd8802e",
     }

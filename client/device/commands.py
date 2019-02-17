@@ -57,7 +57,7 @@ def parse_msg(data):
 @device.command()
 @click.argument('data')
 def save_column_keys(data):
-    """ Can be trigger by: `./cli.py -b "172.21.0.3" user send-column-keys 23` """
+    """ Can be trigger by: `./cli.py -b "172.26.0.8" user send-column-keys 1 23` """
     try:
         data = json.loads(data)
 
@@ -69,7 +69,10 @@ def save_column_keys(data):
             fernet_key = hex_to_fernet(doc["shared_key"])
             keys = {}
             for k, v in data.items():
-                keys[k] = key_to_hex(fernet_key.decrypt(data[k].encode()))
+                if k == "device_data:data":
+                    keys[k] = v
+                else:
+                    keys[k] = key_to_hex(fernet_key.decrypt(data[k].encode()))
 
             doc = {**doc, **keys}
             table.update(doc)

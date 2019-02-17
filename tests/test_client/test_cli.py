@@ -22,7 +22,7 @@ import client.device.commands as device_cmd
 from app.models.models import MQTTUser, User, Action, Device, DeviceType, Scene
 from crypto_utils import hash, check_correctness_hash, hex_to_fernet, hex_to_ope, decrypt_using_fernet_hex, \
     decrypt_using_ope_hex
-from utils import json_string_with_bytes_to_dict, get_tinydb_table, search_tinydb_doc, insert_into_tinydb
+from utils import json_string_with_bytes_to_dict, get_tinydb_table, search_tinydb_doc, insert_into_tinydb, _create_payload
 
 cmd.path = '/tmp/keystore.json'
 
@@ -97,7 +97,11 @@ def test_send_column_keys(runner, access_token, reset_tiny_db):
     result = runner.invoke(cmd.send_column_keys, [user_id, device_id])
     assert f"Keys for device {device_id} not present, please use:" in result.output
 
-    insert_into_tinydb(cmd.path, 'device_keys', {'device_id': device_id, 'shared_key': key})
+    device_data_doc = {
+        "private_key": "dummy-value",
+        "attr_list": ['1-23', '1-GUEST', '1'],
+    }
+    insert_into_tinydb(cmd.path, 'device_keys', {'device_id': device_id, 'shared_key': key, "device_data:data": device_data_doc})
     insert_into_tinydb(cmd.path, "credentials", {"broker_id": "4", "broker_password": 'test_pass'})
 
     result = runner.invoke(cmd.send_column_keys, [user_id, device_id])
@@ -329,7 +333,7 @@ def test_parse_msg(runner, reset_tiny_db):
 
 @pytest.mark.parametrize('reset_tiny_db', [device_cmd.path], indirect=True)
 def test_save_column_keys(runner, reset_tiny_db):
-    data = """{"device_data:data": "gAAAAABcRHiboBSiAuKLxvSqS1yu4vOR8FlqGBOnzJSQ85e5UShmQ9avtLAXx_w9fKad2xILHWbi_uFywJML8ukoDGB7iiHkLT39iOnrUCAQHFyOdFERixgl-iFHMji-S1YfGKGwxRIU", "device_data:num_data": "gAAAAABcRHibuWXtMvF7XgSN7FR-cHyNl2eDb_HHPCuTjqtdMN2VxxZnSxGCjkoJxRNIGMcpBW-z4n1wynPoCCb1VanmH3EukMPwpf7Vwk9WytkNR9h51ApyGt1QEkaj_JF2A5jKu-vw", "action:name": "gAAAAABcRHibSiR3cHtaSUSk1ipKP_7csl3xTCd4J-JesU8GPlC2iwfblksE3kvuV3U2mAYqiYe3UuYw04JPbYDYaFePY-YTUAzie3OCRzwuMTE6tE9UBJtJ8wUNJSctZnrvSi0rcPzQ", "device_type:description": "gAAAAABcRHibvjQEIYiaSi9yXLm2VPbgPsmye1mKv9DYF9ktCixOf6Cq03dKc1-ZpxucfrKJXOyT7vyq17cfxyrN9k-Bj4pi3BV7M68fLTR__03lK32W8LOLkMLWdMvxcURU1W8gg91f", "device:name": "gAAAAABcRHib0mxfmRE3mg4ALX3XPjP7ZuVQ69NiRdebiNCE-40wZuzzNV1krKcnZeRZVWXwYf4xjYLNNygY-kbbgxltBWNJ5rLanpBIqTeoq8uI9up1bZ_vFFCiGPIjHTpYkMnF5XIN", "device:status": "gAAAAABcRHiboBSiAuKLxvSqS1yu4vOR8FlqGBOnzJSQ85e5UShmQ9avtLAXx_w9fKad2xILHWbi_uFywJML8ukoDGB7iiHkLT39iOnrUCAQHFyOdFERixgl-iFHMji-S1YfGKGwxRIU", "device_data:added": "gAAAAABcRHibuWXtMvF7XgSN7FR-cHyNl2eDb_HHPCuTjqtdMN2VxxZnSxGCjkoJxRNIGMcpBW-z4n1wynPoCCb1VanmH3EukMPwpf7Vwk9WytkNR9h51ApyGt1QEkaj_JF2A5jKu-vw", "scene:name": "gAAAAABcRHibVgsVHRls8IGj95TdFKraKbGfyf_TvDzjg0KV_vu-HawiISBzRaxwrFV_QHI5jA73CTM2dF4ePENaMe0QtIJljtqCBUSRhoQideCy0JL4hDAIJUzpGXFK5RMC2fJHUJ17", "scene:description": "gAAAAABcRHib1iH0Bs9sHff-dt7FY9XOUDzARN-mwaq7eI7iLYYwtmBcMkB3T5ChNnoNWhIRLnh_lQLmvCT_itBvjoIHydBVdIcTjzsyHcTMBUdlxPmohokOjunxdMSCY0B48-pYqzsn", "user_id": 1}"""
+    data = """{"device_data:data": {"private_key": "stuff", "attr_list": ["1", "1-23"]}, "device_data:num_data": "gAAAAABcRHibuWXtMvF7XgSN7FR-cHyNl2eDb_HHPCuTjqtdMN2VxxZnSxGCjkoJxRNIGMcpBW-z4n1wynPoCCb1VanmH3EukMPwpf7Vwk9WytkNR9h51ApyGt1QEkaj_JF2A5jKu-vw", "action:name": "gAAAAABcRHibSiR3cHtaSUSk1ipKP_7csl3xTCd4J-JesU8GPlC2iwfblksE3kvuV3U2mAYqiYe3UuYw04JPbYDYaFePY-YTUAzie3OCRzwuMTE6tE9UBJtJ8wUNJSctZnrvSi0rcPzQ", "device_type:description": "gAAAAABcRHibvjQEIYiaSi9yXLm2VPbgPsmye1mKv9DYF9ktCixOf6Cq03dKc1-ZpxucfrKJXOyT7vyq17cfxyrN9k-Bj4pi3BV7M68fLTR__03lK32W8LOLkMLWdMvxcURU1W8gg91f", "device:name": "gAAAAABcRHib0mxfmRE3mg4ALX3XPjP7ZuVQ69NiRdebiNCE-40wZuzzNV1krKcnZeRZVWXwYf4xjYLNNygY-kbbgxltBWNJ5rLanpBIqTeoq8uI9up1bZ_vFFCiGPIjHTpYkMnF5XIN", "device:status": "gAAAAABcRHiboBSiAuKLxvSqS1yu4vOR8FlqGBOnzJSQ85e5UShmQ9avtLAXx_w9fKad2xILHWbi_uFywJML8ukoDGB7iiHkLT39iOnrUCAQHFyOdFERixgl-iFHMji-S1YfGKGwxRIU", "device_data:added": "gAAAAABcRHibuWXtMvF7XgSN7FR-cHyNl2eDb_HHPCuTjqtdMN2VxxZnSxGCjkoJxRNIGMcpBW-z4n1wynPoCCb1VanmH3EukMPwpf7Vwk9WytkNR9h51ApyGt1QEkaj_JF2A5jKu-vw", "scene:name": "gAAAAABcRHibVgsVHRls8IGj95TdFKraKbGfyf_TvDzjg0KV_vu-HawiISBzRaxwrFV_QHI5jA73CTM2dF4ePENaMe0QtIJljtqCBUSRhoQideCy0JL4hDAIJUzpGXFK5RMC2fJHUJ17", "scene:description": "gAAAAABcRHib1iH0Bs9sHff-dt7FY9XOUDzARN-mwaq7eI7iLYYwtmBcMkB3T5ChNnoNWhIRLnh_lQLmvCT_itBvjoIHydBVdIcTjzsyHcTMBUdlxPmohokOjunxdMSCY0B48-pYqzsn", "user_id": 1}"""
 
     insert_into_tinydb(device_cmd.path, 'users', {"id": 1, "shared_key": "aefe715635c3f35f7c58da3eb410453712aaf1f8fd635571aa5180236bb21acc"})
     runner.invoke(device_cmd.save_column_keys, [data])
@@ -342,6 +346,8 @@ def test_save_column_keys(runner, reset_tiny_db):
     assert isinstance(fernet_key, Fernet)
     cipher = hex_to_ope(doc["device_data:added"])
     assert isinstance(cipher, OPE)
+
+    assert doc["device_data:data"]["attr_list"] == ["1", "1-23"]
 
 
 @pytest.mark.parametrize('reset_tiny_db', [cmd.path], indirect=True)
@@ -642,12 +648,33 @@ def test_aa_setup(runner, attr_auth_access_token_one, reset_tiny_db):
 
 @pytest.mark.parametrize('reset_tiny_db', [cmd.path], indirect=True)
 def test_aa_keygen(runner, attr_auth_access_token_one, reset_tiny_db):
-    result = runner.invoke(cmd.attr_auth_keygen, ["'TODAY GUEST'", '1', '--token', attr_auth_access_token_one])
+    result = runner.invoke(cmd.attr_auth_keygen, ["'1-TODAY 1-GUEST'", '1', '--token', attr_auth_access_token_one])
 
     assert "Master key not present, please use: get-attr-auth-keys" in result.output
     runner.invoke(cmd.get_attr_auth_keys, ['--token', attr_auth_access_token_one])
-    result = runner.invoke(cmd.attr_auth_keygen, ["'TODAY GUEST'", '1', '--token', attr_auth_access_token_one])
+    result = runner.invoke(cmd.attr_auth_keygen, ["'1-TODAY 1-GUEST'", '1', '--token', attr_auth_access_token_one])
     assert "\"success\": true" in result.output
+
+
+@pytest.mark.parametrize('reset_tiny_db', [cmd.path], indirect=True)
+def test_aa_device_keygen(runner, attr_auth_access_token_one, reset_tiny_db):
+    device_id = "23"
+    attr_list = "'1-23 1-GUEST 1'"
+    result = runner.invoke(cmd.attr_auth_device_keygen, [attr_list, device_id, '--token', attr_auth_access_token_one])
+
+    assert "Master key not present, please use: get-attr-auth-keys" in result.output
+    aa_keys_doc = {
+            "public_key": "eJyVVsuO2zAM/BUjZx9EWc/+SrEw0iLNHnIokLZAsci/V0MO5WxPu4ckth4UZzhD5e10PX1Z3k77/v12vt/3fbydvv39dbmf1mWM/jnffl909Gvq65LbutRtXSSMrxbGg5R16XWMyrqUihnBaMJXHMPF1uG34h1LZERBtDaCFERsGNzsIYt9KkKEekSX0PhVM9ZnRtLFiFYwMB5K5kdeHgPENX4UYQ5EGC2ASLWckIuBGy9NeLC+ZeLW04E9bQYMe7KQhpbImYRgsRG2g9HxjHMlRu6LNlEDzx2BM2Jmi60L7WjNiNGrnk9SW7VDkBR+EzHkZHFKx+KZE2qoQ0IgDeiiMDPR0NkKCfTd8cp/BQeeyB2VeLoz1bxqWtDEkitFIMXzahMVTukEXhkehbYtmftMDBoucEO103VAJWTkNJvWl8gSA06RqZXXz5oBlCDrnJwOcUBKQLRKl3r8An4uxpSKCpxUviBBiYHJJ8JXtLovTe2xDorPmK+E3pzAxgIjQQL88Wm3F8oneqn15EDnduLqhkmf6WjUzPGmzlQ6i9CZLPgDEVA4TN7c9Tk8iUSFTXoj6chevcPpl/163c+3n6/nDzteDKW6PVDw1myiZa1JiTUulzOs6Qmb/Mq70ryXZvchXeUmAHOwM/hF5XStWi6auUBnYvHU4KTU/D+7n/WdzTLXHGx+GsZJq+6OyFJ1ikxtEF1N2wyeqCBxBoIloIaOVKfOJm8XxRt7M7KUhTS7RXtqq3lzJwpt2Y4+xwxc3s3VFqw1cppdVLvpbIzq+egtSeUWrWV4c20kw2+scuCuc694QRm8U7NGEiNrDTsr68cwuW1Klzpl+ydLQAm02dVtNm+EoeKmShrvtuq9uBQWoNI4ei0EOsoukuoVzGwM3uy76zLwiOYCwYwV3O9ovXoCRWvpT0Fs5MHdj7VgUvt/KIbSrqnINLx5JMc86VLHxfB0dbsylEOPnVxAkf8R5l1hd5RMl9WXx+Mfq/O0uQ==",
+            "master_key": "eJyNUrtuwzAM/BXDcwbRFvXorxSF4BRGO3go4LRAEeTfy+MjcwfK4lk83lG6z9f9ts0v030e4/3YznMMyebr720/58sk6M92fO+KvuZ2mViCUsFCWCStgAWpi8Qqe/IjWZJGHlnAJQlYvbZJwmxfWgBIPVEywib1nG2vYK9Wa0DHshpavQXLqRZ/CyHeHuLhYxnb8fX5b5vggU1w8Qq17JqQkGwKXKsPGAot+ouS4AytoeQ5lhTiw3yx0JJS3W/3OZkTqe3NGxkbRyPKVgVunTQmnLpXoateBCarLbtrRbTqo8thUZss0Vupsl1JaXHPQRLuqViiDLijBmr2ppXCGjwSOqo3iCuGVn8g+AEp1ScD9hK2OQjZTzxtYczwibZ61F5QN2LMTR9MdVe4AHu1Km91uLCJiBfz+AOqO5sI"
+    }
+
+    insert_into_tinydb(cmd.path, "aa_keys", aa_keys_doc)
+    insert_into_tinydb(cmd.path, "device_keys", {'device_id': device_id, 'shared_key': "dummy_value"})
+    runner.invoke(cmd.attr_auth_device_keygen, [attr_list, device_id, '--token', attr_auth_access_token_one])
+    doc = search_tinydb_doc(cmd.path, 'device_keys', Query().device_id == device_id)
+    assert "device_data:data" in doc and 'shared_key' in doc and "device_id" in doc
+    assert "private_key" in doc["device_data:data"]
+    assert doc["device_data:data"]["attr_list"] == ['1-23', '1-GUEST', '1']
 
 
 def test_aa_encrypt(runner, attr_auth_access_token_one):
@@ -914,3 +941,19 @@ def test_process_action(runner, reset_tiny_db, col_keys):
 
     result = runner.invoke(device_cmd.process_action, [payload])
     assert "On" in result.output
+
+#
+# def test_create_payload():
+#     data = {
+#         'action:name': 'gAAAAABcaUWhIiLCm-sHzH-39qFDhB0HM866bbdCON2E0UW47-cPMWK5WGtw5FfPXRQIAxc8gnmnb1NTLzQt2Hw-oj2al3QB6mOUlMki90Q-6sJ9OJyz2TDatcrYQCiyVgAUKw9_dErc',
+#         'device_type:description': 'gAAAAABcaUWhZoaxIFQVeQuAfugm0MOUxDuSHzEvaPxYPdy3SZ5356pmsZzydiTmqdcr39__mpn8VXBQJnUEqKY7kDx2MSoX9E4mV6iNNVyo0GJb53BO7pQQFICqyt_vyFLC5qwYrlsQ',
+#         'device:name': 'gAAAAABcaUWhjZsbeRCmgielMCU8WIIBi9_wKfmf7qinxu3raDYQwMnb-XeEgr578wJRO4IAqG8jgCA5oEtZIWQjw_8Ly85TMAFm87GbM8Q3jck0IMQOe5matkhNirHwg-nS9P0uapwx',
+#         'device:status': 'gAAAAABcaUWhYEUVk90J7NdK_zsjCsN9UFSsZPztJBSWST7PYIX8EFjcTmecy27lhqkQbuOJehasc9lN_S_04fUBO6_EZRP8gAf3cuVgM5vh7Hz235hTCmpFJ_Gwic9GFmY9ricmZANf',
+#         'device_data:added': 'gAAAAABcaUWh0pla8DXXMGX37JqwonB9mHqBzfT_vBTiU7_003BSbs7UnczjN_5p4myEEYMhE1KXO6jiSQelYoIn08NQLqjtmgQeujXGtoJpOZ2EQxjTpPx965rqlHBO5gdIiUfCTt60',
+#         'device_data:num_data': 'gAAAAABcaUWhe40ZmHB-ezFX57DeI5QNI4QIChAyoxU1xKaXC5CbFpiZUYOGrPZ-G0I_z0KU_G6rqO9877uVWMWjtQjrZeXGbPttV6uatb10OmoNCpe0MVbQtmb49fEXz8KJoqOgSM-H',
+#         'device_data:tid': 'gAAAAABcaUWhqwMNoLly60QZ05jp0fABRTdqzs58B7gQyL1lUyHBZX7HDve4WeEmGlRwL9gFjClueo695MAojJbBGiDyMpkWh-M2w07umtL-ZcmNNgW1riph-_lfxCHGFqBpx5r_X25s',
+#         'device_data:data': {'private_key': 'dummy-value', 'attr_list': ['1-23', '1-GUEST', '1']}
+#     }
+#     payload = _create_payload(1, data)
+#
+#     assert payload ==

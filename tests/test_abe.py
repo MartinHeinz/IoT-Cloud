@@ -8,10 +8,10 @@ from charm.toolbox.pairinggroup import PairingGroup
 
 from app.consts import INCORRECT_RECEIVER_ID_ERROR_MSG, INVALID_ATTR_LIST_ERROR_MSG, MESSAGE_MISSING_ERROR_MSG, POLICY_STRING_MISSING_ERROR_MSG, \
     CIPHERTEXT_MISSING_ERROR_MSG, COULD_NOT_DECRYPT_ERROR_MSG, INVALID_OWNER_API_USERNAME_ERROR_MSG, OWNER_API_USERNAME_MISSING_ERROR_MSG, \
-    API_USERNAME_MISSING_ERROR_MSG
+    API_USERNAME_MISSING_ERROR_MSG, MASTER_KEY_MISSING_ERROR_MSG, ATTR_LIST_MISSING_ERROR_MSG
 from app.attribute_authority.utils import create_pairing_group, create_cp_abe, serialize_charm_object, deserialize_charm_object, already_has_key_from_owner, \
     create_attributes, \
-    replace_existing_key, parse_attr_list, get_private_key_based_on_owner
+    replace_existing_key, parse_attr_list, get_private_key_based_on_owner, is_valid, create_private_key
 from app.auth.utils import INVALID_ACCESS_TOKEN_ERROR_MSG
 from app.models.models import AttrAuthUser, PrivateKey
 from tests.conftest import assert_got_error_from_post, assert_got_data_from_post, get_data_from_post
@@ -27,7 +27,7 @@ def test_charm_crypto():
     (pk, msk) = hyb_abe.setup()  # Public Key and Master SECRET Key
 
     # generate a key
-    attr_list = ['TODAY']
+    attr_list = ['1-GUEST']
     key = hyb_abe.keygen(pk, msk, attr_list)
 
     serialized_pk = serialize_charm_object(pk, pairing_group)
@@ -40,7 +40,7 @@ def test_charm_crypto():
     msg = "Hello World"
 
     # generate a ciphertext
-    policy_str = '(TODAY)'
+    policy_str = '(1-GUEST)'
     ctxt = hyb_abe.encrypt(pk, msg, policy_str)
 
     policy_str = '(TOMORROW)'  # Re-encrypted data with new policy
@@ -184,14 +184,14 @@ def test_keygen_invalid_receiver(client, master_key_user_one, attr_auth_access_t
         "attr_list": "TODAY_GUEST, ANOTHER",
         "receiver_id": "15"
     }
-    assert_got_error_from_post(client, '/attr_auth/keygen', data, 400, INCORRECT_RECEIVER_ID_ERROR_MSG)
+    assert_got_error_from_post(client, '/attr_auth/user/keygen', data, 400, INCORRECT_RECEIVER_ID_ERROR_MSG)
     data = {
         "access_token": attr_auth_access_token_one,
         "master_key": master_key_user_one,
         "attr_list": "TODAY_GUEST, ANOTHER",
         "receiver_id": "eth"
     }
-    assert_got_error_from_post(client, '/attr_auth/keygen', data, 400, INCORRECT_RECEIVER_ID_ERROR_MSG)
+    assert_got_error_from_post(client, '/attr_auth/user/keygen', data, 400, INCORRECT_RECEIVER_ID_ERROR_MSG)
 
 
 def test_keygen_invalid_attr_list(client, master_key_user_one, attr_auth_access_token_one):
@@ -201,14 +201,22 @@ def test_keygen_invalid_attr_list(client, master_key_user_one, attr_auth_access_
         "attr_list": "TODAY_GUEST, ANOTHER",
         "receiver_id": "2"
     }
-    assert_got_error_from_post(client, '/attr_auth/keygen', data, 400, INVALID_ATTR_LIST_ERROR_MSG)
+    assert_got_error_from_post(client, '/attr_auth/user/keygen', data, 400, INVALID_ATTR_LIST_ERROR_MSG)
+
+    data = {
+        "access_token": attr_auth_access_token_one,
+        "master_key": master_key_user_one,
+        "attr_list": "15-GUEST 15",
+        "receiver_id": "2"
+    }
+    assert_got_error_from_post(client, '/attr_auth/user/keygen', data, 400, INVALID_ATTR_LIST_ERROR_MSG)
 
 
 def test_keygen_already_has_key_from_owner(client, app_and_ctx, master_key_user_one, attr_auth_access_token_one, attr_auth_access_token_two):
     data = {
         "access_token": attr_auth_access_token_one,
         "master_key": master_key_user_one,
-        "attr_list": "TODAY GUEST",
+        "attr_list": "1 1-2 1-GUEST",
         "receiver_id": "2"
     }
     app, ctx = app_and_ctx
@@ -217,21 +225,24 @@ def test_keygen_already_has_key_from_owner(client, app_and_ctx, master_key_user_
         old_private_key = next(key for key in receiver.private_keys if key.challenger_id == 1)
         old_private_key_data = old_private_key.data
         old_private_key_key_update = old_private_key.key_update
+        private_keys_num = len(receiver.private_keys)
 
-        assert_got_data_from_post(client, '/attr_auth/keygen', data)
+        assert_got_data_from_post(client, '/attr_auth/user/keygen', data)
 
         receiver = AttrAuthUser.get_by_access_token(attr_auth_access_token_two)  # TestUser access_token
-        new_private_key = next(key for key in receiver.private_keys if key.challenger_id == 1)
+        new_private_key = next(key for key in sorted(receiver.private_keys, key=lambda p: p.key_update, reverse=True) if key.challenger_id == 1)
 
         assert old_private_key_data != new_private_key.data
         assert old_private_key_key_update < new_private_key.key_update
+
+        assert len(receiver.private_keys) > private_keys_num
 
         # Try to encrypt and decrypt
         pairing_group = create_pairing_group()
         cp_abe = create_cp_abe()
         plaintext = "Hello World"
         data_owner = AttrAuthUser.get_by_access_token(attr_auth_access_token_one)
-        policy_str = '(TODAY)'
+        policy_str = '(1-GUEST)'
         public_key = deserialize_charm_object(data_owner.public_key.data, pairing_group)
         new_private_key = deserialize_charm_object(new_private_key.data, pairing_group)
         ciphertext = cp_abe.encrypt(public_key, plaintext, policy_str)
@@ -243,7 +254,7 @@ def test_keygen_doesnt_have_key_from_owner(client, app_and_ctx, master_key_user_
     data = {
         "access_token": attr_auth_access_token_two,
         "master_key": master_key_user_two,
-        "attr_list": "TODAY GUEST",
+        "attr_list": "2 2-1 2-GUEST",
         "receiver_id": "1"
     }
     app, ctx = app_and_ctx
@@ -252,7 +263,7 @@ def test_keygen_doesnt_have_key_from_owner(client, app_and_ctx, master_key_user_
 
         num_of_old_keys = len(receiver.private_keys)
 
-        assert_got_data_from_post(client, '/attr_auth/keygen', data)
+        assert_got_data_from_post(client, '/attr_auth/user/keygen', data)
 
         receiver = AttrAuthUser.get_by_access_token(attr_auth_access_token_one)
         new_private_key = next(key for key in receiver.private_keys if key.challenger_id == 2)
@@ -264,7 +275,7 @@ def test_keygen_doesnt_have_key_from_owner(client, app_and_ctx, master_key_user_
         cp_abe = create_cp_abe()
         plaintext = "Hello World"
         data_owner = AttrAuthUser.get_by_access_token(attr_auth_access_token_two)
-        policy_str = '(GUEST)'
+        policy_str = '(2-GUEST)'
         public_key = deserialize_charm_object(data_owner.public_key.data, pairing_group)
         new_private_key = deserialize_charm_object(new_private_key.data, pairing_group)
         ciphertext = cp_abe.encrypt(public_key, plaintext, policy_str)
@@ -272,11 +283,42 @@ def test_keygen_doesnt_have_key_from_owner(client, app_and_ctx, master_key_user_
         assert plaintext == decrypted_msg.decode("utf-8")
 
 
+def test_device_keygen(client, app_and_ctx, master_key_user_two, attr_auth_access_token_one, attr_auth_access_token_two):
+    data = {
+        "access_token": attr_auth_access_token_one,
+    }
+    assert_got_error_from_post(client, '/attr_auth/device/keygen', data, 400, MASTER_KEY_MISSING_ERROR_MSG)
+
+    data = {
+        "access_token": attr_auth_access_token_one,
+        "master_key": master_key_user_two,
+    }
+    assert_got_error_from_post(client, '/attr_auth/device/keygen', data, 400, ATTR_LIST_MISSING_ERROR_MSG)
+
+    data = {
+        "access_token": attr_auth_access_token_one,
+        "master_key": master_key_user_two,
+        "attr_list": "sedrgd 1 1-23 1-GUEST",  # invalid
+    }
+    assert_got_error_from_post(client, '/attr_auth/device/keygen', data, 400, INVALID_ATTR_LIST_ERROR_MSG)
+
+    data = {
+        "access_token": attr_auth_access_token_one,
+        "master_key": master_key_user_two,
+        "attr_list": "1 1-23 1-GUEST",
+    }
+    status, data_out = get_data_from_post(client, '/attr_auth/device/keygen', data)
+    assert status == 200
+    assert "private_key" in data_out
+
+
 def test_parse_attr_list():
-    attr_list = 'QH QD\t JC KD 4   JS'
+    valid_attr_list = 'QH QD\t JC KD 4   JS'
+    valid_attr_list_2 = '12-GUEST 12-13 12'
     empty_attr_list = ''
     invalid_attr_list = 'Q-H QD JC K_D JS'
-    assert parse_attr_list(attr_list) == ['QH', 'QD', 'JC', 'KD', '4', 'JS']
+    assert parse_attr_list(valid_attr_list) == ['QH', 'QD', 'JC', 'KD', '4', 'JS']
+    assert parse_attr_list(valid_attr_list_2) == ['12-GUEST', '12-13', '12']
     assert len(parse_attr_list(empty_attr_list)) == 0
     assert len(parse_attr_list(invalid_attr_list)) == 0
 
@@ -288,6 +330,31 @@ def test_get_private_key_based_on_owner():
     owner = expected.challenger
     key = get_private_key_based_on_owner(decryptor, owner)
     assert key == expected
+
+
+def test_is_valid():
+    assert not is_valid(["3-thdr", "1-34, 1"], 1)
+    assert is_valid(["1-thdr", "1-34, 1"], 1)
+
+
+def test_create_private_key():
+    pairing_group = create_pairing_group()
+    cp_abe = create_cp_abe()
+
+    public_key, master_key = cp_abe.setup()
+    serialized_public_key = serialize_charm_object(public_key, pairing_group)
+    serialized_master_key = serialize_charm_object(master_key, pairing_group)
+
+    serialized_private_key = create_private_key(serialized_master_key, serialized_public_key, ["1", "1-2", "1-GUEST"])
+
+    plaintext_in = "stuff"
+    policy_string = "(1)"
+    ciphertext = cp_abe.encrypt(public_key, plaintext_in, policy_string)
+
+    private_key = deserialize_charm_object(serialized_private_key, pairing_group)
+    plaintext_out = cp_abe.decrypt(public_key, private_key, ciphertext)
+
+    assert plaintext_in == plaintext_out.decode()
 
 
 def test_get_private_key_based_on_owner_missing():

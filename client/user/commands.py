@@ -16,7 +16,7 @@ from cryptography.hazmat.primitives.serialization import load_pem_private_key, l
 from paho.mqtt import client as paho
 from tinydb import where, Query
 from passlib.hash import bcrypt
-
+from tinydb.operations import set
 
 sys.stdout = open(os.devnull, 'w')
 sys.path.insert(0, '../app')
@@ -56,7 +56,8 @@ URL_REGISTER_TO_BROKER = URL_BASE + "user/broker_register"
 AA_URL_BASE = "https://localhost/attr_auth/"
 AA_URL_SET_USERNAME = AA_URL_BASE + "set_username"
 AA_URL_SETUP = AA_URL_BASE + "setup"
-AA_URL_KEYGEN = AA_URL_BASE + "keygen"
+AA_URL_KEYGEN = AA_URL_BASE + "user/keygen"
+AA_URL_DEVICE_KEYGEN = AA_URL_BASE + "device/keygen"
 AA_URL_ENCRYPT = AA_URL_BASE + "encrypt"
 AA_URL_DECRYPT = AA_URL_BASE + "decrypt"
 
@@ -94,7 +95,7 @@ def send_message(user_id, device_id, data):
 
     client = _setup_client(user_id)
 
-    payload = _create_payload(user_id, {"ciphertext": token.decode()})
+    payload = f'"{json.dumps(_create_payload({"ciphertext": token.decode()}, user_id))}"'
     ret = client.publish(f"u:{user_id}/d:{device_id}/", payload)  # TODO change payload to json and parse it as JSON on device end
     click.echo(f"RC and MID = {ret}")
 
@@ -427,7 +428,6 @@ def send_column_keys(user_id, device_id):
         "device:status": None,
         "device_data:added": None,
         "device_data:num_data": None,
-        "device_data:data": None,
         "device_data:tid": None
     }
 
@@ -437,13 +437,45 @@ def send_column_keys(user_id, device_id):
         keys[k] = key_to_hex(random_bytes)  # NOTE: retrieve key as `key_to_hex(key)`
         payload_keys[k] = fernet_key.encrypt(random_bytes).decode()
 
+    payload_keys["device_data:data"] = doc["device_data:data"]
+
     doc = {**doc, **keys}
     table.upsert(doc, Query().device_id == device_id)
 
     client = _setup_client(user_id)
-    payload = _create_payload(user_id, payload_keys)
+    payload = f'"{json.dumps(_create_payload(payload_keys, user_id))}"'
     ret = client.publish(f"u:{user_id}/d:{device_id}/", payload)
     click.echo(f"RC and MID = {ret}")
+
+
+@user.command()
+@click.argument('attr_list')
+@click.argument('device_id')
+@click.option('--token', envvar='AA_ACCESS_TOKEN')
+def attr_auth_device_keygen(attr_list, device_id, token):  # TODO check if attr_list is consistent with device_id
+    doc = search_tinydb_doc(path, 'aa_keys', where('public_key').exists() & where('master_key').exists())
+    if not doc:
+        with click.Context(get_attr_auth_keys) as ctx:
+            click.echo(f"Master key not present, please use: {ctx.command.name}")
+            click.echo(get_attr_auth_keys.get_help(ctx))
+            return
+
+    attr_list = re.sub('[\']', '', attr_list)
+    data = {
+        "access_token": token,
+        "master_key": doc['master_key'],
+        "attr_list": attr_list
+    }
+    r = requests.post(AA_URL_DEVICE_KEYGEN, params=data, verify=VERIFY_CERTS)
+    content = r.content.decode('unicode-escape')
+    json_content = json_string_with_bytes_to_dict(content)
+
+    t = get_tinydb_table(path, "device_keys")
+    device_data_doc = {
+        "private_key": json_content["private_key"],
+        "attr_list": attr_list.split(),
+    }
+    t.update(set("device_data:data", device_data_doc), Query().device_id == device_id)
 
 
 @user.command()
@@ -496,7 +528,7 @@ def _get_fake_tuple_data(user_id, device_id):
         _handle_on_message(mqtt_client, userdata, msg, device_id, user_id)
 
     client = _setup_client(str({user_id}))
-    payload = _create_payload(user_id, payload_dict)
+    payload = f'"{json.dumps(_create_payload(payload_dict, user_id))}"'
     sub_topic = f"d:{device_id}/u:{user_id}/"
     client.subscribe(sub_topic)
     client.publish(f"u:{user_id}/d:{device_id}/", payload)

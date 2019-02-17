@@ -28,14 +28,14 @@ INSERT INTO acl (id, mqtt_user_id, username, topic, acc) VALUES (17, 8, 'testuse
 INSERT INTO acl (id, mqtt_user_id, username, topic, acc) VALUES (18, 8, 'testuser', 'write', 2);
 INSERT INTO acl (id, mqtt_user_id, username, topic, acc) VALUES (19, 8, 'testuser', 'both', 3);
 
-INSERT INTO public.acl (id, mqtt_user_id, username, topic, acc) VALUES (1, 1, 'u:23', 'u:1/d:23/+', 1);
-INSERT INTO public.acl (id, mqtt_user_id, username, topic, acc) VALUES (2, 1, 'u:23', 'd:23/u:1/+', 2);
-INSERT INTO public.acl (id, mqtt_user_id, username, topic, acc) VALUES (3, 1, 'u:23', 'd:23/server/+', 2);
-INSERT INTO public.acl (id, mqtt_user_id, username, topic, acc) VALUES (4, 1, 'u:23', 'server/d:23/+', 1);
-INSERT INTO public.acl (id, mqtt_user_id, username, topic, acc) VALUES (5, 2, 'd:1', 'u:1/d:23/+', 2);
-INSERT INTO public.acl (id, mqtt_user_id, username, topic, acc) VALUES (6, 2, 'd:1', 'd:23/u:1/+', 1);
-INSERT INTO public.acl (id, mqtt_user_id, username, topic, acc) VALUES (7, 2, 'd:1', 'u:1/server/+', 2);
-INSERT INTO public.acl (id, mqtt_user_id, username, topic, acc) VALUES (8, 2, 'd:1', 'server/u:1/+', 1);
+INSERT INTO public.acl (id, mqtt_user_id, username, topic, acc) VALUES (1, 1, 'd:23', 'u:1/d:23/+', 1);
+INSERT INTO public.acl (id, mqtt_user_id, username, topic, acc) VALUES (2, 1, 'd:23', 'd:23/u:1/+', 2);
+INSERT INTO public.acl (id, mqtt_user_id, username, topic, acc) VALUES (3, 1, 'd:23', 'd:23/server/+', 2);
+INSERT INTO public.acl (id, mqtt_user_id, username, topic, acc) VALUES (4, 1, 'd:23', 'server/d:23/+', 1);
+INSERT INTO public.acl (id, mqtt_user_id, username, topic, acc) VALUES (5, 2, 'u:1', 'u:1/d:23/+', 2);
+INSERT INTO public.acl (id, mqtt_user_id, username, topic, acc) VALUES (6, 2, 'u:1', 'd:23/u:1/+', 1);
+INSERT INTO public.acl (id, mqtt_user_id, username, topic, acc) VALUES (7, 2, 'u:1', 'u:1/server/+', 2);
+INSERT INTO public.acl (id, mqtt_user_id, username, topic, acc) VALUES (8, 2, 'u:1', 'server/u:1/+', 1);
 INSERT INTO public.acl (id, mqtt_user_id, username, topic, acc) VALUES (9, 5, 'd:45', 'u:2/d:45/+', 1);
 INSERT INTO public.acl (id, mqtt_user_id, username, topic, acc) VALUES (10, 5, 'd:45', 'd:45/u:2/+', 2);
 INSERT INTO public.acl (id, mqtt_user_id, username, topic, acc) VALUES (11, 5, 'd:45', 'd:45/server/+', 2);

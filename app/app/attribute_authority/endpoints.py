@@ -1,6 +1,6 @@
 from flask import request
 
-from app.attribute_authority.utils import already_has_key_from_owner, replace_existing_key, create_attributes, parse_attr_list, get_private_key_based_on_owner
+from app.attribute_authority.utils import create_attributes, parse_attr_list, get_private_key_based_on_owner, is_valid, create_private_key
 from app.app_setup import db
 from app.attribute_authority import attr_authority
 from app.attribute_authority.utils import serialize_charm_object, create_cp_abe, create_pairing_group, deserialize_charm_object
@@ -9,7 +9,7 @@ from app.consts import MASTER_KEY_MISSING_ERROR_MSG, ATTR_LIST_MISSING_ERROR_MSG
     INVALID_ATTR_LIST_ERROR_MSG, MESSAGE_MISSING_ERROR_MSG, POLICY_STRING_MISSING_ERROR_MSG, CIPHERTEXT_MISSING_ERROR_MSG, COULD_NOT_DECRYPT_ERROR_MSG, \
     INVALID_OWNER_API_USERNAME_ERROR_MSG, OWNER_API_USERNAME_MISSING_ERROR_MSG, API_USERNAME_MISSING_ERROR_MSG
 from app.models.models import AttrAuthUser, PublicKey, PrivateKey
-from app.utils import http_json_response, check_missing_request_argument, is_number
+from app.utils import http_json_response, check_missing_request_argument
 
 """
 NOTES:
@@ -78,13 +78,14 @@ def key_setup():
     return http_json_response(**{'public_key': serialized_public_key.decode("utf-8"), 'master_key': serialized_master_key.decode("utf-8")})
 
 
-@attr_authority.route('/keygen', methods=['POST'])
+@attr_authority.route('/user/keygen', methods=['POST'])
 @require_api_token("attr_auth")
 def keygen():
     token = request.args.get("access_token", None)
     serialized_master_key = request.args.get("master_key", None)
     attr_list = request.args.get("attr_list", None)
     receiver_id = request.args.get("receiver_id", None)
+    data_owner = AttrAuthUser.get_by_access_token(token)
 
     arg_check = check_missing_request_argument(
         (serialized_master_key, MASTER_KEY_MISSING_ERROR_MSG),
@@ -93,31 +94,46 @@ def keygen():
     if arg_check is not True:
         return arg_check
 
-    receiver = AttrAuthUser.get_by_id(int(receiver_id) if is_number(receiver_id) else 0)
+    receiver = AttrAuthUser.get_by_id(receiver_id)
     if receiver is None:
         return http_json_response(False, 400, **{"error": INCORRECT_RECEIVER_ID_ERROR_MSG})
 
     attr_list = parse_attr_list(attr_list)
-    if not attr_list:
+    if not attr_list or not is_valid(attr_list, data_owner.id):
         return http_json_response(False, 400, **{"error": INVALID_ATTR_LIST_ERROR_MSG})
 
-    master_key = deserialize_charm_object(str.encode(serialized_master_key), create_pairing_group())  # TODO check `serialized_master_key` before using `str.encode()`
-    cp_abe = create_cp_abe()
-
-    data_owner = AttrAuthUser.get_by_access_token(token)
-    public_key = deserialize_charm_object(data_owner.public_key.data, create_pairing_group())
-    private_key = cp_abe.keygen(public_key, master_key, attr_list)
-    serialized_private_key = serialize_charm_object(private_key, create_pairing_group())
+    serialized_private_key = create_private_key(serialized_master_key.encode(), data_owner.public_key.data, attr_list)
 
     # delegate to receiver of generated key
-    if already_has_key_from_owner(receiver, data_owner):
-        replace_existing_key(receiver, serialized_private_key, data_owner, attr_list)
-    else:
-        receiver.private_keys.append(PrivateKey(data=serialized_private_key,
-                                                challenger=data_owner,
-                                                attributes=create_attributes(attr_list)))
+    receiver.private_keys.append(PrivateKey(data=serialized_private_key,
+                                            challenger=data_owner,
+                                            attributes=create_attributes(attr_list)))
     db.session.commit()
     return http_json_response()
+
+
+@attr_authority.route('/device/keygen', methods=['POST'])
+@require_api_token("attr_auth")
+def device_keygen():
+    token = request.args.get("access_token", None)
+    serialized_master_key = request.args.get("master_key", None)
+    attr_list = request.args.get("attr_list", None)
+    data_owner = AttrAuthUser.get_by_access_token(token)
+
+    arg_check = check_missing_request_argument(
+        (serialized_master_key, MASTER_KEY_MISSING_ERROR_MSG),
+        (attr_list, ATTR_LIST_MISSING_ERROR_MSG))
+    if arg_check is not True:
+        return arg_check
+
+    attr_list = parse_attr_list(attr_list)
+    if not attr_list or not is_valid(attr_list, data_owner.id):
+        return http_json_response(False, 400, **{"error": INVALID_ATTR_LIST_ERROR_MSG})
+
+    serialized_private_key = create_private_key(serialized_master_key, data_owner.public_key.data, attr_list)
+
+    # delegate to receiver of generated key
+    return http_json_response(private_key=serialized_private_key.decode("utf-8"))
 
 
 @attr_authority.route('/encrypt', methods=['POST'])
