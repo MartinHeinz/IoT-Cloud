@@ -16,6 +16,8 @@ from pyope.ope import OPE, ValueRange
 from scipy import signal
 import numpy as np
 
+from app.attribute_authority.utils import create_pairing_group, create_cp_abe, deserialize_charm_object, serialize_charm_object
+
 
 def encrypt(key, plaintext, associated_data):
     # Generate a random 96-bit IV.
@@ -142,7 +144,7 @@ def generate(columns, bound="upper_bound"):
             "seed": 3453657356745,
             "lower_bound": 1,
             "upper_bound": 1,
-            "is_numeric": True
+            "type": "OPE"
         , ...}
     :returns example: {
             "added": -1000,
@@ -168,19 +170,21 @@ def encrypt_fake_tuple(fake_tuple, keys):
         "tid": 1
     }
     :param keys: example: {
-        "added": [ "217b5c3430fd77e7a0191f04cbaf872be189d8cb203c54f7b083211e8e5f4f70", True],
-        "num_data": [ "a70c6a23f6b0ef9163040f4cc02819c22d7e35de6469672d250519077b36fe4d", True],
-        "data": [ "d011b0fa5a23b3c2efadb2e0fea094647ff7b03b9a93022aeae6c1edf3eb1871", False]
+        "added": [ "217b5c3430fd77e7a0191f04cbaf872be189d8cb203c54f7b083211e8e5f4f70", "OPE"],
+        "num_data": [ "a70c6a23f6b0ef9163040f4cc02819c22d7e35de6469672d250519077b36fe4d", "OPE"],
+        "data": [ "d011b0fa5a23b3c2efadb2e0fPUBLIC_KEY93022aeae6c1edf3eb1871", "ABE", "1-23 1-GUEST 1"]
     }
     """
     result = {}
     for col, val in fake_tuple.items():
-        if not keys[col][1]:  # if key is for fernet (is_numeric is False) create Fernet token
+        if keys[col][1] == "Fernet":  # if key is for fernet, create Fernet token
             cipher = hex_to_fernet(keys[col][0])
             result[col] = cipher.encrypt(bytes(str(val), "utf-8")).decode()
-        else:  # if key is for OPE (is_numeric is True) create OPE cipher
+        elif keys[col][1] == "OPE":  # if key is for OPE, create OPE cipher
             cipher = hex_to_ope(keys[col][0])
             result[col] = cipher.encrypt(val)
+        else:  # if key is for ABE
+            result[col] = encrypt_using_abe_serialized_key(keys[col][0], val, keys[col][2])
     return result
 
 
@@ -242,3 +246,23 @@ def decrypt_using_ope_hex(h, ciphertext):
     cipher = hex_to_ope(h)
     plaintext = cipher.decrypt(int(ciphertext))
     return plaintext
+
+
+def encrypt_using_abe_serialized_key(pk, plaintext, policy_string):
+    pairing_group = create_pairing_group()  # TODO This is being imported from server app - might break with `setup.py`
+    cp_abe = create_cp_abe()
+    public_key = deserialize_charm_object(str.encode(pk), pairing_group)  # TODO can throw Exception
+    ciphertext = cp_abe.encrypt(public_key, str(plaintext), policy_string)
+    return serialize_charm_object(ciphertext, pairing_group).decode("utf-8")
+
+
+def decrypt_using_abe_serialized_key(serialized_ciphertext, serialized_pk, serialized_sk):
+    pairing_group = create_pairing_group()
+    cp_abe = create_cp_abe()
+
+    public_key = deserialize_charm_object(str.encode(serialized_pk), pairing_group)
+    private_key = deserialize_charm_object(str.encode(serialized_sk), pairing_group)
+    ciphertext = deserialize_charm_object(str.encode(serialized_ciphertext), pairing_group)
+    plaintext = cp_abe.decrypt(public_key, private_key, ciphertext)
+
+    return plaintext.decode("utf-8")

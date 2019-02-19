@@ -11,11 +11,12 @@ from cryptography.hazmat.primitives.serialization import load_pem_public_key
 from tinydb import Query
 
 try:  # for packaged CLI (setup.py)
-    from client.crypto_utils import triangle_wave, sawtooth_wave, square_wave, sine_wave, generate, fake_tuple_to_hash, \
-    encrypt_fake_tuple, index_function, hash, hex_to_key, key_to_hex, hex_to_fernet, decrypt_using_fernet_hex, get_random_seed
+    from client.crypto_utils import triangle_wave, sawtooth_wave, square_wave, sine_wave, generate, fake_tuple_to_hash, encrypt_fake_tuple, index_function, \
+        hash, hex_to_key, key_to_hex, hex_to_fernet, decrypt_using_fernet_hex, get_random_seed
     from client.utils import get_tinydb_table, search_tinydb_doc
 except ImportError:  # for un-packaged CLI
-    from crypto_utils import triangle_wave, sawtooth_wave, square_wave, sine_wave, generate, fake_tuple_to_hash, encrypt_fake_tuple, index_function, hash, hex_to_key, key_to_hex, hex_to_fernet, decrypt_using_fernet_hex, get_random_seed
+    from crypto_utils import triangle_wave, sawtooth_wave, square_wave, sine_wave, generate, fake_tuple_to_hash, encrypt_fake_tuple, index_function, \
+        hash, hex_to_key, key_to_hex, hex_to_fernet, decrypt_using_fernet_hex, get_random_seed
     from utils import get_tinydb_table, search_tinydb_doc
 
 dir_path = os.path.dirname(os.path.realpath(__file__))
@@ -136,7 +137,13 @@ def get_fake_tuple(user_id, bound):
         for t in doc["integrity"]:
             for col in doc["integrity"][t]:
                 doc_key = f'{t}:{col}'
-                keys[col] = [doc[doc_key], doc["integrity"][t][col]["is_numeric"]]
+                if doc_key == "device_data:data":
+                    keys[col] = [doc[doc_key]["public_key"],
+                                 doc["integrity"][t][col]["type"],
+                                 " ".join(doc[doc_key]["attr_list"])]
+                else:
+
+                    keys[col] = [doc[doc_key], doc["integrity"][t][col]["type"]]
 
         fake_tuple_hash = fake_tuple_to_hash([fake_tuple["added"], fake_tuple["data"], fake_tuple["num_data"], fake_tuple["tid"]])
         encrypted_fake_tuple = encrypt_fake_tuple(fake_tuple, keys)
@@ -225,24 +232,24 @@ def init_integrity_data():
                 "seed": get_random_seed(),
                 "lower_bound": 1,
                 "upper_bound": 1,
-                "is_numeric": True
+                "type": "OPE"
             },
             "num_data": {
                 "seed": get_random_seed(),
                 "lower_bound": 1,
                 "upper_bound": 1,
-                "is_numeric": True
+                "type": "OPE"
             },
             "data": {
                 "seed": get_random_seed(),
                 "lower_bound": 1,
                 "upper_bound": 1,
-                "is_numeric": False
+                "type": "ABE"
             },
             "tid": {
                 "lower_bound": 1,
                 "upper_bound": 1,
-                "is_numeric": False
+                "type": "Fernet"
             },
         }
     }

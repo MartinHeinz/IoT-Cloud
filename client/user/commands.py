@@ -25,13 +25,15 @@ from app.utils import bytes_to_json, is_number
 sys.stdout = sys.__stdout__
 
 try:  # for packaged CLI (setup.py)
-    from client.crypto_utils import hash, correctness_hash, check_correctness_hash, int_to_bytes, instantiate_ope_cipher, int_from_bytes, hex_to_key, key_to_hex, \
-    hex_to_fernet, hex_to_ope, decrypt_using_fernet_hex, decrypt_using_ope_hex, encrypt_using_fernet_hex, murmur_hash
-    from client.utils import json_string_with_bytes_to_dict, _create_payload, search_tinydb_doc, get_tinydb_table, \
-    insert_into_tinydb
+    from client.crypto_utils import hash, correctness_hash, check_correctness_hash, int_to_bytes, instantiate_ope_cipher, int_from_bytes, hex_to_key, \
+        key_to_hex, hex_to_fernet, hex_to_ope, decrypt_using_fernet_hex, decrypt_using_ope_hex, encrypt_using_fernet_hex, murmur_hash, \
+        decrypt_using_abe_serialized_key
+    from client.utils import json_string_with_bytes_to_dict, _create_payload, search_tinydb_doc, get_tinydb_table, insert_into_tinydb
     from client.password_hashing import pbkdf2_hash
 except ImportError:  # for un-packaged CLI
-    from crypto_utils import hash, correctness_hash, check_correctness_hash, instantiate_ope_cipher, int_from_bytes, hex_to_key, key_to_hex, hex_to_fernet, hex_to_ope, decrypt_using_fernet_hex, decrypt_using_ope_hex, encrypt_using_fernet_hex, murmur_hash
+    from crypto_utils import hash, correctness_hash, check_correctness_hash, instantiate_ope_cipher, int_from_bytes, hex_to_key, key_to_hex, \
+        hex_to_fernet, hex_to_ope, decrypt_using_fernet_hex, decrypt_using_ope_hex, encrypt_using_fernet_hex, murmur_hash, \
+        decrypt_using_abe_serialized_key
     from utils import json_string_with_bytes_to_dict, _create_payload, search_tinydb_doc, get_tinydb_table, insert_into_tinydb
     from password_hashing import pbkdf2_hash
 
@@ -566,7 +568,10 @@ def _divide_fake_and_real_data(rows, device_id, integrity_info):
     col_types = {col: get_col_encryption_type(col, integrity_info) for col in db_col_names}
     key_type_pairs = {}
     for k, v in enc_keys.items():
-        key_type_pairs[k.split(":")[1]] = [enc_keys[k], col_types[k]]
+        if k == "device_data:data":
+            key_type_pairs[k.split(":")[1]] = [enc_keys[k][0], col_types[k], enc_keys[k][1]]  # public, type, private
+        else:
+            key_type_pairs[k.split(":")[1]] = [enc_keys[k], col_types[k]]  # private, type
 
     real, fake = [], []
     for row in rows:
@@ -597,27 +602,30 @@ def get_encryption_keys(device_id, db_keys):
     doc = search_tinydb_doc(path, 'device_keys', Query().device_id == str(device_id))
     result = {}
     for key in db_keys:
-        result[key] = doc[key]
+        if key == "device_data:data":
+            result[key] = [doc[key]["public_key"], doc[key]["private_key"]]
+        else:
+            result[key] = doc[key]
     return result
 
 
 def get_col_encryption_type(col_name, integrity_info):
     """
-    Returns True or False based on whether the column is encrypted as number (OPE) or not (Fernet) - this
-    is based on "is_numeric" attribute in TinyDB
+    Returns type based on whether the column is encrypted as number (OPE) or symmetrically (Fernet) or asymmetrically (ABE)- this
+    is based on "type" attribute in TinyDB
     :param integrity_info: {
             'device_data': {
                 'added': {
                     'seed': 12312412,
                     'lower_bound': 1,
                     'upper_bound': 1,
-                    'is_numeric': True
+                    'type': "OPE"
                     }}}
     :param col_name: e.g. "device_data:data"
     :return:
     """
     table, col = col_name.split(":")
-    return integrity_info[table][col]["is_numeric"]
+    return integrity_info[table][col]["type"]
 
 
 def decrypt_row(row, keys):
@@ -629,17 +637,19 @@ def decrypt_row(row, keys):
         "tid": 1
     }
     :param keys: example:
-        "added": ["26751017213ff85f189bedc34d302acfdf1649d5e1bac653a9709171ad37b155", True],
-        "num_data": ["84964a963c097c550b41a085bbf1ad93ba5a1046aa5495d86d62f9623ab89cc6", True],
-        "data": ["1fac0f8fa2083fe32c21d081a46e455420f71c5f1f6959afb9f44623048e6875", False]
+        "added": ["26751017213ff85f189bedc34d302acfdf1649d5e1bac653a9709171ad37b155", "OPE"],
+        "num_data": ["84964a963c097c550b41a085bbf1ad93ba5a1046aa5495d86d62f9623ab89cc6", "OPE"],
+        "data": ["1fac0f8fa2083fe32c21d0PUBLIC_KEYf6959afb9f44623048e6875", "ABE", "rgesdrgPRIVATE_KEYedhder"]
     }
     """
     result = {}
     for col, val in row.items():
-        if not keys[col][1]:  # if key is for fernet (is_numeric is False) create Fernet token
+        if keys[col][1] == "Fernet":  # if key is for fernet, create Fernet token
             result[col] = decrypt_using_fernet_hex(keys[col][0], val).decode()
-        else:  # if key is for OPE (is_numeric is True) create OPE cipher
+        elif keys[col][1] == "OPE":  # if key is for OPE, create OPE cipher
             result[col] = decrypt_using_ope_hex(keys[col][0], val)
+        else:
+            result[col] = decrypt_using_abe_serialized_key(val, keys[col][0], keys[col][2])
     return result
 
 
