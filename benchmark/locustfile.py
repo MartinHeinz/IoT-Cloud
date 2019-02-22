@@ -5,10 +5,6 @@ DEVICE_NAME_BI = '$2b$12$1xxxxxxxxxxxxxxxxxxxxuZLbwxnpY0o58unSvIPxddLxGystU.Mq'
 ACCESS_TOKEN = "5c36ab84439c45a3719644c0d9bd7b31929afd9f"
 AA_ACCESS_TOKEN_USER_1 = '54agPr4edV9PvyyBNkjFfA))'
 AA_ACCESS_TOKEN_USER_2 = '7jagPr4edVdgvyyBNkjdaQ))'
-MASTER_KEY_USER_2 = 'eJyNUstOxDAM/JWo5x7iNC/zKwhVXVTBoQekLkhotf+Ox45hjxzSJs7Enhn7Nl326zY9hdu0rq/Hdp7rKqfp8n3dz2kOEv3ajs9do8+5z6HIqnUOlEgO2MQ0h8ZyyHMAohYJEm5l0+UyN9' \
-                    'njLyCWfYsAMJ42fBaBIdwMSkmwlUcSgJkts9ZUCB42ibQM2IKIUumeFOkrYb3cRcZbWrfj4/3fSks0peDVQRuUowobUYpSupdBl6LUYhCSQ19Mb1uMegcrGoxhSqEhMEV71avpqm4KbIKf' \
-                    'FfUF1LOn4V+Z2RsRByMQUcJlWNXkunpx7RPagWLMI4oMxdupHkOJnpAGUoiSNRW0G5muohfV3HloZlKjogMWGw0lUuxf/BGgelEtbfcuR7eouGhQivwwItSHDXAMliqWjTCS/TmTbfB8EN' \
-                    'UGtBcBomxPdY1xuf8AJSqbbw=='
 
 
 class AttrAuthUserBehavior(TaskSet):
@@ -28,7 +24,6 @@ class AttrAuthUserBehavior(TaskSet):
     def keygen(self):
         data = {
             "access_token": AA_ACCESS_TOKEN_USER_2,
-            "master_key": MASTER_KEY_USER_2,
             "attr_list": "TODAY GUEST",
             "receiver_id": "1"
         }

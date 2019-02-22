@@ -653,16 +653,16 @@ def test_aa_setup(runner, attr_auth_access_token_one, reset_tiny_db):
     assert path is not None
     path_string = path.group(1)
     table = get_tinydb_table(path_string, 'aa_keys')
-    doc = table.search(where('public_key').exists() & where('master_key').exists())
+    doc = table.search(where('public_key').exists())
     assert doc is not None, "Keys not present in DB."
-    assert len(doc) == 1, "More than one public and master key pair."
+    assert len(doc) == 1, "More than one public key."
 
 
 @pytest.mark.parametrize('reset_tiny_db', [cmd.path], indirect=True)
 def test_aa_keygen(runner, attr_auth_access_token_one, reset_tiny_db):
     result = runner.invoke(cmd.attr_auth_keygen, ["'1-TODAY 1-GUEST'", '1', '--token', attr_auth_access_token_one])
 
-    assert "Master key not present, please use: get-attr-auth-keys" in result.output
+    assert "Public key not present, please use: get-attr-auth-keys" in result.output
     runner.invoke(cmd.get_attr_auth_keys, ['--token', attr_auth_access_token_one])
     result = runner.invoke(cmd.attr_auth_keygen, ["'1-TODAY 1-GUEST'", '1', '--token', attr_auth_access_token_one])
     assert "\"success\": true" in result.output
@@ -674,12 +674,10 @@ def test_aa_device_keygen(runner, attr_auth_access_token_one, reset_tiny_db):
     attr_list = "'1-23 1-GUEST 1'"
     result = runner.invoke(cmd.attr_auth_device_keygen, [attr_list, device_id, '--token', attr_auth_access_token_one])
 
-    assert "Master key not present, please use: get-attr-auth-keys" in result.output
+    assert "Public key not present, please use: get-attr-auth-keys" in result.output
     aa_keys_doc = {
-            "public_key": "eJyVVsuO2zAM/BUjZx9EWc/+SrEw0iLNHnIokLZAsci/V0MO5WxPu4ckth4UZzhD5e10PX1Z3k77/v12vt/3fbydvv39dbmf1mWM/jnffl909Gvq65LbutRtXSSMrxbGg5R16XWMyrqUihnBaMJXHMPF1uG34h1LZERBtDaCFERsGNzsIYt9KkKEekSX0PhVM9ZnRtLFiFYwMB5K5kdeHgPENX4UYQ5EGC2ASLWckIuBGy9NeLC+ZeLW04E9bQYMe7KQhpbImYRgsRG2g9HxjHMlRu6LNlEDzx2BM2Jmi60L7WjNiNGrnk9SW7VDkBR+EzHkZHFKx+KZE2qoQ0IgDeiiMDPR0NkKCfTd8cp/BQeeyB2VeLoz1bxqWtDEkitFIMXzahMVTukEXhkehbYtmftMDBoucEO103VAJWTkNJvWl8gSA06RqZXXz5oBlCDrnJwOcUBKQLRKl3r8An4uxpSKCpxUviBBiYHJJ8JXtLovTe2xDorPmK+E3pzAxgIjQQL88Wm3F8oneqn15EDnduLqhkmf6WjUzPGmzlQ6i9CZLPgDEVA4TN7c9Tk8iUSFTXoj6chevcPpl/163c+3n6/nDzteDKW6PVDw1myiZa1JiTUulzOs6Qmb/Mq70ryXZvchXeUmAHOwM/hF5XStWi6auUBnYvHU4KTU/D+7n/WdzTLXHGx+GsZJq+6OyFJ1ikxtEF1N2wyeqCBxBoIloIaOVKfOJm8XxRt7M7KUhTS7RXtqq3lzJwpt2Y4+xwxc3s3VFqw1cppdVLvpbIzq+egtSeUWrWV4c20kw2+scuCuc694QRm8U7NGEiNrDTsr68cwuW1Klzpl+ydLQAm02dVtNm+EoeKmShrvtuq9uBQWoNI4ei0EOsoukuoVzGwM3uy76zLwiOYCwYwV3O9ovXoCRWvpT0Fs5MHdj7VgUvt/KIbSrqnINLx5JMc86VLHxfB0dbsylEOPnVxAkf8R5l1hd5RMl9WXx+Mfq/O0uQ==",
-            "master_key": "eJyNUrtuwzAM/BXDcwbRFvXorxSF4BRGO3go4LRAEeTfy+MjcwfK4lk83lG6z9f9ts0v030e4/3YznMMyebr720/58sk6M92fO+KvuZ2mViCUsFCWCStgAWpi8Qqe/IjWZJGHlnAJQlYvbZJwmxfWgBIPVEywib1nG2vYK9Wa0DHshpavQXLqRZ/CyHeHuLhYxnb8fX5b5vggU1w8Qq17JqQkGwKXKsPGAot+ouS4AytoeQ5lhTiw3yx0JJS3W/3OZkTqe3NGxkbRyPKVgVunTQmnLpXoateBCarLbtrRbTqo8thUZss0Vupsl1JaXHPQRLuqViiDLijBmr2ppXCGjwSOqo3iCuGVn8g+AEp1ScD9hK2OQjZTzxtYczwibZ61F5QN2LMTR9MdVe4AHu1Km91uLCJiBfz+AOqO5sI"
+            "public_key": "eJyVVsuO2zAM/BUjZx9EWc/+SrEw0iLNHnIokLZAsci/V0MO5WxPu4ckth4UZzhD5e10PX1Z3k77/v12vt/3fbydvv39dbmf1mWM/jnffl909Gvq65LbutRtXSSMrxbGg5R16XWMyrqUihnBaMJXHMPF1uG34h1LZERBtDaCFERsGNzsIYt9KkKEekSX0PhVM9ZnRtLFiFYwMB5K5kdeHgPENX4UYQ5EGC2ASLWckIuBGy9NeLC+ZeLW04E9bQYMe7KQhpbImYRgsRG2g9HxjHMlRu6LNlEDzx2BM2Jmi60L7WjNiNGrnk9SW7VDkBR+EzHkZHFKx+KZE2qoQ0IgDeiiMDPR0NkKCfTd8cp/BQeeyB2VeLoz1bxqWtDEkitFIMXzahMVTukEXhkehbYtmftMDBoucEO103VAJWTkNJvWl8gSA06RqZXXz5oBlCDrnJwOcUBKQLRKl3r8An4uxpSKCpxUviBBiYHJJ8JXtLovTe2xDorPmK+E3pzAxgIjQQL88Wm3F8oneqn15EDnduLqhkmf6WjUzPGmzlQ6i9CZLPgDEVA4TN7c9Tk8iUSFTXoj6chevcPpl/163c+3n6/nDzteDKW6PVDw1myiZa1JiTUulzOs6Qmb/Mq70ryXZvchXeUmAHOwM/hF5XStWi6auUBnYvHU4KTU/D+7n/WdzTLXHGx+GsZJq+6OyFJ1ikxtEF1N2wyeqCBxBoIloIaOVKfOJm8XxRt7M7KUhTS7RXtqq3lzJwpt2Y4+xwxc3s3VFqw1cppdVLvpbIzq+egtSeUWrWV4c20kw2+scuCuc694QRm8U7NGEiNrDTsr68cwuW1Klzpl+ydLQAm02dVtNm+EoeKmShrvtuq9uBQWoNI4ei0EOsoukuoVzGwM3uy76zLwiOYCwYwV3O9ovXoCRWvpT0Fs5MHdj7VgUvt/KIbSrqnINLx5JMc86VLHxfB0dbsylEOPnVxAkf8R5l1hd5RMl9WXx+Mfq/O0uQ=="
     }
-
     insert_into_tinydb(cmd.path, "aa_keys", aa_keys_doc)
     insert_into_tinydb(cmd.path, "device_keys", {'device_id': device_id, 'shared_key': "dummy_value"})
     runner.invoke(cmd.attr_auth_device_keygen, [attr_list, device_id, '--token', attr_auth_access_token_one])
@@ -757,7 +755,7 @@ def test_retrieve_device_public_key(runner, access_token, reset_tiny_db, setup_u
 
     doc = search_tinydb_doc(cmd.path, 'device_keys', Query().device_id == device_id)
     assert "device_id" in doc and "shared_key" in doc
-    assert "public_key" not in doc and "master_key" not in doc, "public_key and master_key should not be present anymore (Ephemeral keys need to be wiped)."
+    assert "public_key" not in doc and "private_key" not in doc, "public_key and private_key should not be present anymore (Ephemeral keys need to be wiped)."
 
 
 def test_dict_to_payload():

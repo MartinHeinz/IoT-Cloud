@@ -456,17 +456,16 @@ def send_column_keys(user_id, device_id):
 @click.argument('device_id')
 @click.option('--token', envvar='AA_ACCESS_TOKEN')
 def attr_auth_device_keygen(attr_list, device_id, token):  # TODO check if attr_list is consistent with device_id
-    doc = search_tinydb_doc(path, 'aa_keys', where('public_key').exists() & where('master_key').exists())
+    doc = search_tinydb_doc(path, 'aa_keys', where('public_key').exists())
     if not doc:
         with click.Context(get_attr_auth_keys) as ctx:
-            click.echo(f"Master key not present, please use: {ctx.command.name}")
+            click.echo(f"Public key not present, please use: {ctx.command.name}")
             click.echo(get_attr_auth_keys.get_help(ctx))
             return
 
     attr_list = re.sub('[\']', '', attr_list)
     data = {
         "access_token": token,
-        "master_key": doc['master_key'],
         "attr_list": attr_list
     }
     r = requests.post(AA_URL_DEVICE_KEYGEN, params=data, verify=VERIFY_CERTS)
@@ -749,8 +748,8 @@ def get_attr_auth_keys(token):
     content = json.loads(r.content.decode('unicode-escape'))
     click.echo(f"Saving keys to {path}")
     table = get_tinydb_table(path, 'aa_keys')
-    doc = table.get(where('public_key').exists() & where('master_key').exists())
-    data = {"public_key": content["public_key"], "master_key": content["master_key"]}
+    doc = table.get(where('public_key').exists())
+    data = {"public_key": content["public_key"]}
     if doc:
         table.update(data)
     else:
@@ -762,15 +761,14 @@ def get_attr_auth_keys(token):
 @click.argument('receiver_id')
 @click.option('--token', envvar='AA_ACCESS_TOKEN')
 def attr_auth_keygen(attr_list, receiver_id, token):
-    doc = search_tinydb_doc(path, 'aa_keys', where('public_key').exists() & where('master_key').exists())
+    doc = search_tinydb_doc(path, 'aa_keys', where('public_key').exists())
     if not doc:
         with click.Context(get_attr_auth_keys) as ctx:
-            click.echo(f"Master key not present, please use: {ctx.command.name}")
+            click.echo(f"Public key not present, please use: {ctx.command.name}")
             click.echo(get_attr_auth_keys.get_help(ctx))
             return
     data = {
         "access_token": token,
-        "master_key": doc['master_key'],
         "attr_list": re.sub('[\']', '', attr_list),
         "receiver_id": receiver_id
     }

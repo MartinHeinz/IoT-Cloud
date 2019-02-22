@@ -275,7 +275,7 @@ class AttrAuthUser(MixinGetByAccessToken, MixinGetById, db.Model):
     api_username = db.Column(db.String(200), unique=True, nullable=True)
     access_token = db.Column(db.String(200), unique=True, nullable=False)  # TODO Give the token expiration date/time and force user to generate new token through `/login` endpoint
     access_token_update = db.Column(db.DateTime, nullable=False)
-    public_key = relationship("PublicKey", back_populates="attr_auth_user", uselist=False)
+    master_keypair = relationship("MasterKeypair", back_populates="attr_auth_user", uselist=False)
 
     private_keys = relationship("PrivateKey", backref="user", foreign_keys=lambda: PrivateKey.user_id)
 
@@ -295,15 +295,17 @@ class PrivateKey(db.Model):
     challenger = relationship("AttrAuthUser", uselist=False, foreign_keys=[challenger_id])
 
 
-class PublicKey(db.Model):
+class MasterKeypair(db.Model):
     __table_args__ = {'extend_existing': True}
     __bind_key__ = 'attr_auth'
+    __tablename__ = 'master_keypair'
 
     id = db.Column(db.Integer, primary_key=True)
-    data = db.Column(db.LargeBinary, nullable=False)
+    data_public = db.Column(db.LargeBinary, nullable=False)
+    data_master = db.Column(db.LargeBinary, nullable=False)
     key_update = db.Column(db.DateTime(timezone=True), server_default=func.now())
     attr_auth_user_id = db.Column(db.Integer, db.ForeignKey('attr_auth_user.id'))
-    attr_auth_user = relationship("AttrAuthUser", back_populates="public_key")
+    attr_auth_user = relationship("AttrAuthUser", back_populates="master_keypair")
 
 
 class Attribute(db.Model):

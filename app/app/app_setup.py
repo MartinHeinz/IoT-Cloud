@@ -16,7 +16,7 @@ client = mqtt.Client(client_id=f'server_{str(uuid.uuid4())}')
 
 
 def register_models():
-    from app.models.models import Device, DeviceType, User, DeviceData, Action, Scene, AttrAuthUser, PublicKey, PrivateKey, Attribute, UserDevice, MQTTUser, ACL  # noqa pylint: disable=unused-variable, cyclic-import
+    from app.models.models import Device, DeviceType, User, DeviceData, Action, Scene, AttrAuthUser, MasterKeypair, PrivateKey, Attribute, UserDevice, MQTTUser, ACL  # noqa pylint: disable=unused-variable, cyclic-import
 
 
 def create_app(config_name):

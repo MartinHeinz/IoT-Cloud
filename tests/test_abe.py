@@ -177,27 +177,24 @@ def test_decrypt_succesfull(client, attr_auth_access_token_one, attr_auth_access
     assert json_data["plaintext"] == plaintext
 
 
-def test_keygen_invalid_receiver(client, master_key_user_one, attr_auth_access_token_one):
+def test_keygen_invalid_receiver(client, attr_auth_access_token_one):
     data = {
         "access_token": attr_auth_access_token_one,
-        "master_key": master_key_user_one,
         "attr_list": "TODAY_GUEST, ANOTHER",
         "receiver_id": "15"
     }
     assert_got_error_from_post(client, '/attr_auth/user/keygen', data, 400, INCORRECT_RECEIVER_ID_ERROR_MSG)
     data = {
         "access_token": attr_auth_access_token_one,
-        "master_key": master_key_user_one,
         "attr_list": "TODAY_GUEST, ANOTHER",
         "receiver_id": "eth"
     }
     assert_got_error_from_post(client, '/attr_auth/user/keygen', data, 400, INCORRECT_RECEIVER_ID_ERROR_MSG)
 
 
-def test_keygen_invalid_attr_list(client, master_key_user_one, attr_auth_access_token_one):
+def test_keygen_invalid_attr_list(client, attr_auth_access_token_one):
     data = {
         "access_token": attr_auth_access_token_one,
-        "master_key": master_key_user_one,
         "attr_list": "TODAY_GUEST, ANOTHER",
         "receiver_id": "2"
     }
@@ -205,17 +202,15 @@ def test_keygen_invalid_attr_list(client, master_key_user_one, attr_auth_access_
 
     data = {
         "access_token": attr_auth_access_token_one,
-        "master_key": master_key_user_one,
         "attr_list": "15-GUEST 15",
         "receiver_id": "2"
     }
     assert_got_error_from_post(client, '/attr_auth/user/keygen', data, 400, INVALID_ATTR_LIST_ERROR_MSG)
 
 
-def test_keygen_already_has_key_from_owner(client, app_and_ctx, master_key_user_one, attr_auth_access_token_one, attr_auth_access_token_two):
+def test_keygen_already_has_key_from_owner(client, app_and_ctx, attr_auth_access_token_one, attr_auth_access_token_two):
     data = {
         "access_token": attr_auth_access_token_one,
-        "master_key": master_key_user_one,
         "attr_list": "1 1-2 1-GUEST",
         "receiver_id": "2"
     }
@@ -243,7 +238,7 @@ def test_keygen_already_has_key_from_owner(client, app_and_ctx, master_key_user_
         plaintext = "Hello World"
         data_owner = AttrAuthUser.get_by_access_token(attr_auth_access_token_one)
         policy_str = '(1-GUEST)'
-        public_key = deserialize_charm_object(data_owner.public_key.data, pairing_group)
+        public_key = deserialize_charm_object(data_owner.master_keypair.data_public, pairing_group)
         new_private_key = deserialize_charm_object(new_private_key.data, pairing_group)
         ciphertext = cp_abe.encrypt(public_key, plaintext, policy_str)
         decrypted_msg = cp_abe.decrypt(public_key, new_private_key, ciphertext)
@@ -264,10 +259,9 @@ def test_retrieve_private_keys(client, attr_auth_access_token_one, attr_auth_acc
     assert len(json_data["private_keys"]) == 2
 
 
-def test_keygen_doesnt_have_key_from_owner(client, app_and_ctx, master_key_user_two, attr_auth_access_token_one, attr_auth_access_token_two):
+def test_keygen_doesnt_have_key_from_owner(client, app_and_ctx, attr_auth_access_token_one, attr_auth_access_token_two):
     data = {
         "access_token": attr_auth_access_token_two,
-        "master_key": master_key_user_two,
         "attr_list": "2 2-1 2-GUEST",
         "receiver_id": "1"
     }
@@ -290,35 +284,27 @@ def test_keygen_doesnt_have_key_from_owner(client, app_and_ctx, master_key_user_
         plaintext = "Hello World"
         data_owner = AttrAuthUser.get_by_access_token(attr_auth_access_token_two)
         policy_str = '(2-GUEST)'
-        public_key = deserialize_charm_object(data_owner.public_key.data, pairing_group)
+        public_key = deserialize_charm_object(data_owner.master_keypair.data_public, pairing_group)
         new_private_key = deserialize_charm_object(new_private_key.data, pairing_group)
         ciphertext = cp_abe.encrypt(public_key, plaintext, policy_str)
         decrypted_msg = cp_abe.decrypt(public_key, new_private_key, ciphertext)
         assert plaintext == decrypted_msg.decode("utf-8")
 
 
-def test_device_keygen(client, app_and_ctx, master_key_user_two, attr_auth_access_token_one, attr_auth_access_token_two):
+def test_device_keygen(client, app_and_ctx, attr_auth_access_token_one, attr_auth_access_token_two):
     data = {
         "access_token": attr_auth_access_token_one,
-    }
-    assert_got_error_from_post(client, '/attr_auth/device/keygen', data, 400, MASTER_KEY_MISSING_ERROR_MSG)
-
-    data = {
-        "access_token": attr_auth_access_token_one,
-        "master_key": master_key_user_two,
     }
     assert_got_error_from_post(client, '/attr_auth/device/keygen', data, 400, ATTR_LIST_MISSING_ERROR_MSG)
 
     data = {
         "access_token": attr_auth_access_token_one,
-        "master_key": master_key_user_two,
         "attr_list": "sedrgd 1 1-23 1-GUEST",  # invalid
     }
     assert_got_error_from_post(client, '/attr_auth/device/keygen', data, 400, INVALID_ATTR_LIST_ERROR_MSG)
 
     data = {
         "access_token": attr_auth_access_token_one,
-        "master_key": master_key_user_two,
         "attr_list": "1 1-23 1-GUEST",
     }
     status, data_out = get_data_from_post(client, '/attr_auth/device/keygen', data)
@@ -390,7 +376,7 @@ def test_key_setup(client, app_and_ctx, attr_auth_access_token_one):
 
     app, ctx = app_and_ctx
     with app.app_context():
-        serialized_public_key_from_db = AttrAuthUser.get_by_access_token(data["access_token"]).public_key.data.decode("utf-8")
+        serialized_public_key_from_db = AttrAuthUser.get_by_access_token(data["access_token"]).master_keypair.data_public.decode("utf-8")
         assert serialized_public_key_response == serialized_public_key_from_db
 
 
