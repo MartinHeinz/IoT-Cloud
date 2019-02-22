@@ -276,29 +276,29 @@ def test_api_add_scene_action(client, app_and_ctx, access_token):
 
     data = {
         "access_token": access_token,
-        "scene_name_bi": '$2b$12$1xxxxxxxxxxxxxxxxxxxxuu6vgMFXlStkb/wcrduAWfPJXkjFPowS',  # valid
-        "action_name_bi": '$2b$12$2xxxxxxxxxxxxxxxxxxxxuX8WVpwRXwSKCMut/AzDWhKdjjjSz7VS',  # unauthorized
+        "scene_name_bi": '9c06d92d58a6c3f38fd5dcffef58fedc5502684b1acd4bbede9980803175471a',  # valid
+        "action_name_bi": '602b766b0a1d7d5a05df61a2d1b33165e35b57d32d2e5b54a16e21514bdbb9a7',  # unauthorized
     }
     assert_got_error_from_post(client, '/api/scene/add_action', data, 400, UNAUTHORIZED_USER_ERROR_MSG)
 
     data = {
         "access_token": access_token,
-        "scene_name_bi": '$2b$12$1xxxxxxxxxxxxxxxxxxxxuu6vgMFXlStkb/wcrduAWfPJXkjFPowS',  # valid
-        "action_name_bi": '$2b$12$1xxxxxxxxxxxxxxxxxxxxuz5Jia.EDkTwFaphV2YY8UhBMcuo6Nte',  # valid
+        "scene_name_bi": '9c06d92d58a6c3f38fd5dcffef58fedc5502684b1acd4bbede9980803175471a',  # valid
+        "action_name_bi": '86a638eab77f45b9e0e2fb384471e517664df67cec75c33d724efa8649be357e',  # valid
     }
     assert_got_data_from_post(client, '/api/scene/add_action', data)
 
     data = {
         "access_token": access_token,
-        "scene_name_bi": '$2b$12$1xxxxxxxxxxxxxxxxxxxxuu6vgMFXlStkb/wcrduAWfPJXkjFPowS',  # valid
-        "action_name_bi": '$2b$12$1xxxxxxxxxxxxxxxxxxxxuz5Jia.EDkTwFaphV2YY8UhBMcuo6Nte',  # already added
+        "scene_name_bi": '9c06d92d58a6c3f38fd5dcffef58fedc5502684b1acd4bbede9980803175471a',  # valid
+        "action_name_bi": '86a638eab77f45b9e0e2fb384471e517664df67cec75c33d724efa8649be357e',  # already added
     }
     assert_got_error_from_post(client, '/api/scene/add_action', data, 400, ACTION_ALREADY_PRESENT_ERROR_MSG)
 
     data = {
         "access_token": access_token,
-        "scene_name_bi": '$2b$12$2xxxxxxxxxxxxxxxxxxxxuFf6FbODZ2N76WZRFjGnVHEA8kZXP.U2',  # other user
-        "action_name_bi": '$2b$12$1xxxxxxxxxxxxxxxxxxxxuz5Jia.EDkTwFaphV2YY8UhBMcuo6Nte',
+        "scene_name_bi": '0b0a367318926df75879294f1520905ba72d8f1bebe64865645a7e108bfaf3e4',  # other user
+        "action_name_bi": '86a638eab77f45b9e0e2fb384471e517664df67cec75c33d724efa8649be357e',
     }
     assert_got_error_from_post(client, '/api/scene/add_action', data, 400, UNAUTHORIZED_USER_SCENE_ERROR_MSG)
 
@@ -357,7 +357,7 @@ def test_api_get_device_by_name(client, app_and_ctx, access_token):
 
     app, ctx = app_and_ctx
 
-    bi_hash = "$2b$12$1xxxxxxxxxxxxxxxxxxxxuZLbwxnpY0o58unSvIPxddLxGystU.Mq"
+    bi_hash = "a36758aa531feb3ef0ce632b7a5b993af3d8d59b8f2f8df8de854dce915d20df"
     with app.app_context():
         dt = DeviceType(id=123, description=b"nothing...", correctness_hash=correctness_hash("nothing..."))
         db.session.add(dt)
@@ -379,7 +379,7 @@ def test_api_get_device_by_name(client, app_and_ctx, access_token):
 
 def test_api_get_device_by_name_foreign_device_hash(client, app_and_ctx, access_token):
     data = {
-        "name_bi": "$2b$12$2xxxxxxxxxxxxxxxxxxxxu9vIxS.wvIOPeYz88BA5e/t3FlezwvUm",
+        "name_bi": "19f0eb580950646713d77c0f4e053083fedeb27865191163a72b0c49d3210969",
         "access_token": access_token
     }
     assert_got_data_from_post(client, '/api/device/get', data, devices=[])
@@ -479,7 +479,7 @@ def test_api_trigger_action(client, app_and_ctx, access_token):
 
     data = {
         "device_id": device_id,
-        "name_bi": '$2b$12$1xxxxxxxxxxxxxxxxxxxxuz5Jia.EDkTwFaphV2YY8UhBMcuo6Nte',
+        "name_bi": '86a638eab77f45b9e0e2fb384471e517664df67cec75c33d724efa8649be357e',
         "access_token": access_token
     }
 
@@ -503,13 +503,13 @@ def test_api_trigger_scene(client, app_and_ctx, access_token, access_token_two):
 
     data = {
         "access_token": access_token,
-        "name_bi": '$2b$12$2xxxxxxxxxxxxxxxxxxxxuFf6FbODZ2N76WZRFjGnVHEA8kZXP.U2',  # other user
+        "name_bi": '0b0a367318926df75879294f1520905ba72d8f1bebe64865645a7e108bfaf3e4',  # other user
     }
     assert_got_error_from_post(client, '/api/scene/trigger', data, 400, UNAUTHORIZED_USER_SCENE_ERROR_MSG)
 
     data = {
         "access_token": access_token_two,
-        "name_bi": '$2b$12$2xxxxxxxxxxxxxxxxxxxxuFf6FbODZ2N76WZRFjGnVHEA8kZXP.U2',
+        "name_bi": '0b0a367318926df75879294f1520905ba72d8f1bebe64865645a7e108bfaf3e4',
     }
 
     app, ctx = app_and_ctx

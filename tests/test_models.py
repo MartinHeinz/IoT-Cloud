@@ -45,8 +45,8 @@ def test_get_action_by_bi(app_and_ctx):
     app, ctx = app_and_ctx
 
     with app.app_context():
-        ac = Device.get_action_by_bi(23, '$2b$12$1xxxxxxxxxxxxxxxxxxxxuz5Jia.EDkTwFaphV2YY8UhBMcuo6Nte')
-        assert ac.correctness_hash == '$2b$12$o/H4BWhAHD678EHuAYCWB.DkLglRvPML6xhraF37WCD5vW7M8HOTK'
+        ac = Device.get_action_by_bi(23, '86a638eab77f45b9e0e2fb384471e517664df67cec75c33d724efa8649be357e')
+        assert ac.correctness_hash == '$2b$12$jOfamxBlpNv4BM0Ro3t9uOjLOxkA28J8/82vHAG7m9H.roDBlntPi'
 
 
 def test_is_device():
@@ -69,7 +69,7 @@ def test_scene_owner(app_and_ctx, access_token_two):
     app, ctx = app_and_ctx
 
     with app.app_context():
-        sc = db.session.query(Scene).filter(Scene.name_bi == '$2b$12$2xxxxxxxxxxxxxxxxxxxxuFf6FbODZ2N76WZRFjGnVHEA8kZXP.U2').first()
+        sc = db.session.query(Scene).filter(Scene.name_bi == '0b0a367318926df75879294f1520905ba72d8f1bebe64865645a7e108bfaf3e4').first()
         assert sc.owner.access_token == access_token_two
 
     sc_no_owner = Scene()

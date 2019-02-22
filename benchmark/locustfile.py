@@ -1,7 +1,7 @@
 from locust import HttpLocust, TaskSet, task, TaskSequence, seq_task
 
 DEVICE_ID = 23
-DEVICE_NAME_BI = '$2b$12$1xxxxxxxxxxxxxxxxxxxxuZLbwxnpY0o58unSvIPxddLxGystU.Mq'
+DEVICE_NAME_BI = 'a36758aa531feb3ef0ce632b7a5b993af3d8d59b8f2f8df8de854dce915d20df'
 ACCESS_TOKEN = "5c36ab84439c45a3719644c0d9bd7b31929afd9f"
 AA_ACCESS_TOKEN_USER_1 = '54agPr4edV9PvyyBNkjFfA))'
 AA_ACCESS_TOKEN_USER_2 = '7jagPr4edVdgvyyBNkjdaQ))'

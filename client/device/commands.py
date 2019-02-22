@@ -12,11 +12,11 @@ from tinydb import Query
 
 try:  # for packaged CLI (setup.py)
     from client.crypto_utils import triangle_wave, sawtooth_wave, square_wave, sine_wave, generate, fake_tuple_to_hash, encrypt_fake_tuple, index_function, \
-        hash, hex_to_key, key_to_hex, hex_to_fernet, decrypt_using_fernet_hex, get_random_seed
+        hex_to_key, key_to_hex, hex_to_fernet, decrypt_using_fernet_hex, get_random_seed, blind_index
     from client.utils import get_tinydb_table, search_tinydb_doc
 except ImportError:  # for un-packaged CLI
     from crypto_utils import triangle_wave, sawtooth_wave, square_wave, sine_wave, generate, fake_tuple_to_hash, encrypt_fake_tuple, index_function, \
-        hash, hex_to_key, key_to_hex, hex_to_fernet, decrypt_using_fernet_hex, get_random_seed
+        hex_to_key, key_to_hex, hex_to_fernet, decrypt_using_fernet_hex, get_random_seed
     from utils import get_tinydb_table, search_tinydb_doc
 
 dir_path = os.path.dirname(os.path.realpath(__file__))
@@ -142,12 +142,13 @@ def get_fake_tuple(user_id, bound):
                                  doc["integrity"][t][col]["type"],
                                  " ".join(doc[doc_key]["attr_list"])]
                 else:
-
                     keys[col] = [doc[doc_key], doc["integrity"][t][col]["type"]]
 
         fake_tuple_hash = fake_tuple_to_hash([fake_tuple["added"], fake_tuple["data"], fake_tuple["num_data"], fake_tuple["tid"]])
         encrypted_fake_tuple = encrypt_fake_tuple(fake_tuple, keys)
-        row = {**encrypted_fake_tuple, "correctness_hash": fake_tuple_hash, "tid_bi": hash(str(fake_tuple["tid"]), get_self_id())}
+        row = {**encrypted_fake_tuple,
+               "correctness_hash": fake_tuple_hash,
+               "tid_bi": blind_index(hex_to_key(get_bi_key_by_user(int(user_id))), str(fake_tuple["tid"]))}
 
         if bound == "lower_bound":
             doc["integrity"]["device_data"] = increment_bounds(doc["integrity"]["device_data"], bound=bound)
@@ -261,3 +262,8 @@ def increment_bounds(table, bound="upper_bound"):
             raise Exception("Invalid Bounds.")
         table[k][bound] += 1
     return table
+
+
+def get_bi_key_by_user(user_id):
+    doc = search_tinydb_doc(path, 'users', Query().id == int(user_id))
+    return doc["bi_key"]

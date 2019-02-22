@@ -1,4 +1,6 @@
 import base64
+import hashlib
+import hmac
 import mmh3
 import os
 from binascii import a2b_hex, b2a_hex
@@ -60,7 +62,11 @@ def decrypt(key, associated_data, iv, ciphertext, tag):
     return decryptor.update(ciphertext) + decryptor.finalize()
 
 
-def hash(value, salt):
+def blind_index(key, value):
+    return hmac.new(key, value.encode(), hashlib.sha256).hexdigest()
+
+
+def hash(value, salt):  # TODO remove
     if salt == "":
         raise Exception("You need to specify salt (at least 1 character).")
     return bcrypt.using(rounds=12, salt=salt.ljust(22, "x")).hash(value)
