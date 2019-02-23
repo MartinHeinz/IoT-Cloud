@@ -169,7 +169,7 @@ def encrypt():
     pairing_group = create_pairing_group()
     cp_abe = create_cp_abe()
     data_owner = AttrAuthUser.get_by_access_token(token)
-    public_key = deserialize_charm_object(data_owner.master_keypair.data_public, pairing_group)  # TODO can throw Exception
+    public_key = deserialize_charm_object(data_owner.master_keypair.data_public, pairing_group)
     ciphertext = cp_abe.encrypt(public_key, plaintext, policy_string)
 
     # return ciphertext

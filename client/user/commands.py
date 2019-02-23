@@ -132,13 +132,15 @@ def create_device_type(description, token):
 @click.argument('device_name')
 @click.argument('password')
 @click.option('--token', envvar='ACCESS_TOKEN')
-def create_device(device_type_id, device_name, password, token):  # TODO missing device name encryption
+def create_device(device_type_id, device_name, password, token):
     password_hash = pbkdf2_hash(password)
     bi_key = os.urandom(32)
+    device_name_key = key_to_hex(os.urandom(32))  # NOTE: retrieve key as `key_to_hex(key)`
+    device_status_key = key_to_hex(os.urandom(32))
     data = {
         "type_id": device_type_id,
         "access_token": token,
-        "name": device_name,
+        "name": hex_to_fernet(device_name_key).encrypt(device_name.encode()),
         "correctness_hash": correctness_hash(device_name),
         "name_bi": blind_index(bi_key, device_name),
         "password": password_hash
@@ -148,7 +150,9 @@ def create_device(device_type_id, device_name, password, token):  # TODO missing
     if content["success"]:
         insert_into_tinydb(path, 'device_keys', {
             'device_id': str(content["id"]),
-            'bi_key': key_to_hex(bi_key)
+            'bi_key': key_to_hex(bi_key),
+            'device:name': device_name_key,
+            'device:status': device_status_key
         })
     click.echo(content)
 
@@ -352,33 +356,34 @@ def slice_by_range(device_id, all_tuples, lower, upper, key_name):
 @click.argument('device_id')
 @click.option('--token', envvar='ACCESS_TOKEN')
 def send_key_to_device(device_id, token):
-    private_key = ec.generate_private_key(ec.SECP384R1(), default_backend())
-    public_key = private_key.public_key()
-    public_pem = public_key.public_bytes(
-        encoding=serialization.Encoding.PEM,
-        format=serialization.PublicFormat.SubjectPublicKeyInfo
-    ).decode('utf-8')
+    if not is_device_bi_key_missing(device_id, create_device, "Blind index key for device name is missing"):
+        private_key = ec.generate_private_key(ec.SECP384R1(), default_backend())
+        public_key = private_key.public_key()
+        public_pem = public_key.public_bytes(
+            encoding=serialization.Encoding.PEM,
+            format=serialization.PublicFormat.SubjectPublicKeyInfo
+        ).decode('utf-8')
 
-    private_pem = private_key.private_bytes(
-        encoding=serialization.Encoding.PEM,
-        format=serialization.PrivateFormat.TraditionalOpenSSL,
-        encryption_algorithm=serialization.NoEncryption()
-    ).decode()
-    table = get_tinydb_table(path, 'device_keys')
-    table.upsert({
-        'device_id': device_id,
-        'public_key': public_pem,
-        'private_key': private_pem,
-        'key_bi': key_to_hex(get_device_bi_key(device_id))  # TODO this might be missing - do the `is_global_bi_key_missing` check
-    }, Query().device_id == device_id)
+        private_pem = private_key.private_bytes(
+            encoding=serialization.Encoding.PEM,
+            format=serialization.PrivateFormat.TraditionalOpenSSL,
+            encryption_algorithm=serialization.NoEncryption()
+        ).decode()
+        table = get_tinydb_table(path, 'device_keys')
+        table.upsert({
+            'device_id': device_id,
+            'public_key': public_pem,
+            'private_key': private_pem,
+            'key_bi': key_to_hex(get_device_bi_key(device_id))
+        }, Query().device_id == device_id)
 
-    data = {
-        'device_id': device_id,
-        'public_key': public_pem,
-        'access_token': token
-    }
-    r = requests.post(URL_START_KEY_EXCHANGE, params=data, verify=VERIFY_CERTS)
-    click.echo(r.content.decode('unicode-escape'))
+        data = {
+            'device_id': device_id,
+            'public_key': public_pem,
+            'access_token': token
+        }
+        r = requests.post(URL_START_KEY_EXCHANGE, params=data, verify=VERIFY_CERTS)
+        click.echo(r.content.decode('unicode-escape'))
 
 
 @user.command()
@@ -436,8 +441,6 @@ def send_column_keys(user_id, device_id):
     keys = {
         "action:name": None,
         "device_type:description": None,
-        "device:name": None,
-        "device:status": None,
         "device_data:added": None,
         "device_data:num_data": None,
         "device_data:tid": None
@@ -450,6 +453,8 @@ def send_column_keys(user_id, device_id):
         payload_keys[k] = fernet_key.encrypt(random_bytes).decode()
 
     payload_keys["device_data:data"] = doc["device_data:data"]
+    payload_keys["device:name"] = doc["device:name"]
+    payload_keys["device:status"] = doc["device:status"]
     bi_key = get_global_bi_key()
     payload_keys["bi_key"] = fernet_key.encrypt(bi_key).decode()
     keys["bi_key"] = key_to_hex(bi_key)
@@ -467,7 +472,10 @@ def send_column_keys(user_id, device_id):
 @click.argument('attr_list')
 @click.argument('device_id')
 @click.option('--token', envvar='AA_ACCESS_TOKEN')
-def attr_auth_device_keygen(attr_list, device_id, token):  # TODO check if attr_list is consistent with device_id
+def attr_auth_device_keygen(attr_list, device_id, token):
+    if device_id not in attr_list:
+        click.echo(f"attr_list argument should contain device_id ({device_id})")
+        return
     doc = search_tinydb_doc(path, 'aa_keys', where('public_key').exists())
     if not doc:
         with click.Context(get_attr_auth_keys) as ctx:
@@ -503,16 +511,17 @@ def attr_auth_retrieve_private_keys(token):
 @user.command()
 @click.argument('user_id')
 @click.argument('device_id')
+@click.argument('device_name')
 @click.option('--token', envvar='ACCESS_TOKEN')
-def get_device_data(user_id, device_id, token):  # TODO right now it requires device to 1st use `get_fake_tuple` (`init_integrity_data`) before 1st call to this
+def get_device_data(user_id, device_id, device_name, token):  # TODO right now it requires device to 1st use `get_fake_tuple` (`init_integrity_data`) before 1st call to this
     """
     Queries server for data of :param device_id device and then verifies the received data using
     integrity information from device (received using MQTT Broker) and correctness hash attribute
     of each DB row.
     """
-    # TODO use Blind Index instead of device_id
     user_id = int(user_id)
-    data = {"device_id": device_id, "access_token": token}
+    device_name_bi = blind_index(get_device_bi_key(device_id), device_name)
+    data = {"device_name_bi": device_name_bi, "access_token": token}
 
     r = requests.post(URL_GET_DEVICE_DATA, params=data, verify=VERIFY_CERTS)
     content = r.content.decode('unicode-escape')
@@ -838,6 +847,16 @@ def get_global_bi_key():
 def get_device_bi_key(device_id):
     doc = search_tinydb_doc(path, 'device_keys', Query().device_id == str(device_id))
     return hex_to_key(doc["bi_key"])
+
+
+def is_device_bi_key_missing(device_id, command, message):
+    doc = search_tinydb_doc(path, 'device_keys', Query().device_id == str(device_id))
+    if doc is None or "bi_key" not in doc:
+        with click.Context(command) as ctx:
+            click.echo(f"{message}, please use: {ctx.command.name}")
+            click.echo(command.get_help(ctx))
+            return True
+    return False
 
 
 if __name__ == '__main__':

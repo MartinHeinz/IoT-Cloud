@@ -7,8 +7,6 @@ from app.app_setup import db
 from app.models.models import UserDevice, DeviceData
 from app.mqtt.utils import Payload
 
-from client.crypto_utils import hash
-
 
 def test_payload_init():
     p = Payload(device_id=111111,
@@ -112,8 +110,8 @@ def test_mqtt_handle_on_message_receive_pk_user_doesnt_have_this_device(app_and_
 
 def test_mqtt_handle_on_message_save_device_data(app_and_ctx, capsys):
     device_id = 9999  # not present
-    tid_bi = hash("8", "23")
-    payload = b"{'added': 6987, 'num_data': 31164, 'data': 'gAAAAABcTFAz9Wr5ZsnMcVYbQiXlnZCvT36MfDatZNyLwDpm_ixbzkZhM1NA4w7MN2p3CW3gyTA8gYtuKtDTomhulszvLTFfPA==', 'tid': 'encrypted_tid(8)', 'tid_bi': '$2b$12$23xxxxxxxxxxxxxxxxxxxuLHznKMxjdogfckEGo6U8J.idwkqiHaO', 'correctness_hash': '$2b$12$9hxKg4pjXbm0kpbItQTd2uMICAGn2ntRw1qQskHIL/7tLa3ISIlmO'}"
+    tid_bi = 'b209eba637a54f1f617cf5a6f925e4eb9fc083e66029061018b369e64b9864d7'  # blind_index(hex_to_key("622c23fe2623e54ba103c13b88072ca3fdc5836fc459cb2b5c31d8df3f07ebc2"), "8")
+    payload = b"{'added': 6987, 'num_data': 31164, 'data': 'gAAAAABcTFAz9Wr5ZsnMcVYbQiXlnZCvT36MfDatZNyLwDpm_ixbzkZhM1NA4w7MN2p3CW3gyTA8gYtuKtDTomhulszvLTFfPA==', 'tid': 'encrypted_tid(8)', 'tid_bi': '%b', 'correctness_hash': '$2b$12$9hxKg4pjXbm0kpbItQTd2uMICAGn2ntRw1qQskHIL/7tLa3ISIlmO'}" % tid_bi.encode()
 
     topic = b"d:%a/server/save_data" % device_id
     msg = MQTTMessage(topic=topic)
@@ -156,9 +154,9 @@ def test_mqtt_handle_on_message_save_device_data(app_and_ctx, capsys):
 
 def test_mqtt_handle_on_message_delete_device_data(app_and_ctx, capsys):
     device_id = 23
-    tid_bi = hash("8", "23")
+    tid_bi = 'b209eba637a54f1f617cf5a6f925e4eb9fc083e66029061018b369e64b9864d7'  # blind_index(hex_to_key("622c23fe2623e54ba103c13b88072ca3fdc5836fc459cb2b5c31d8df3f07ebc2"), "8")
     topic = b"d:%a/server/remove_data" % device_id
-    payload = b"{'added': 6987, 'num_data': 31164, 'data': 'gAAAAABcTFAz9Wr5ZsnMcVYbQiXlnZCvT36MfDatZNyLwDpm_ixbzkZhM1NA4w7MN2p3CW3gyTA8gYtuKtDTomhulszvLTFfPA==', 'tid': 'encrypted_tid(8)', 'tid_bi': '$2b$12$23xxxxxxxxxxxxxxxxxxxuLHznKMxjdogfckEGo6U8J.idwkqiHaO', 'correctness_hash': '$2b$12$9hxKg4pjXbm0kpbItQTd2uMICAGn2ntRw1qQskHIL/7tLa3ISIlmO'}"
+    payload = b"{'added': 6987, 'num_data': 31164, 'data': 'gAAAAABcTFAz9Wr5ZsnMcVYbQiXlnZCvT36MfDatZNyLwDpm_ixbzkZhM1NA4w7MN2p3CW3gyTA8gYtuKtDTomhulszvLTFfPA==', 'tid': 'encrypted_tid(8)', 'tid_bi': '%b', 'correctness_hash': '$2b$12$9hxKg4pjXbm0kpbItQTd2uMICAGn2ntRw1qQskHIL/7tLa3ISIlmO'}" % tid_bi.encode()
     msg = MQTTMessage(topic=topic)
     msg.payload = payload
     from app.mqtt.mqtt import handle_on_message

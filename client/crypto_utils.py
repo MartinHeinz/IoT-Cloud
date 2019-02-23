@@ -1,8 +1,10 @@
 import base64
+import binascii
 import hashlib
 import hmac
 import mmh3
 import os
+import zlib
 from binascii import a2b_hex, b2a_hex
 
 import click
@@ -64,12 +66,6 @@ def decrypt(key, associated_data, iv, ciphertext, tag):
 
 def blind_index(key, value):
     return hmac.new(key, value.encode(), hashlib.sha256).hexdigest()
-
-
-def hash(value, salt):  # TODO remove
-    if salt == "":
-        raise Exception("You need to specify salt (at least 1 character).")
-    return bcrypt.using(rounds=12, salt=salt.ljust(22, "x")).hash(value)
 
 
 def correctness_hash(*strings, fake=False):
@@ -257,7 +253,10 @@ def decrypt_using_ope_hex(h, ciphertext):
 def encrypt_using_abe_serialized_key(pk, plaintext, policy_string):
     pairing_group = create_pairing_group()  # TODO This is being imported from server app - might break with `setup.py`
     cp_abe = create_cp_abe()
-    public_key = deserialize_charm_object(str.encode(pk), pairing_group)  # TODO can throw Exception
+    try:
+        public_key = deserialize_charm_object(str.encode(pk), pairing_group)
+    except binascii.Error:
+        raise Exception("Invalid public key.")
     ciphertext = cp_abe.encrypt(public_key, str(plaintext), policy_string)
     return serialize_charm_object(ciphertext, pairing_group).decode("utf-8")
 
@@ -265,10 +264,12 @@ def encrypt_using_abe_serialized_key(pk, plaintext, policy_string):
 def decrypt_using_abe_serialized_key(serialized_ciphertext, serialized_pk, serialized_sk):
     pairing_group = create_pairing_group()
     cp_abe = create_cp_abe()
-
-    public_key = deserialize_charm_object(str.encode(serialized_pk), pairing_group)
-    private_key = deserialize_charm_object(str.encode(serialized_sk), pairing_group)
-    ciphertext = deserialize_charm_object(str.encode(serialized_ciphertext), pairing_group)
+    try:
+        public_key = deserialize_charm_object(str.encode(serialized_pk), pairing_group)
+        private_key = deserialize_charm_object(str.encode(serialized_sk), pairing_group)
+        ciphertext = deserialize_charm_object(str.encode(serialized_ciphertext), pairing_group)
+    except (binascii.Error, zlib.error):
+        raise Exception("One of the serialized objects is invalid.")
     plaintext = cp_abe.decrypt(public_key, private_key, ciphertext)
 
     return plaintext.decode("utf-8")

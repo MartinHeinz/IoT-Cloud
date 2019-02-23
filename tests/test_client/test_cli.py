@@ -21,7 +21,7 @@ import client.user.commands as cmd
 import client.device.commands as device_cmd
 from app.models.models import MQTTUser, User, Action, Device, DeviceType, Scene
 from crypto_utils import check_correctness_hash, hex_to_fernet, hex_to_ope, decrypt_using_fernet_hex, \
-    decrypt_using_ope_hex, decrypt_using_abe_serialized_key, blind_index, hex_to_key
+    decrypt_using_ope_hex, decrypt_using_abe_serialized_key, blind_index, hex_to_key, encrypt_using_abe_serialized_key
 from utils import json_string_with_bytes_to_dict, get_tinydb_table, search_tinydb_doc, insert_into_tinydb
 
 cmd.path = '/tmp/keystore.json'
@@ -101,7 +101,13 @@ def test_send_column_keys(runner, access_token, reset_tiny_db, bi_key):
         "private_key": "dummy-value",
         "attr_list": ['1-23', '1-GUEST', '1'],
     }
-    insert_into_tinydb(cmd.path, 'device_keys', {'device_id': device_id, 'shared_key': key, "device_data:data": device_data_doc})
+    insert_into_tinydb(cmd.path, 'device_keys', {
+        'device_id': device_id,
+        'shared_key': key,
+        "device_data:data": device_data_doc,
+        "device:name": '4e7ed70343c0187f8d9acad60477e908ba23aeca0d8513399ce2c3c154e8d312',  # random
+        "device:status": '688f7c16a252c66b042426416181e8112970d32aae120e1d365e898ae9433c6d'  # random
+    })
     insert_into_tinydb(cmd.path, "credentials", {"broker_id": "4", "broker_password": 'test_pass'})
     insert_into_tinydb(cmd.path, 'global', {"bi_key": bi_key})
 
@@ -129,6 +135,7 @@ def test_aa_retrieve_private_keys(runner, attr_auth_access_token_two):
 @pytest.mark.parametrize('reset_tiny_db', [cmd.path], indirect=True)
 def test_get_device_data(runner, access_token, app_and_ctx, reset_tiny_db, col_keys):
     device_id = 23
+    device_name = "my_raspberry"
     user_id = "1"
     r = Mock()
     r.content = b'{\n  "device_data": [\n    {\n      "added": 2116572382, \n      "correctness_hash": "$2b$12$GxqMXIMKiEtrOF9YVL2TO.S7vf7Jc4RP8MXgL9d0kgIJfthUQjxM6", \n      "data": "eJyVVV1vEzEQ/CvRvTZIXp8/kXioCqKIjwItICAoSi4JBEJbmpSCqv53PLvru/AGD2nv7L31zuzs+LbpqLk/um2Oprv1ZrHk5+m028y22+m0vDXz37vlthmPyurP2eZ6yasfPY1HPo1HufzI2vEotuNRcuXF5LLjZMH78iv/iQx2ylPweEN8CYvlf451oWRKFtk4Fn8Ie6asx3JaRC4O1sDUykbOsoEDkTVlfOVlk0zZSZwsSKhDPZY0vhSaSmguESHU70py4EvloJA0IXn5nHGiJC6lAkbxDnUAgLF1NegDowYQhoQKwJDv0TL+KImHig0paVyupAXVeqyRDKnnpay6JAscDDK8UfYT1RerzBBJGSjOh1pkrYJa7Q2qCH4fllTptDgJstoY7Rkw58qzFWUwGzgdZEevnEIi6CTjkZNDhYhcHAjUrA0gQa1oCXeDJC8yQIopCpHSevQvCju9zLhUEUT6q3AmGhG+AoIG8J0PlUOjwBHCnNjaJwgJAsJ5uppEFoK0rLioX4OZXA/HB24gdJB9hQuYaGkKCgucco+Ju5j1KZF2DT1lilNdpF5MprLeL4FolMjtQjIeA5FZ+HRX5v7oXz2BByDJiOSqE/KqBx4twUYakOOefGR09nmSfol18GbY9wSZMCuVo0VRtS9IWu09ybwJYUHZYPZJBzOQwPzNOOmebf8bsFcsSfSs8+rEE5hi9ss6AElVG6pzJFEwVA0hDbLSUbeqz2j/4gLDKq5FOkSklWAOkM1pdsapWAXs5X+jhXtUyxfD8VouW0Q/KF6OZIdrVYLifanXIenoJnVaM7gVntEtVz0t9VIABbJcG6ny8pJKzbQ6k2pFC3O151FdR0csqvtn9XRT7yucFOtO0CJp8EqnKtYaorSAPdbEmqPVe6ZeKYOb71u23Ipu37Kz1jbcZr3985AkFX1b7YP0VsxiFVCByMUNPhT0roBoYtg7N9W7T8K9TpKX9gUalHN5sVl3GJVmu7u6D/2M6N7jN49Oz0YEycx2u6v1/BoCKprpgxqesc6y2GabzzXB8fPDo+np8aHFt9+3/frtpDl89nhSXgvYSfP85OEjvFi8PHmLx0lz/eH96nh78ePqxasv3frru4NX7dmHwwcPJg2ijtaXX5ZXZ8tfO4m++HZ+82N3ffCa8vnLdydPV9ldHNwg+g5nL9afl9tdPX7ZkSu/5Bed6Wg2m3vrZq7IeL6Ydba1cb5qKS1WNs+NczGtOuNbb7MhR9bH1Nzd/QEO2OWF", \n      "device_id": 23, \n      "id": 6, \n      "num_data": 464064, \n      "tid": "gAAAAABcUvNYaVEWRG5vxlvTBgj0TVP9icLDThlR5sxYlfPOP8eNoFcWkCoPNyGK5mFuS9Ia2WQ_gEFsdiKpG4cnPsg2uYSTvA==", \n      "tid_bi": "$2b$12$23xxxxxxxxxxxxxxxxxxxuN5X.DMkHilBYQSsUWodebAG.asbqKNa"\n    }, \n    {\n      "added": 2244032082, \n      "correctness_hash": "$2b$12$panqbBvEIAG4/7ct77LyieP017hCkKeZ6cubdQo4fcJpHOoA6UbPO", \n      "data": "eJyVVcluE0EQ/ZXRnI3Ue3UjcbASSCIIW8IiYWR5xgsWJpsdRBTl3+naxuFGDh5P91RXvVf1qvq+7W37vLlvD6a79Wa+oPfptN/MttvptK7a7m632Lajpu7+nm1uF7T7LdpRE/OoscbVh8OHLfKWY/35UQMed6G+AG9Yiw9Tj0EYNcWMmpSG3YiPuoT6kuovFDmNoXAR6rksa2vq4YzWiKNupvoxVD8ly0f0jtbk01p6YAhrOIRgJvRoagWisRwpAAeIiR0DosaA4pscpcKGhD474ZKAicVKMkYNjPHwCyLGf/qC2ctENDDJ6Dls0iO4CY5DRccGkixEmDnNlEfj+TMQWav0kDuBdJo4wo7OiC0ZAH0rAika5UTYsrwYL2QwAVhUXhTODsEtUiAwEj7LAgPkJEw5VXFgUlg0mDDQSqFEQCXF0IiTCQKZkhiUEpfTSDmJK6UKVZlAqKJ51sqIahAcKdaIetiT5V0iX0QPBAeRMHdgJ6DKRuhoSjQRBRVUE5tFLywez6kiMI79YKYINyc97SESQ3aU+DOeQTRooeiYPaoiJjFFIXO8Iv5t0J50km9JC3qh1oPvD7XZD/53EBBH7cwgvYUtThPCaHmo6d1QLKsNlB9VB0ArYLVHjQomD46C7DNJTRUMfUayVSNMQCraNYGTgL2VLNO8I572mfNPJYyJoxLoJHIMk5JgOApojyEO7jov/ZEeq5vKI01OFSROZT++rBTM8Wm05URbLaeXMRV0JpPwCzNlqldP5orcqLg6OakY1PDSzjjFQNA/ugZQ38zZDYNHckVweSCzDDxP3qwjKugU4gknswHpg/nnqwyJrFNJMufl/tC5TNqjIzilCLCO4SLaB5FL0SlDnVCUQxzt7xSCXwbZRtXmP6DBaLvJXQc6eLwOXlBlw/6uotmHKqWwNM6FCJY2l0cCIdUVUZxRa8dC4IvM6x3qtT0ydw3NJyO3L9+RQdOk2aM+sXv1XF1u1j02S7vd3TxHDTX22dGnl2fnjUXZzHa7m3V3iyKquhmMWuqy3pHgZpuVOjg+HR9Mz47HDs/+2g7795N2/OZoUpcV3qQ9fXf4EhcOFyef8XXSro7s3avj24u78c/Di93Ha/v26Or1+MWLSYtWB+urH4ub88WfHVtfrt5/fPdhdW3+HJ+cfF2MTTo/+7JC6weMPV+vFtudhl86n8D6tFzOZl2fXD/zsQuznLsMKXS5X7gux+DnDkwXknXzZd8tS4GYYz+3oX14+Av3EuQO", \n      "device_id": 23, \n      "id": 8, \n      "num_data": 466263, \n      "tid": "gAAAAABcUvNYvD4xkZ7pHxIBtpEWka8UVdCxmvR-O886BC06ILrqWqtT59ZKVgz7k8-TtIstlYzubq1ZZp_prquskFw5ZWNVSQ==", \n      "tid_bi": "$2b$12$23xxxxxxxxxxxxxxxxxxxu.ZfhXcDxDatkjrxC5f7I1S9D0G9uMI."\n    }, \n    {\n      "added": 2328638717, \n      "correctness_hash": "$2b$12$CwcoYDiksZSEIvQpwWE8KurDopFpaofsfYW7Y67Ifonv.a7ZDe0SW", \n      "data": "eJyVVdtu00AQ/RXLrwSxu95rJR6qFiiIi0oLCBEUuY5bgoIoTbhW/Xf2zMXJIzxk7V3Pzpwzc2Zy2w62PWhu26PFdrVejvS+WAzrfrNZLOquvfi9HTftrKmnP/r195FOPwQ7a0KeNdbEWVNKfbFm1qR6Ehw23ayJCZ+xM4FtUrX1HT4HLJkv0E0xxOKsLMHPmgzXBgauLiFihyAde0vkiCJWQwJVT3Nkz4gZEp/n+oxlPwZZGQYcCKsX7/RGrhkLwttq4YG48E1rYZOYEALBea5nAXmw/GRvwIdkJPCp1tlyYHriVlB61aAYNgJ+ugDc4EK44MUxZKYuQa21/IU28JUd3y2Jk0j+NDeaxmQ0fcgKEMM0eM0Q7tbDSPZFABBzSnWQjXVaZThMncCAcRZK1nSa5Y7JwLTQgdUFSIAzW4mHwLD1SQADEZFPkjYzeWAMUao3UQ+T3KaaJLHOSgb5AJksGqX8kITzHg0WrGHuIIkrRMkmCR2DAMcxdQXioIzk3kopC5d4X6rcPoXzTYToVHXKvuxeBFFlYJc5c040WVTpwkKMedcNSZUQJqlnKZD1H+9qlx/96wTwhScAECFsEHRTHyTVl5ECUkYjgw1xv4E13ywbyzUuOhayNLwvO/nCEr5A0E9VsswaH0LcwYmWqf0mbva+6/6XJImbGKY9YNR+pFpExjGgUQdHhkstKRKgZNBAgVRIwarmKBYdk6WyQiEib9UY0kyzBz2UVP5BkRDdSpW5Xv83WXRHEI2jYNT2JGAj7AwHofkkrKnMamxE9qzdXYaS0umke4oMNKuzfrIpKsocJ+oyP/30eRpQQZxSxmjcR9GDkyHLwtDm1srxP4HyQ8/lNLmKnFPuxLib0fglvz8aqE5ReYCr10Y0rNEctaRGnHgdmhSeh69ntVD35j0lZWkHSCjKtKBEIzBGik+ayKxfCusoyXCip5PGkd6g4upAsjvRXH9drwY0SbvZ3hxAOo29/+TNo7PzxkIt/XZ7s7r4Du1UuUxGLXXX4Ehn/fpKHZy8ODxanJ0cOtz9spnOb+ft4fMn87qtPOfti1fHj7Bx2Dx9i9d5e/zg3stvN4+7Yp+7Z69Ozn8eh8+nVw8fzltYHa2uP4035+OvLVu/u375+NwuD7+6B8PTP69D+PPsy/tTWN8h9nJ1NW62Gj4NxY3eX8TSFT+YIRRTljkt+1hGt0x96S4vbR9i8g7LGHtjBuvG3pVhSJe+vbv7C/GT3oI=", \n      "device_id": 23, \n      "id": 4, \n      "num_data": 471232, \n      "tid": "gAAAAABcUvNYhiqIYBpG848jbgdwY92eW2HUGSwjAP4NL9rAcSCTmeU2noYgDnlpy7XzLDu4Ly4UaGMjBqUeNlpryV_BEYbcug==", \n      "tid_bi": "$2b$12$23xxxxxxxxxxxxxxxxxxxuSfVK9H/a.JO/whZHvsU1Q39d26XzS/6"\n    }, \n    {\n      "added": 2893046721, \n      "correctness_hash": "$2b$12$wvleRl6BZXh59slt2gPoyuEgKzmPCo.lZheLo2gYlVeQEk016oUMq", \n      "data": "eJyVVdluE0EQ/BVrX2OkuQ8kHoIJJBKHRAhCYGTZ601iyYgQmzPKvzPVxzqP8LDHzM70VHVV9951ve0eT+662WK/2a4Hel8s+u1yt1ss2qhb/d4Pu246abM/ltvvA81+inY6iWU6KX46yXU6sSa1l9guPC0/U7tiu6zN7eZMmzWyVG5tZ25RUnuWtqm0z7Xgg8cN4VybMfykCIgXcGjmw0toc/hosM+2LYVeAkdNbRAFTgy8lcaG56wtjNc6J6iCl2jMq0VMgG/boloFnw6iGcEWCSbMcFZhMNiR6YthENa2JSUK74gJxyiKExIUPGg0rAdJynoUetZZSQFmTOaDCBF9KQoj84VwiJ/blpoViWQ+VOZ7QINESX4hC0UporGX95GP5Z0kBCWSAAITYpAQktmCQ+CR8ABeUdCcS6sgohXVAa+I6iyyhCVvYJX1wh8fMzNlJY3mQlmp7IBEJ7NswoHAJVWsCJKioTjMaGocy8d4oZ7V69WoUYoMEI3ymSQOIbDsUiQG8FLk5ETJDacSOlEwQoN0BHFIFVGIuJVKIVkdc4Uj2FdKBoBrFYHYOfXzfSvx2b+WPx1e2EdgA3qokqxRU5WUKkRaUfRcp2VqONGhSKnFoL73jLyO8nlJN+fCjPo6NaF5GF38QYuR0mSZ4W+iaB85/79ciQ7BgGwp62mBdcsqKuXdiZlETBKRRHBqVoyg+di8qLE4EStpE+OsGE5R9GNHwCg/yPGBqJBltjf/TRdngS5gw0vFqvujdN7AZqMFQfyl2KVipKOAH3nYqIIwCOo1RSnkoEQPfVX+E0Ubbh0bnpNeKD22yG/AilVUDvqvUG1pfpEucguKllqR4KB/gbZuYpIOCmZNp3Z0aipZ4nr9I8kE+T6LAbImhQtXGp/2b+22BOcgd2TyKFrqCI7hAIo27CiKUGc0Ik0Q+1HroX7n9ReYJO9FugNBQfCDVQ52ufm63fQokG63v30M00zsoxcXJ+fvJhY+We73t5vVd7imGWVc1FFl9Y4cttxeaYDTV8ezxfnpscPeL7tx/m7eHb98MW/DBnXevXrz7AQDh8HZe7zOu28/j06O3gZ/fnpbX69Ov/w5uj55fvzkybzDqtnm5nq4fTf82stqY85mH9bXvy4+fnt6dv71z9Bf/LjC6nucvd5cDbu9Ht/bsIppqJc+VXeZcl2uvfc1m9XShiHZuu5TcNEM1i3X69rWXbo+ZRuiyX0My+7+/i/IRN60", \n      "device_id": 23, \n      "id": 12, \n      "num_data": 468360, \n      "tid": "gAAAAABcUvNY8h6dQrIaMAYm-9Mp2-ykEqOxc3BII_N_u8a6g1rP4JZRqjeAqGPivYAQFMC1Wkq0y2xyBv612yFVBGFBVXs3_Q==", \n      "tid_bi": "$2b$12$23xxxxxxxxxxxxxxxxxxxupooniyevX3UXhzktSF2tYwePP7PnQ6C"\n    },\n  {\n      "added": -3371974092, \n      "correctness_hash": "$2b$12$FLzwDx6/a.ZrsXgGa1uU0OAMJUhfU9Ukq8HbxQ4DEwlqY8C/LDTsi", \n      "data": "eJyVVdlOG0EQ/JXVvsYoM7NzRsoDAhRyC0EOEkfW2izgyCgONrkQ/57p7uolj+HB9s5OT09XdVX7tl3Y9klz2+7NtsvV2cDPs9li1W82s1ldtfPf22HTTpr69ke/uhn47edgJ03Ik6aUSZPMpIlx0mQr61g/1nb6ZWi7hnpeULyvi0wLSlI/KVJsRixtW1u/squLVEMCEtAzbTpDofVNrilT/Y0BO5qejiWuwCAZP2UuocP1Dpfl+htqCSVrrHGSN1lBw88J9VlbpCbBgGwpSBiAGzlAmLMZ0XW4xNBttE1sJZTrJBGhBHFRQBQgtdbhrXAa8JCTfGTf1a+cQRBjpFpD1KOWWHRyP8XlKBiz18MWpSYLKugwhVG51OBcwIJUZSU0JNkdO2q8ZC1JGcljR0gqRltpExiiuqiPqQih3A06TvkJIp2hTZJDgK44B93juawAInIA8gClUR4im6WEHNzYCOAJeQKTn3CM3gglXGoEdBamxgiwjC3qIjPqtPlRkkbtPdUkaosCmBglATAVBUywujuhPyhr1lncxXCFPwe1G6fWyVI44/OSsph/8Fp4l1srQvpyV02+978DgG6nAUCHSYkENKFQQVIgAdhPBSg+zcIG9wQmyFH1qggpT4IcRO0JfseUYdMFKMwU9TXmEN8ZUV+0gu83A7Q7rnsoUraDhQAFGbsEk0rlzxCi8g+Tc3GsbCtgucdRekyN4eEocy3920ieeTALqTDptQHMsY078M28VKCCdP1gqNQ8nupZFdepCwJ0MjqXhxmqo8pIABEWZUWKNzFJI7KyH0QVmKBehyJJ34NnLsRhGCrLMtA9rN3pSEZ1zFR3Px54rmJo8XQ0QXvhMF2MzjHxtiyhRK9OYbIxyYJVt3Qq0U7C2Kv6D2M1hHghr2f9H2Q+ZATSE4ua/05UwPpfhGnj1C/jMbaQHS8xUoKHl8gxEVNaihSuE/ppgv4xEI+sodEf99JZf1stF2SUdrO9fkICauzOs3cHxyeNJc302+31cn5DCqqiGYNadtjCsdr61YUmOHy9uzc7Ptx1dPZqM76/nba7r55N67KWNm1fv90/oIWjxfP39DhtP31Nl4ffj398O3pxuF9Or07e+I+Pj54+nbYUtbdcXw7XJ8OvrUSfro/ch9XlzaOb538u1sufV+Hl5WaXou/o7rPlxbDZ6vXx3PVDl+bZ9QufuqEMbrHwzrvhPLruPJhofAn9kPNZiqULwc+D771fzF3uh+Lbu7u/8cvhIg==", \n      "device_id": 23, \n      "id": 26, \n      "num_data": 1880673631, \n      "tid": "gAAAAABcaBdELr-gRHpHNXLk9LrbjtHsutZGkVTkwPcqVa5pV5k1ILXm985v3oQPHnvjaZaL3-ZesmREmvHCymTSJ_4yBaavxA==", \n      "tid_bi": "$2b$12$23xxxxxxxxxxxxxxxxxxxuN5X.DMkHilBYQSsUWodebAG.asbqKNa"\n    }], \n  "success": true\n}\n'
@@ -139,7 +146,7 @@ def test_get_device_data(runner, access_token, app_and_ctx, reset_tiny_db, col_k
     with app.app_context():
         with mock.patch('requests.post', return_value=r):
             with mock.patch('client.user.commands._get_fake_tuple_data') as _get_fake_tuple_data:
-                result = runner.invoke(cmd.get_device_data, [user_id, str(device_id), '--token', access_token])
+                result = runner.invoke(cmd.get_device_data, [user_id, str(device_id), device_name, '--token', access_token])
                 assert "Data Integrity satisfied." in result.output
                 assert "failed correctness hash test!" not in result.output
 
@@ -149,7 +156,7 @@ def test_get_device_data(runner, access_token, app_and_ctx, reset_tiny_db, col_k
                                                        'data': {'seed': 3, 'lower_bound': 1, 'upper_bound': 2, "type": "ABE"},
                                                        'tid': {'lower_bound': 1, 'upper_bound': 2, "type": "Fernet"}}}
 
-                result = runner.invoke(cmd.get_device_data, [user_id, str(device_id), '--token', access_token])
+                result = runner.invoke(cmd.get_device_data, [user_id, str(device_id), device_name, '--token', access_token])
                 assert "Data Integrity NOT satisfied." in result.output
                 assert "failed correctness hash test!" in result.output
     cmd.fake_tuple_data = None
@@ -194,7 +201,7 @@ def test_divide_fake_and_real_data(reset_tiny_db, col_keys):
     rows = [{
       "added": 2116572382,
       "correctness_hash": "$2b$12$GxqMXIMKiEtrOF9YVL2TO.S7vf7Jc4RP8MXgL9d0kgIJfthUQjxM6",
-      "data": 'eJyVVV1vEzEQ/CvRvTZIXp8/kXioCqKIjwItICAoSi4JBEJbmpSCqv53PLvru/AGD2nv7L31zuzs+LbpqLk/um2Oprv1ZrHk5+m028y22+m0vDXz37vlthmPyurP2eZ6yasfPY1HPo1HufzI2vEotuNRcuXF5LLjZMH78iv/iQx2ylPweEN8CYvlf451oWRKFtk4Fn8Ie6asx3JaRC4O1sDUykbOsoEDkTVlfOVlk0zZSZwsSKhDPZY0vhSaSmguESHU70py4EvloJA0IXn5nHGiJC6lAkbxDnUAgLF1NegDowYQhoQKwJDv0TL+KImHig0paVyupAXVeqyRDKnnpay6JAscDDK8UfYT1RerzBBJGSjOh1pkrYJa7Q2qCH4fllTptDgJstoY7Rkw58qzFWUwGzgdZEevnEIi6CTjkZNDhYhcHAjUrA0gQa1oCXeDJC8yQIopCpHSevQvCju9zLhUEUT6q3AmGhG+AoIG8J0PlUOjwBHCnNjaJwgJAsJ5uppEFoK0rLioX4OZXA/HB24gdJB9hQuYaGkKCgucco+Ju5j1KZF2DT1lilNdpF5MprLeL4FolMjtQjIeA5FZ+HRX5v7oXz2BByDJiOSqE/KqBx4twUYakOOefGR09nmSfol18GbY9wSZMCuVo0VRtS9IWu09ybwJYUHZYPZJBzOQwPzNOOmebf8bsFcsSfSs8+rEE5hi9ss6AElVG6pzJFEwVA0hDbLSUbeqz2j/4gLDKq5FOkSklWAOkM1pdsapWAXs5X+jhXtUyxfD8VouW0Q/KF6OZIdrVYLifanXIenoJnVaM7gVntEtVz0t9VIABbJcG6ny8pJKzbQ6k2pFC3O151FdR0csqvtn9XRT7yucFOtO0CJp8EqnKtYaorSAPdbEmqPVe6ZeKYOb71u23Ipu37Kz1jbcZr3985AkFX1b7YP0VsxiFVCByMUNPhT0roBoYtg7N9W7T8K9TpKX9gUalHN5sVl3GJVmu7u6D/2M6N7jN49Oz0YEycx2u6v1/BoCKprpgxqesc6y2GabzzXB8fPDo+np8aHFt9+3/frtpDl89nhSXgvYSfP85OEjvFi8PHmLx0lz/eH96nh78ePqxasv3frru4NX7dmHwwcPJg2ijtaXX5ZXZ8tfO4m++HZ+82N3ffCa8vnLdydPV9ldHNwg+g5nL9afl9tdPX7ZkSu/5Bed6Wg2m3vrZq7IeL6Ydba1cb5qKS1WNs+NczGtOuNbb7MhR9bH1Nzd/QEO2OWF',  # TODO encrypt b"test1" with keys from populate
+      "data": 'eJyVVV1vEzEQ/CvRvTZIXp8/kXioCqKIjwItICAoSi4JBEJbmpSCqv53PLvru/AGD2nv7L31zuzs+LbpqLk/um2Oprv1ZrHk5+m028y22+m0vDXz37vlthmPyurP2eZ6yasfPY1HPo1HufzI2vEotuNRcuXF5LLjZMH78iv/iQx2ylPweEN8CYvlf451oWRKFtk4Fn8Ie6asx3JaRC4O1sDUykbOsoEDkTVlfOVlk0zZSZwsSKhDPZY0vhSaSmguESHU70py4EvloJA0IXn5nHGiJC6lAkbxDnUAgLF1NegDowYQhoQKwJDv0TL+KImHig0paVyupAXVeqyRDKnnpay6JAscDDK8UfYT1RerzBBJGSjOh1pkrYJa7Q2qCH4fllTptDgJstoY7Rkw58qzFWUwGzgdZEevnEIi6CTjkZNDhYhcHAjUrA0gQa1oCXeDJC8yQIopCpHSevQvCju9zLhUEUT6q3AmGhG+AoIG8J0PlUOjwBHCnNjaJwgJAsJ5uppEFoK0rLioX4OZXA/HB24gdJB9hQuYaGkKCgucco+Ju5j1KZF2DT1lilNdpF5MprLeL4FolMjtQjIeA5FZ+HRX5v7oXz2BByDJiOSqE/KqBx4twUYakOOefGR09nmSfol18GbY9wSZMCuVo0VRtS9IWu09ybwJYUHZYPZJBzOQwPzNOOmebf8bsFcsSfSs8+rEE5hi9ss6AElVG6pzJFEwVA0hDbLSUbeqz2j/4gLDKq5FOkSklWAOkM1pdsapWAXs5X+jhXtUyxfD8VouW0Q/KF6OZIdrVYLifanXIenoJnVaM7gVntEtVz0t9VIABbJcG6ny8pJKzbQ6k2pFC3O151FdR0csqvtn9XRT7yucFOtO0CJp8EqnKtYaorSAPdbEmqPVe6ZeKYOb71u23Ipu37Kz1jbcZr3985AkFX1b7YP0VsxiFVCByMUNPhT0roBoYtg7N9W7T8K9TpKX9gUalHN5sVl3GJVmu7u6D/2M6N7jN49Oz0YEycx2u6v1/BoCKprpgxqesc6y2GabzzXB8fPDo+np8aHFt9+3/frtpDl89nhSXgvYSfP85OEjvFi8PHmLx0lz/eH96nh78ePqxasv3frru4NX7dmHwwcPJg2ijtaXX5ZXZ8tfO4m++HZ+82N3ffCa8vnLdydPV9ldHNwg+g5nL9afl9tdPX7ZkSu/5Bed6Wg2m3vrZq7IeL6Ydba1cb5qKS1WNs+NczGtOuNbb7MhR9bH1Nzd/QEO2OWF',  # b"test1"
       "device_id": 23,
       "id": 6,
       "num_data": 464064,
@@ -204,7 +211,7 @@ def test_divide_fake_and_real_data(reset_tiny_db, col_keys):
     {
       "added": 2244032082,
       "correctness_hash": '$2b$12$IG7lSJbUlJ2xxPlWvHwWN.gowMe/Xqg/lxmueyqlaBI4TCHE.BxU2',  # Fake
-      "data": 'eJyVVcluE0EQ/ZXRnI3Ue3UjcbASSCIIW8IiYWR5xgsWJpsdRBTl3+naxuFGDh5P91RXvVf1qvq+7W37vLlvD6a79Wa+oPfptN/MttvptK7a7m632Lajpu7+nm1uF7T7LdpRE/OoscbVh8OHLfKWY/35UQMed6G+AG9Yiw9Tj0EYNcWMmpSG3YiPuoT6kuovFDmNoXAR6rksa2vq4YzWiKNupvoxVD8ly0f0jtbk01p6YAhrOIRgJvRoagWisRwpAAeIiR0DosaA4pscpcKGhD474ZKAicVKMkYNjPHwCyLGf/qC2ctENDDJ6Dls0iO4CY5DRccGkixEmDnNlEfj+TMQWav0kDuBdJo4wo7OiC0ZAH0rAika5UTYsrwYL2QwAVhUXhTODsEtUiAwEj7LAgPkJEw5VXFgUlg0mDDQSqFEQCXF0IiTCQKZkhiUEpfTSDmJK6UKVZlAqKJ51sqIahAcKdaIetiT5V0iX0QPBAeRMHdgJ6DKRuhoSjQRBRVUE5tFLywez6kiMI79YKYINyc97SESQ3aU+DOeQTRooeiYPaoiJjFFIXO8Iv5t0J50km9JC3qh1oPvD7XZD/53EBBH7cwgvYUtThPCaHmo6d1QLKsNlB9VB0ArYLVHjQomD46C7DNJTRUMfUayVSNMQCraNYGTgL2VLNO8I572mfNPJYyJoxLoJHIMk5JgOApojyEO7jov/ZEeq5vKI01OFSROZT++rBTM8Wm05URbLaeXMRV0JpPwCzNlqldP5orcqLg6OakY1PDSzjjFQNA/ugZQ38zZDYNHckVweSCzDDxP3qwjKugU4gknswHpg/nnqwyJrFNJMufl/tC5TNqjIzilCLCO4SLaB5FL0SlDnVCUQxzt7xSCXwbZRtXmP6DBaLvJXQc6eLwOXlBlw/6uotmHKqWwNM6FCJY2l0cCIdUVUZxRa8dC4IvM6x3qtT0ydw3NJyO3L9+RQdOk2aM+sXv1XF1u1j02S7vd3TxHDTX22dGnl2fnjUXZzHa7m3V3iyKquhmMWuqy3pHgZpuVOjg+HR9Mz47HDs/+2g7795N2/OZoUpcV3qQ9fXf4EhcOFyef8XXSro7s3avj24u78c/Di93Ha/v26Or1+MWLSYtWB+urH4ub88WfHVtfrt5/fPdhdW3+HJ+cfF2MTTo/+7JC6weMPV+vFtudhl86n8D6tFzOZl2fXD/zsQuznLsMKXS5X7gux+DnDkwXknXzZd8tS4GYYz+3oX14+Av3EuQO',  # TODO encrypt b"test2" with keys from populate
+      "data": 'eJyVVcluE0EQ/ZXRnI3Ue3UjcbASSCIIW8IiYWR5xgsWJpsdRBTl3+naxuFGDh5P91RXvVf1qvq+7W37vLlvD6a79Wa+oPfptN/MttvptK7a7m632Lajpu7+nm1uF7T7LdpRE/OoscbVh8OHLfKWY/35UQMed6G+AG9Yiw9Tj0EYNcWMmpSG3YiPuoT6kuovFDmNoXAR6rksa2vq4YzWiKNupvoxVD8ly0f0jtbk01p6YAhrOIRgJvRoagWisRwpAAeIiR0DosaA4pscpcKGhD474ZKAicVKMkYNjPHwCyLGf/qC2ctENDDJ6Dls0iO4CY5DRccGkixEmDnNlEfj+TMQWav0kDuBdJo4wo7OiC0ZAH0rAika5UTYsrwYL2QwAVhUXhTODsEtUiAwEj7LAgPkJEw5VXFgUlg0mDDQSqFEQCXF0IiTCQKZkhiUEpfTSDmJK6UKVZlAqKJ51sqIahAcKdaIetiT5V0iX0QPBAeRMHdgJ6DKRuhoSjQRBRVUE5tFLywez6kiMI79YKYINyc97SESQ3aU+DOeQTRooeiYPaoiJjFFIXO8Iv5t0J50km9JC3qh1oPvD7XZD/53EBBH7cwgvYUtThPCaHmo6d1QLKsNlB9VB0ArYLVHjQomD46C7DNJTRUMfUayVSNMQCraNYGTgL2VLNO8I572mfNPJYyJoxLoJHIMk5JgOApojyEO7jov/ZEeq5vKI01OFSROZT++rBTM8Wm05URbLaeXMRV0JpPwCzNlqldP5orcqLg6OakY1PDSzjjFQNA/ugZQ38zZDYNHckVweSCzDDxP3qwjKugU4gknswHpg/nnqwyJrFNJMufl/tC5TNqjIzilCLCO4SLaB5FL0SlDnVCUQxzt7xSCXwbZRtXmP6DBaLvJXQc6eLwOXlBlw/6uotmHKqWwNM6FCJY2l0cCIdUVUZxRa8dC4IvM6x3qtT0ydw3NJyO3L9+RQdOk2aM+sXv1XF1u1j02S7vd3TxHDTX22dGnl2fnjUXZzHa7m3V3iyKquhmMWuqy3pHgZpuVOjg+HR9Mz47HDs/+2g7795N2/OZoUpcV3qQ9fXf4EhcOFyef8XXSro7s3avj24u78c/Di93Ha/v26Or1+MWLSYtWB+urH4ub88WfHVtfrt5/fPdhdW3+HJ+cfF2MTTo/+7JC6weMPV+vFtudhl86n8D6tFzOZl2fXD/zsQuznLsMKXS5X7gux+DnDkwXknXzZd8tS4GYYz+3oX14+Av3EuQO',  # b"test2"
       "device_id": 23,
       "id": 8,
       "num_data": 466263,
@@ -214,7 +221,7 @@ def test_divide_fake_and_real_data(reset_tiny_db, col_keys):
     {
       "added": 2328638717,
       "correctness_hash": '$2b$12$eWHqbmbvv.Egj/4Jy3.msOdnZ0vz.iaMRdgHJ5d9/Ymmczjr7wbcK',  # Fake
-      "data": 'eJyVVdtu00AQ/RXLrwSxu95rJR6qFiiIi0oLCBEUuY5bgoIoTbhW/Xf2zMXJIzxk7V3Pzpwzc2Zy2w62PWhu26PFdrVejvS+WAzrfrNZLOquvfi9HTftrKmnP/r195FOPwQ7a0KeNdbEWVNKfbFm1qR6Ehw23ayJCZ+xM4FtUrX1HT4HLJkv0E0xxOKsLMHPmgzXBgauLiFihyAde0vkiCJWQwJVT3Nkz4gZEp/n+oxlPwZZGQYcCKsX7/RGrhkLwttq4YG48E1rYZOYEALBea5nAXmw/GRvwIdkJPCp1tlyYHriVlB61aAYNgJ+ugDc4EK44MUxZKYuQa21/IU28JUd3y2Jk0j+NDeaxmQ0fcgKEMM0eM0Q7tbDSPZFABBzSnWQjXVaZThMncCAcRZK1nSa5Y7JwLTQgdUFSIAzW4mHwLD1SQADEZFPkjYzeWAMUao3UQ+T3KaaJLHOSgb5AJksGqX8kITzHg0WrGHuIIkrRMkmCR2DAMcxdQXioIzk3kopC5d4X6rcPoXzTYToVHXKvuxeBFFlYJc5c040WVTpwkKMedcNSZUQJqlnKZD1H+9qlx/96wTwhScAECFsEHRTHyTVl5ECUkYjgw1xv4E13ywbyzUuOhayNLwvO/nCEr5A0E9VsswaH0LcwYmWqf0mbva+6/6XJImbGKY9YNR+pFpExjGgUQdHhkstKRKgZNBAgVRIwarmKBYdk6WyQiEib9UY0kyzBz2UVP5BkRDdSpW5Xv83WXRHEI2jYNT2JGAj7AwHofkkrKnMamxE9qzdXYaS0umke4oMNKuzfrIpKsocJ+oyP/30eRpQQZxSxmjcR9GDkyHLwtDm1srxP4HyQ8/lNLmKnFPuxLib0fglvz8aqE5ReYCr10Y0rNEctaRGnHgdmhSeh69ntVD35j0lZWkHSCjKtKBEIzBGik+ayKxfCusoyXCip5PGkd6g4upAsjvRXH9drwY0SbvZ3hxAOo29/+TNo7PzxkIt/XZ7s7r4Du1UuUxGLXXX4Ehn/fpKHZy8ODxanJ0cOtz9spnOb+ft4fMn87qtPOfti1fHj7Bx2Dx9i9d5e/zg3stvN4+7Yp+7Z69Ozn8eh8+nVw8fzltYHa2uP4035+OvLVu/u375+NwuD7+6B8PTP69D+PPsy/tTWN8h9nJ1NW62Gj4NxY3eX8TSFT+YIRRTljkt+1hGt0x96S4vbR9i8g7LGHtjBuvG3pVhSJe+vbv7C/GT3oI=',  # TODO encrypt b"test3" with keys from populate
+      "data": 'eJyVVdtu00AQ/RXLrwSxu95rJR6qFiiIi0oLCBEUuY5bgoIoTbhW/Xf2zMXJIzxk7V3Pzpwzc2Zy2w62PWhu26PFdrVejvS+WAzrfrNZLOquvfi9HTftrKmnP/r195FOPwQ7a0KeNdbEWVNKfbFm1qR6Ehw23ayJCZ+xM4FtUrX1HT4HLJkv0E0xxOKsLMHPmgzXBgauLiFihyAde0vkiCJWQwJVT3Nkz4gZEp/n+oxlPwZZGQYcCKsX7/RGrhkLwttq4YG48E1rYZOYEALBea5nAXmw/GRvwIdkJPCp1tlyYHriVlB61aAYNgJ+ugDc4EK44MUxZKYuQa21/IU28JUd3y2Jk0j+NDeaxmQ0fcgKEMM0eM0Q7tbDSPZFABBzSnWQjXVaZThMncCAcRZK1nSa5Y7JwLTQgdUFSIAzW4mHwLD1SQADEZFPkjYzeWAMUao3UQ+T3KaaJLHOSgb5AJksGqX8kITzHg0WrGHuIIkrRMkmCR2DAMcxdQXioIzk3kopC5d4X6rcPoXzTYToVHXKvuxeBFFlYJc5c040WVTpwkKMedcNSZUQJqlnKZD1H+9qlx/96wTwhScAECFsEHRTHyTVl5ECUkYjgw1xv4E13ywbyzUuOhayNLwvO/nCEr5A0E9VsswaH0LcwYmWqf0mbva+6/6XJImbGKY9YNR+pFpExjGgUQdHhkstKRKgZNBAgVRIwarmKBYdk6WyQiEib9UY0kyzBz2UVP5BkRDdSpW5Xv83WXRHEI2jYNT2JGAj7AwHofkkrKnMamxE9qzdXYaS0umke4oMNKuzfrIpKsocJ+oyP/30eRpQQZxSxmjcR9GDkyHLwtDm1srxP4HyQ8/lNLmKnFPuxLib0fglvz8aqE5ReYCr10Y0rNEctaRGnHgdmhSeh69ntVD35j0lZWkHSCjKtKBEIzBGik+ayKxfCusoyXCip5PGkd6g4upAsjvRXH9drwY0SbvZ3hxAOo29/+TNo7PzxkIt/XZ7s7r4Du1UuUxGLXXX4Ehn/fpKHZy8ODxanJ0cOtz9spnOb+ft4fMn87qtPOfti1fHj7Bx2Dx9i9d5e/zg3stvN4+7Yp+7Z69Ozn8eh8+nVw8fzltYHa2uP4035+OvLVu/u375+NwuD7+6B8PTP69D+PPsy/tTWN8h9nJ1NW62Gj4NxY3eX8TSFT+YIRRTljkt+1hGt0x96S4vbR9i8g7LGHtjBuvG3pVhSJe+vbv7C/GT3oI=',  # b"test3"
       "device_id": 23,
       "id": 4,
       "num_data": 471232,
@@ -292,7 +299,7 @@ def test_get_col_encryption_type():
 def test_decrypt_row():
     row = {
       "added": 2116572382,
-      "data": 'eJyVVdtu1EgQ/RXLz4PU3e4rEg8hsASJLCwkQYJBo/HEDrM7bKLMBBZF+fftUxc7j/BgT3e7q+qcqlM19+3Gtk+b+/Z4ddjuLgdar1ab3Xq/X63qru1/HoZ9u2jq6ff17m6g08/BLpqQF03u6uPrExeNta4u0qIp9QmmPvU3WXyor4SP1cJ3/MHXdajrVBZNrNahPjnUy87ypQS3Vg5NtUZMxInVOtbD7PDBw6SuUkIgvEwNXQpHtCaLtTWW0SBwgk8rEK0FeAPgBjvPscmA0BTy0QkRMAMmAKfPIepl2/GnmAVZiswBkEGeHVDwIFFw4hMjRiD2BiAm8hVmBvRIeL3mEdlK/miBoLypr1jEizNKm/gXdsWUPedv8oCaZaNGOEnqj9AQeiDyEgGVByBKAQ6KPASV0gkbJttJlmN8rIYgmuFIQXIndUAuiKgJ7F+qGLj4yL5Pk2+jUuA6eMaWonxLCulRdgPDYYES6TJLlipoJ/2qupGuICVEAFK5U99GQKoEstXDJPCwI4IqEFCIomnEJqF4Dpu9wKT4pHakDskhcqontBzncsIK1SdJM2qSxT3w56RqFzllFXIN9uWhdvrxr04B1CeoVICUckFoy1wmPpRyInM+ywEVL4h2SVBuzq1Qdyw51nwSLTutV1EFTo3spSxIE4zgKoqEomV+P4mgfeK632XKXe1kxjkWVJgmhoKY5oMtwoEFZeaKE5kYNBNoLfQL9YwVI2oKIpu1AYo6RBmjjDIyoElnvQQlypUu8735bcKk7KxTq6hrTEGMCcxhFrHhg6hTmsrYce951T03YZBRDeOsvRtn9RVOGg0zHev8Ip10E7/MNYBDqoPVLPk5idkqOqlOcPo3VQQVAuEkJB3ZZZ6KcEr/MiLNqKimSSwDMGte0jSRZYQRYZRFBZK19jQLknKWARq01cM08NMj11mVVuSw6D8esM+T1aoYdSQkw57K5M1ooMC5Ip5AYWfR3Fzvths0Srs/3D6FdBr75NX5yw9njYVa1ofD7ba/g3aqXKZLLXXYxpHO1rsrdXByenS8+nBy5GD7bT+d3y/bozevlnVbQS3b07cvXmLjsHl9geWy/fP60934/fzk3/H9P28v7s7+OBpO7Y9nz5Ytbh1vb74Ot2fDfwe+Pb74ev2Xeff+ef8u9R/PXr/5+5sZr3D7AbEvt1fD/jDxKpdj2sTN4HrbD13crLtxTHVngvO9G5O3yfT9sAkhjf0Ya8F63w+ui3EIphvah4f/AYEK4uQ=',  # TODO encrypt "test1" with keys below
+      "data": 'eJyVVdtu1EgQ/RXLz4PU3e4rEg8hsASJLCwkQYJBo/HEDrM7bKLMBBZF+fftUxc7j/BgT3e7q+qcqlM19+3Gtk+b+/Z4ddjuLgdar1ab3Xq/X63qru1/HoZ9u2jq6ff17m6g08/BLpqQF03u6uPrExeNta4u0qIp9QmmPvU3WXyor4SP1cJ3/MHXdajrVBZNrNahPjnUy87ypQS3Vg5NtUZMxInVOtbD7PDBw6SuUkIgvEwNXQpHtCaLtTWW0SBwgk8rEK0FeAPgBjvPscmA0BTy0QkRMAMmAKfPIepl2/GnmAVZiswBkEGeHVDwIFFw4hMjRiD2BiAm8hVmBvRIeL3mEdlK/miBoLypr1jEizNKm/gXdsWUPedv8oCaZaNGOEnqj9AQeiDyEgGVByBKAQ6KPASV0gkbJttJlmN8rIYgmuFIQXIndUAuiKgJ7F+qGLj4yL5Pk2+jUuA6eMaWonxLCulRdgPDYYES6TJLlipoJ/2qupGuICVEAFK5U99GQKoEstXDJPCwI4IqEFCIomnEJqF4Dpu9wKT4pHakDskhcqontBzncsIK1SdJM2qSxT3w56RqFzllFXIN9uWhdvrxr04B1CeoVICUckFoy1wmPpRyInM+ywEVL4h2SVBuzq1Qdyw51nwSLTutV1EFTo3spSxIE4zgKoqEomV+P4mgfeK632XKXe1kxjkWVJgmhoKY5oMtwoEFZeaKE5kYNBNoLfQL9YwVI2oKIpu1AYo6RBmjjDIyoElnvQQlypUu8735bcKk7KxTq6hrTEGMCcxhFrHhg6hTmsrYce951T03YZBRDeOsvRtn9RVOGg0zHev8Ip10E7/MNYBDqoPVLPk5idkqOqlOcPo3VQQVAuEkJB3ZZZ6KcEr/MiLNqKimSSwDMGte0jSRZYQRYZRFBZK19jQLknKWARq01cM08NMj11mVVuSw6D8esM+T1aoYdSQkw57K5M1ooMC5Ip5AYWfR3Fzvths0Srs/3D6FdBr75NX5yw9njYVa1ofD7ba/g3aqXKZLLXXYxpHO1rsrdXByenS8+nBy5GD7bT+d3y/bozevlnVbQS3b07cvXmLjsHl9geWy/fP60934/fzk3/H9P28v7s7+OBpO7Y9nz5Ytbh1vb74Ot2fDfwe+Pb74ev2Xeff+ef8u9R/PXr/5+5sZr3D7AbEvt1fD/jDxKpdj2sTN4HrbD13crLtxTHVngvO9G5O3yfT9sAkhjf0Ya8F63w+ui3EIphvah4f/AYEK4uQ=',  # b"test1"
       "num_data": 464064,
       "tid": "gAAAAABcUvNYaVEWRG5vxlvTBgj0TVP9icLDThlR5sxYlfPOP8eNoFcWkCoPNyGK5mFuS9Ia2WQ_gEFsdiKpG4cnPsg2uYSTvA==",
     }
@@ -403,19 +410,23 @@ def test_create_device_type(runner, access_token):
 def test_create_device(runner, access_token, change_to_dev_db):
     result = runner.invoke(cmd.create_device_type, ["description-again", '--token', access_token])
     type_id = re.search('type_id": "(.+)"', result.output, re.IGNORECASE).group(1)
-    result = runner.invoke(cmd.create_device, [type_id, "CLITest", "test_pass", '--token', access_token])
+    device_name = "CLITest"
+    result = runner.invoke(cmd.create_device, [type_id, device_name, "test_pass", '--token', access_token])
     assert "'success': True" in result.output
     assert "'id': " in result.output
 
     device_id = re.search("id': (\d+)", result.output, re.IGNORECASE).group(1)
     doc = search_tinydb_doc(cmd.path, 'device_keys', Query().device_id == device_id)
 
+    assert all(k in doc for k in ("device:name", "device:status", "bi_key"))
+
     app, ctx = change_to_dev_db
     with app.app_context():
-        dv = db.session.query(Device).filter(Device.name_bi == blind_index(hex_to_key(doc["bi_key"]), "CLITest")).first()
+        dv = db.session.query(Device).filter(Device.name_bi == blind_index(hex_to_key(doc["bi_key"]), device_name)).first()
         dt = db.session.query(DeviceType).filter(DeviceType.type_id == type_id).first()
 
         assert dv is not None
+        assert device_name == decrypt_using_fernet_hex(doc["device:name"], dv.name.decode()).decode()
 
         db.session.delete(dv)  # Clean up
         db.session.delete(dt)
@@ -634,6 +645,9 @@ def test_send_key_to_device(runner, access_token_two, reset_tiny_db):
     device_id = '45'
     device_id_2 = '34'
 
+    result = runner.invoke(cmd.send_key_to_device, [device_id, '--token', access_token_two])
+    assert "Blind index key for device name is missing" in result.output
+
     insert_into_tinydb(cmd.path, 'device_keys', {
         "device_id": device_id,
         "bi_key": 'fe65ae5d8665d9b68d8e20dec8fca3da23a881e5df60a132a92882a8c666149a'
@@ -739,6 +753,9 @@ def test_aa_keygen(runner, attr_auth_access_token_one, reset_tiny_db):
 @pytest.mark.parametrize('reset_tiny_db', [cmd.path], indirect=True)
 def test_aa_device_keygen(runner, attr_auth_access_token_one, reset_tiny_db):
     device_id = "23"
+    result = runner.invoke(cmd.attr_auth_device_keygen, ["'1-55 1-GUEST 1'", device_id, '--token', attr_auth_access_token_one])
+    assert f"attr_list argument should contain device_id ({device_id})" in result.output
+
     attr_list = "'1-23 1-GUEST 1'"
     result = runner.invoke(cmd.attr_auth_device_keygen, [attr_list, device_id, '--token', attr_auth_access_token_one])
 
@@ -1046,3 +1063,26 @@ def test_process_action(runner, reset_tiny_db, col_keys):
 
     result = runner.invoke(device_cmd.process_action, [payload])
     assert "On" in result.output
+
+
+def test_encrypt_using_abe_serialized_key(col_keys):
+    pk = col_keys["device_data:data"]["public_key"]
+    result = encrypt_using_abe_serialized_key(pk, "Hello", "(Owner)")
+    assert isinstance(result, str)
+
+    with pytest.raises(Exception) as e:
+        encrypt_using_abe_serialized_key("INVALID", "Hello", "(Owner)")
+        assert e.value.message == "Invalid public key."
+
+
+def test_decrypt_using_abe_serialized_key(col_keys):
+    pk = col_keys["device_data:data"]["public_key"]
+    sk = col_keys["device_data:data"]["private_key"]
+    ciphertext = encrypt_using_abe_serialized_key(pk, "Hello", "(1-23)")
+
+    result = decrypt_using_abe_serialized_key(ciphertext, pk, sk)
+    assert result == "Hello"
+
+    with pytest.raises(Exception) as e:
+        decrypt_using_abe_serialized_key("INVALID", "INVALID", "INVALID")
+        assert e.value.message == "One of the serialized objects is invalid."

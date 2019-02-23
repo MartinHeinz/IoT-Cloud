@@ -6,14 +6,13 @@ from unittest import mock
 from unittest.mock import call
 from uuid import UUID
 
-import pytest
 from passlib.hash import bcrypt
 
 from app.consts import DEVICE_TYPE_ID_MISSING_ERROR_MSG, DEVICE_TYPE_ID_INCORRECT_ERROR_MSG, \
     DEVICE_NAME_BI_MISSING_ERROR_MSG, DEVICE_NAME_MISSING_ERROR_MSG, \
     DATA_RANGE_MISSING_ERROR_MSG, DATA_OUT_OF_OUTPUT_RANGE_ERROR_MSG, CORRECTNESS_HASH_MISSING_ERROR_MSG, \
     SOMETHING_WENT_WRONG_MSG, DEVICE_ID_MISSING_ERROR_MSG, \
-    DEVICE_NAME_INVALID_ERROR_MSG, DEVICE_PASSWORD_MISSING_ERROR_MSG, USER_MISSING_PASSWORD_HASH, \
+    DEVICE_PASSWORD_MISSING_ERROR_MSG, USER_MISSING_PASSWORD_HASH, \
     ACTION_NAME_MISSING_ERROR_MSG, \
     ACTION_NAME_BI_MISSING_ERROR_MSG, UNAUTHORIZED_USER_ERROR_MSG, ACTION_BI_INVALID_ERROR_MSG, \
     NOT_REGISTERED_WITH_BROKER_ERROR_MSG, \
@@ -26,7 +25,7 @@ from app.consts import DEVICE_TYPE_ID_MISSING_ERROR_MSG, DEVICE_TYPE_ID_INCORREC
 from app.models.models import DeviceType, Device, User, Action, Scene, UserDevice
 from app.app_setup import client as mqtt_client
 from app.utils import is_valid_uuid, bytes_to_json, format_topic, validate_broker_password
-from client.crypto_utils import encrypt, hash, correctness_hash, triangle_wave, sawtooth_wave, square_wave, sine_wave, generate, fake_tuple_to_hash, \
+from client.crypto_utils import encrypt, correctness_hash, triangle_wave, sawtooth_wave, square_wave, sine_wave, generate, fake_tuple_to_hash, \
     encrypt_fake_tuple, instantiate_ope_cipher, decrypt_using_fernet_hex, decrypt_using_ope_hex, decrypt_using_abe_serialized_key
 
 from .conftest import db, assert_got_error_from_post, assert_got_data_from_post, get_data_from_post
@@ -454,14 +453,11 @@ def test_api_get_device_data_by_range_out_of_range(client, app_and_ctx, access_t
 
 
 def test_api_get_device_data(client, app_and_ctx, access_token_two):
-    data = {"not-device_id": "non-empty", "access_token": access_token_two}
-    assert_got_error_from_post(client, '/api/data/get_device_data', data, 400, DEVICE_ID_MISSING_ERROR_MSG)
+    data = {"not-device_name_bi": "non-empty", "access_token": access_token_two}
+    assert_got_error_from_post(client, '/api/data/get_device_data', data, 400, DEVICE_NAME_BI_MISSING_ERROR_MSG)
 
-    data = {"device_id": "not-a-number", "access_token": access_token_two}
-    assert_got_error_from_post(client, '/api/data/get_device_data', data, 400, DEVICE_NAME_INVALID_ERROR_MSG)
-
-    device_id = 45
-    data = {"device_id": str(device_id), "access_token": access_token_two}
+    device_name_bi = "6c0d409f3d4d630303ca1fea9d1d0b2aa9aef33e0480266e23eb24c6b26a3fde"
+    data = {"device_name_bi": device_name_bi, "access_token": access_token_two}
     status_code, data_out = get_data_from_post(client, '/api/data/get_device_data', data)
 
     assert status_code == 200
@@ -646,12 +642,6 @@ def test_api_revoke_user(client, app_and_ctx, access_token, access_token_two):
         "revoke_user_id": 1,  # not authorized
     }
     assert_got_error_from_post(client, '/api/device/revoke', data, 400, REVOKE_USER_NOT_AUTHORIZED_ERROR_MSG)
-
-
-def test_hash_bcrypt():
-    assert hash("raspberry", "1234srfh") == "$2b$12$1234srfhxxxxxxxxxxxxxu9oRez2BjitmNvretimcFcTsuR/HtxQa"
-    with pytest.raises(Exception):
-        hash("raspberry", "")
 
 
 def test_correctness_hash():

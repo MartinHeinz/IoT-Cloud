@@ -73,7 +73,7 @@ def is_valid(attr_list, do_id):
 
 def create_private_key(serialized_master_key, serialized_public_key, attr_list):
     group = create_pairing_group()
-    master_key = deserialize_charm_object(serialized_master_key, group)  # TODO check `serialized_master_key` before using `str.encode()`
+    master_key = deserialize_charm_object(serialized_master_key, group)
     cp_abe = create_cp_abe()
 
     public_key = deserialize_charm_object(serialized_public_key, group)

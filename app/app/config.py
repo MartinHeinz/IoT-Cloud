@@ -6,7 +6,7 @@ config_path = os.path.join(os.path.abspath(os.path.join(__file__, "../..")), 'co
 if os.path.exists(config_path):
     print('Importing environment from .env file', flush=True)
     for line in open(config_path):
-        var = line.strip().split('=')
+        var = line.strip().split('=', 1)
         if len(var) == 2:
             os.environ[var[0]] = var[1].replace("\"", "")
 

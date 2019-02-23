@@ -279,25 +279,20 @@ def get_data_by_num_range():
 @api.route('/data/get_device_data', methods=['POST'])
 @require_api_token()
 def get_device_data():
-    device_id = request.args.get("device_id", None)
+    device_name_bi = request.args.get("device_name_bi", None)
     access_token = request.args.get("access_token", "")
 
-    arg_check = check_missing_request_argument((device_id, DEVICE_ID_MISSING_ERROR_MSG))
+    arg_check = check_missing_request_argument((device_name_bi, DEVICE_NAME_BI_MISSING_ERROR_MSG))
     if arg_check is not True:
         return arg_check
 
-    if not is_number(device_id):
-        return http_json_response(False, 400, **{"error": DEVICE_NAME_INVALID_ERROR_MSG})
+    device = Device.get_by_name_bi(device_name_bi)
 
-    device_id = int(device_id)
-
-    if not User.can_use_device(access_token, device_id):
+    if not User.can_use_device(access_token, device.id):
         return http_json_response(False, 400, **{"error": UNAUTHORIZED_USER_ERROR_MSG})
 
-    data = db.session.query(DeviceData).filter(DeviceData.device_id == device_id)
-
     result = []
-    for row in data:
+    for row in device.data:
         r = row.as_dict()
         for k, v in r.items():
             if isinstance(v, bytes):

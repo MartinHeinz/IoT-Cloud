@@ -9,12 +9,13 @@ from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker
 from sqlalchemy_repr import RepresentableBase
 
-from client.crypto_utils import hash
+from client.crypto_utils import blind_index
 
 
 Base = declarative_base(cls=RepresentableBase)
 searched_row = 5
 searched_name = ""
+key = b'\xb8z\x1dU)\xb7YY~\xd3>\x00\x85^\x11|\x12K\x95e\xd4\xca\xc9\xf2,\xe0g\xe4\xc44\xd3W'
 
 
 class DataAccessLayer:
@@ -70,7 +71,7 @@ def create_data():
         rows.append(BlindIndex(
             id=i,
             name=name,
-            name_bi=hash(name, str(i))
+            name_bi=blind_index(key, name)
         ))
 
     session.add_all(rows)
@@ -99,26 +100,26 @@ def setup_cursor():
 
 def test_blind_index_orm(benchmark):
     dal = setup()
-    result = benchmark.pedantic(query_orm, args=(dal.Session(), searched_name, searched_row), iterations=5, rounds=5)
+    result = benchmark.pedantic(query_orm, args=(dal.Session(), searched_name), iterations=5, rounds=5)
 
     assert result.id == searched_row
 
 
-def query_orm(session, name, row):
-    return session.query(BlindIndex).filter(BlindIndex.name_bi == hash(name, str(row))).scalar()
+def query_orm(session, name):
+    return session.query(BlindIndex).filter(BlindIndex.name_bi == blind_index(key, name)).scalar()
 
 
 def test_blind_index_cursor(benchmark):
     cursor, connection = setup_cursor()
-    result = benchmark.pedantic(query_cursor, args=(cursor, searched_name, searched_row), iterations=5, rounds=5)
+    result = benchmark.pedantic(query_cursor, args=(cursor, searched_name), iterations=5, rounds=5)
     cursor.close()
     connection.close()
 
     assert result[0] == searched_row
 
 
-def query_cursor(cursor, name, row):
-    cursor.execute(f"SELECT * FROM {BlindIndex.__tablename__} WHERE name_bi = '{hash(name, str(row))}'")
+def query_cursor(cursor, name):
+    cursor.execute(f"SELECT * FROM {BlindIndex.__tablename__} WHERE name_bi = '{blind_index(key, name)}'")
     return cursor.fetchone()
 
 # TODO run directly with raw SQL inside PGadmin or psql console

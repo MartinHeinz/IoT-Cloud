@@ -17,7 +17,7 @@ class Payload:
     def __str__(self):
         result = '{'
         for attr, value in self.__dict__.items():
-            value = convert_based_on_type(value).replace("\\", "\\\\")  # TODO can there be a backslash in hash?
+            value = convert_based_on_type(value).replace("\\", "\\\\")
             result = f'{result}\"{attr}\": \"{value}\", '
         result = result[:-2] + '}'
         return json.dumps(json.loads(result, strict=False), indent=4)

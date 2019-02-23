@@ -9,7 +9,7 @@ from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker
 from sqlalchemy_repr import RepresentableBase
 
-from client.crypto_utils import hash
+from client.crypto_utils import blind_index
 
 
 Base = declarative_base(cls=RepresentableBase)
@@ -42,7 +42,7 @@ class BlindIndex(Base):
     name_bi = Column(String(200), unique=False, nullable=True)  # Blind index for .name
 
 
-dal = DataAccessLayer(user="postgres", password="postgres", host="172.20.0.2", port=5430, db="benchmark")
+dal = DataAccessLayer(user="postgres", password="postgres", host="172.26.0.2", port=5430, db="benchmark")
 
 dal.connect()
 Base.metadata.drop_all(dal.engine)
@@ -54,6 +54,7 @@ rows = []
 rows_num = 1000
 searched_row = 500
 searched_name = ""
+key = b'\xb8z\x1dU)\xb7YY~\xd3>\x00\x85^\x11|\x12K\x95e\xd4\xca\xc9\xf2,\xe0g\xe4\xc44\xd3W'
 
 for i in range(1, rows_num):
     name = ''.join(random.choices(string.ascii_uppercase + string.digits, k=10))
@@ -62,7 +63,7 @@ for i in range(1, rows_num):
     rows.append(BlindIndex(
         id=i,
         name=name,
-        name_bi=hash(name, str(i))
+        name_bi=blind_index(key, name)
     ))
 
 session.add_all(rows)
@@ -70,7 +71,7 @@ session.commit()
 
 
 start = timer()
-result = session.query(BlindIndex).filter(BlindIndex.name_bi == hash(searched_name, str(searched_row))).scalar()
+result = session.query(BlindIndex).filter(BlindIndex.name_bi == blind_index(key, searched_name)).scalar()
 end = timer()
 
 print(f'We searched for row with name: {searched_name}')
@@ -94,7 +95,7 @@ connection = psycopg2.connect(
 cursor = connection.cursor()
 
 start = timer()
-cursor.execute(f"SELECT * FROM {BlindIndex.__tablename__} WHERE name_bi = '{hash(searched_name, str(searched_row))}'")
+cursor.execute(f"SELECT * FROM {BlindIndex.__tablename__} WHERE name_bi = '{blind_index(key, searched_name)}'")
 result = cursor.fetchone()
 end = timer()
 

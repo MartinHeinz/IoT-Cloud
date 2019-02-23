@@ -155,6 +155,10 @@ class Device(MixinGetById, MixinAsDict, db.Model):
             .filter(Action.name_bi == bi)\
             .first()
 
+    @classmethod
+    def get_by_name_bi(cls, bi):
+        return db.session.query(Device).filter(Device.name_bi == bi).first()
+
 
 class MQTTUser(db.Model):
     __tablename__ = 'mqtt_user'

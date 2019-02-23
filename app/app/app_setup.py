@@ -1,4 +1,5 @@
 import atexit
+import base64
 import ssl
 import os
 import uuid
@@ -98,7 +99,7 @@ def create_app(config_name):
         client.tls_insecure_set(app.config["SSL_INSECURE"])
     except ValueError as e:
         app.logger.error(e)
-    client.username_pw_set("admin", "password")  # TODO Read password from file
+    client.username_pw_set(app.config["MQTT_USERNAME"], base64.urlsafe_b64decode(app.config["MQTT_PASSWORD"]).decode())
     client.connect(app.config["MQTT_BROKER_URL"], app.config["MQTT_BROKER_PORT"], 60)
     app.logger.info("Client connected...")
 
