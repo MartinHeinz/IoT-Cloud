@@ -4,6 +4,7 @@ import hashlib
 import hmac
 import mmh3
 import os
+import sys
 import zlib
 from binascii import a2b_hex, b2a_hex
 
@@ -20,7 +21,11 @@ from pyope.ope import OPE, ValueRange
 from scipy import signal
 import numpy as np
 
+sys.stdout = open(os.devnull, 'w')
+sys.path.insert(0, '../app')
 from app.attribute_authority.utils import create_pairing_group, create_cp_abe, deserialize_charm_object, serialize_charm_object
+
+sys.stdout = sys.__stdout__
 
 
 def encrypt(key, plaintext, associated_data):
@@ -163,9 +168,9 @@ def generate(columns, bound="upper_bound"):
     return fake_tuple
 
 
-def encrypt_fake_tuple(fake_tuple, keys):
+def encrypt_row(row, keys):
     """
-    :param fake_tuple: example: {
+    :param row: example: {
         "added": -1000,
         "num_data": -1000,
         "data": 1000,
@@ -178,7 +183,7 @@ def encrypt_fake_tuple(fake_tuple, keys):
     }
     """
     result = {}
-    for col, val in fake_tuple.items():
+    for col, val in row.items():
         if keys[col][1] == "Fernet":  # if key is for fernet, create Fernet token
             cipher = hex_to_fernet(keys[col][0])
             result[col] = cipher.encrypt(bytes(str(val), "utf-8")).decode()

@@ -1,6 +1,7 @@
 import json
 import os
 import sys
+import time
 
 import click
 from cryptography.hazmat.backends import default_backend
@@ -9,14 +10,23 @@ from cryptography.hazmat.primitives.asymmetric import ec
 from cryptography.hazmat.primitives.asymmetric.ec import EllipticCurvePublicKey
 from cryptography.hazmat.primitives.serialization import load_pem_public_key
 from tinydb import Query
+from tinydb.operations import decrement
+
+sys.stdout = open(os.devnull, 'w')
+sys.path.insert(0, '../app')
+from app.utils import is_number
+
+sys.stdout = sys.__stdout__
 
 try:  # for packaged CLI (setup.py)
-    from client.crypto_utils import triangle_wave, sawtooth_wave, square_wave, sine_wave, generate, fake_tuple_to_hash, encrypt_fake_tuple, index_function, \
-        hex_to_key, key_to_hex, hex_to_fernet, decrypt_using_fernet_hex, get_random_seed, blind_index
+    from client.crypto_utils import triangle_wave, sawtooth_wave, square_wave, sine_wave, generate, fake_tuple_to_hash, encrypt_row, index_function, \
+        hex_to_key, key_to_hex, hex_to_fernet, decrypt_using_fernet_hex, get_random_seed, blind_index, encrypt_using_abe_serialized_key, hex_to_ope, \
+        correctness_hash
     from client.utils import get_tinydb_table, search_tinydb_doc
 except ImportError:  # for un-packaged CLI
-    from crypto_utils import triangle_wave, sawtooth_wave, square_wave, sine_wave, generate, fake_tuple_to_hash, encrypt_fake_tuple, index_function, \
-        hex_to_key, key_to_hex, hex_to_fernet, decrypt_using_fernet_hex, get_random_seed
+    from crypto_utils import triangle_wave, sawtooth_wave, square_wave, sine_wave, generate, fake_tuple_to_hash, encrypt_row, index_function, \
+        hex_to_key, key_to_hex, hex_to_fernet, decrypt_using_fernet_hex, get_random_seed, blind_index, \
+        correctness_hash
     from utils import get_tinydb_table, search_tinydb_doc
 
 dir_path = os.path.dirname(os.path.realpath(__file__))
@@ -102,7 +112,7 @@ def receive_pk(data):
 
         table = get_tinydb_table(path, 'users')
         key = key_to_hex(shared_key[:32])  # NOTE: retrieve key as `key_to_hex(key)`
-        table.upsert({'id': user_id, 'shared_key': key}, Query().id == user_id)
+        table.upsert({'id': user_id, 'shared_key': key, 'tid': -1}, Query().id == user_id)
 
         public_key = private_key.public_key()
         public_pem = public_key.public_bytes(
@@ -133,19 +143,10 @@ def get_fake_tuple(user_id, bound):
 
         fake_tuple = {**generate(doc["integrity"]["device_data"], bound=bound)}
 
-        keys = {}
-        for t in doc["integrity"]:
-            for col in doc["integrity"][t]:
-                doc_key = f'{t}:{col}'
-                if doc_key == "device_data:data":
-                    keys[col] = [doc[doc_key]["public_key"],
-                                 doc["integrity"][t][col]["type"],
-                                 " ".join(doc[doc_key]["attr_list"])]
-                else:
-                    keys[col] = [doc[doc_key], doc["integrity"][t][col]["type"]]
+        keys = get_key_type_pair(doc)
 
         fake_tuple_hash = fake_tuple_to_hash([fake_tuple["added"], fake_tuple["data"], fake_tuple["num_data"], fake_tuple["tid"]])
-        encrypted_fake_tuple = encrypt_fake_tuple(fake_tuple, keys)
+        encrypted_fake_tuple = encrypt_row(fake_tuple, keys)
         row = {**encrypted_fake_tuple,
                "correctness_hash": fake_tuple_hash,
                "tid_bi": blind_index(hex_to_key(get_bi_key_by_user(int(user_id))), str(fake_tuple["tid"]))}
@@ -212,6 +213,71 @@ def process_action(data):
         _, _, exc_tb = sys.exc_info()
         line = exc_tb.tb_lineno
         click.echo(f"{repr(e)} at line: {line}")
+
+
+@device.command()
+@click.argument('user_id')
+@click.argument('data')
+@click.argument('num_data')
+def save_data(user_id, data, num_data):
+    try:
+        if not is_number(num_data) or not is_number(user_id):
+            return
+        num_data = int(num_data)
+        user_id = int(user_id)
+
+        doc = get_user_data(user_id)
+        if doc is None:
+            raise Exception(f"No user with ID {user_id}")
+
+        current_time_millis = int(round(time.time()))
+        payload = dict_to_payload(**create_row(data, num_data, get_next_tid(user_id), current_time_millis, user_id))
+        click.echo(payload)
+
+    except Exception as e:
+        _, _, exc_tb = sys.exc_info()
+        line = exc_tb.tb_lineno
+        click.echo(f"{repr(e)} at line: {line}")
+
+
+def create_row(data, num_data, tid, added, user_id):
+    user_data = get_user_data(user_id)
+    encrypted = encrypt_row({
+        "added": added,
+        "num_data": num_data,
+        "data": data,
+        "tid": str(tid)
+    }, get_key_type_pair(user_data))
+    encrypted["correctness_hash"] = correctness_hash(added, data, num_data, tid)
+    encrypted["tid_bi"] = blind_index(hex_to_key(get_bi_key_by_user(user_id)), str(tid))
+
+    return encrypted
+
+
+def get_key_type_pair(user_data):
+    keys = {}
+    for t in user_data["integrity"]:
+        for col in user_data["integrity"][t]:
+            doc_key = f'{t}:{col}'
+            if doc_key == "device_data:data":
+                keys[col] = [user_data[doc_key]["public_key"],
+                             user_data["integrity"][t][col]["type"],
+                             " ".join(user_data[doc_key]["attr_list"])]
+            else:
+                keys[col] = [user_data[doc_key], user_data["integrity"][t][col]["type"]]
+    return keys
+
+
+def get_next_tid(user_id):
+    table = get_tinydb_table(path, 'users')
+    tid = table.get(Query().id == int(user_id))["tid"]
+    table.update(decrement('tid'), Query().id == int(user_id))
+    return tid
+
+
+def get_user_data(user_id):
+    table = get_tinydb_table(path, 'users')
+    return table.get(Query().id == user_id)
 
 
 def dict_to_payload(**kwargs):

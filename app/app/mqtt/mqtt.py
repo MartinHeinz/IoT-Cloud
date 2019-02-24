@@ -67,7 +67,7 @@ def _edit_device_data(device_id, action, msg, app, db):
                         added=int(msg.payload["added"])
                     ))
             else:
-                DeviceData.delete_by_tid_bi(msg.payload["tid_bi"], device_id)
+                DeviceData.delete_by_tid_bi(msg.payload["tid_bi"], device_id)  # TODO Doesn't check attributes only tid -> deletes even if all attrs are different
             db.session.commit()
         else:
             print(f"Device with id: {device_id} doesn't exist.", flush=True)

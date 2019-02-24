@@ -467,7 +467,7 @@
         "qos": "2",
         "broker": "mqtt-broker-tls",
         "x": 160,
-        "y": 1120,
+        "y": 1260,
         "wires": [
             [
                 "e4032d44.42712"
@@ -486,7 +486,7 @@
         "oldrc": false,
         "name": "Get Fake Tuple Info",
         "x": 410,
-        "y": 1120,
+        "y": 1260,
         "wires": [
             [
                 "76a757f.60bf2a8"
@@ -504,7 +504,7 @@
         "action": "",
         "pretty": true,
         "x": 630,
-        "y": 1120,
+        "y": 1260,
         "wires": [
             [
                 "ee9a2a1b.f76cf8",
@@ -522,7 +522,7 @@
         "retain": "",
         "broker": "mqtt-broker-tls",
         "x": 870,
-        "y": 1120,
+        "y": 1260,
         "wires": []
     },
     {
@@ -536,7 +536,7 @@
         "tostatus": false,
         "complete": "payload",
         "x": 890,
-        "y": 1200,
+        "y": 1340,
         "wires": []
     },
     {
@@ -551,7 +551,7 @@
         "oldrc": false,
         "name": "Process Actions Msg",
         "x": 420,
-        "y": 1360,
+        "y": 1500,
         "wires": [
             [
                 "ea1344eb.a51d98"
@@ -569,7 +569,7 @@
         "qos": "2",
         "broker": "mqtt-broker-tls",
         "x": 180,
-        "y": 1360,
+        "y": 1500,
         "wires": [
             [
                 "ea52e919.e2b448"
@@ -601,7 +601,7 @@
         "repair": false,
         "outputs": 2,
         "x": 660,
-        "y": 1360,
+        "y": 1500,
         "wires": [
             [
                 "8f510fae.df1b9"
@@ -622,7 +622,7 @@
         "tostatus": false,
         "complete": "payload",
         "x": 850,
-        "y": 1320,
+        "y": 1460,
         "wires": []
     },
     {
@@ -636,7 +636,92 @@
         "tostatus": false,
         "complete": "payload",
         "x": 850,
-        "y": 1400,
+        "y": 1540,
+        "wires": []
+    },
+    {
+        "id": "15204be5.feb4c4",
+        "type": "inject",
+        "z": "f1dd4598.5b0fa8",
+        "name": "send_save_data",
+        "topic": "23/server/save_data",
+        "payload": "1 data 1234",
+        "payloadType": "str",
+        "repeat": "",
+        "crontab": "",
+        "once": false,
+        "onceDelay": 0.1,
+        "x": 140,
+        "y": 1120,
+        "wires": [
+            [
+                "5768ca06.ec2f34"
+            ]
+        ]
+    },
+    {
+        "id": "5768ca06.ec2f34",
+        "type": "exec",
+        "z": "f1dd4598.5b0fa8",
+        "command": "python3 /home/martin/Projects/diplomovka/IoT-Cloud/client/cli.py --no-debug device save-data ",
+        "addpay": true,
+        "append": "",
+        "useSpawn": "false",
+        "timer": "5",
+        "oldrc": false,
+        "name": "Save Data",
+        "x": 390,
+        "y": 1120,
+        "wires": [
+            [
+                "3b2495f6.4d847a"
+            ],
+            [],
+            []
+        ]
+    },
+    {
+        "id": "96886ba9.eb0e88",
+        "type": "debug",
+        "z": "f1dd4598.5b0fa8",
+        "name": "Console Dump",
+        "active": true,
+        "tosidebar": true,
+        "console": false,
+        "tostatus": false,
+        "complete": "payload",
+        "x": 880,
+        "y": 1080,
+        "wires": []
+    },
+    {
+        "id": "3b2495f6.4d847a",
+        "type": "json",
+        "z": "f1dd4598.5b0fa8",
+        "name": "",
+        "property": "payload",
+        "action": "",
+        "pretty": true,
+        "x": 630,
+        "y": 1120,
+        "wires": [
+            [
+                "96886ba9.eb0e88",
+                "d85cc4ec.087c08"
+            ]
+        ]
+    },
+    {
+        "id": "d85cc4ec.087c08",
+        "type": "mqtt out",
+        "z": "f1dd4598.5b0fa8",
+        "name": "send_add",
+        "topic": "d:23/server/save_data",
+        "qos": "",
+        "retain": "",
+        "broker": "mqtt-broker-tls",
+        "x": 860,
+        "y": 1140,
         "wires": []
     },
     {

@@ -327,6 +327,64 @@ def test_decrypt_row():
     assert expected == result
 
 
+@pytest.mark.parametrize('reset_tiny_db', [device_cmd.path], indirect=True)
+def test_save_data(runner, reset_tiny_db, col_keys, integrity_data):
+    user_id = "not a number"
+    data = "data"
+    num_data = 1111
+    result = runner.invoke(device_cmd.save_data, [user_id, data, num_data])
+    assert result.output == ""
+
+    user_id = 1
+    tid = -5
+    col_keys.pop('device_id')
+    col_keys['id'] = user_id
+    col_keys['tid'] = tid
+    col_keys["integrity"] = integrity_data
+    insert_into_tinydb(device_cmd.path, 'users', col_keys)
+    result = runner.invoke(device_cmd.save_data, ['55', data, str(num_data)])
+    assert f'No user with ID 55' in result.output
+
+    result = runner.invoke(device_cmd.save_data, [str(user_id), data, str(num_data)])
+    doc = search_tinydb_doc(device_cmd.path, 'users', Query().id == int(user_id))
+    assert all(s in result.output for s in ("added", "num_data", "data", "tid", "correctness_hash", "tid_bi"))
+    assert doc["tid"] == tid - 1
+
+
+@pytest.mark.parametrize('reset_tiny_db', [device_cmd.path], indirect=True)
+def test_create_row(col_keys, integrity_data, reset_tiny_db):
+    user_id = 1
+    tid = -5
+    col_keys.pop('device_id')
+    col_keys['id'] = user_id
+    col_keys['tid'] = tid
+    col_keys["integrity"] = integrity_data
+    insert_into_tinydb(device_cmd.path, 'users', col_keys)
+
+    key_type_pairs = {
+        "added": [col_keys["device_data:added"], "OPE"],
+        "num_data": [col_keys["device_data:num_data"], "OPE"],
+        "tid": [col_keys["device_data:tid"], "Fernet"],
+        "data": [col_keys["device_data:data"]["public_key"],
+                 "ABE",
+                 "1-23 1-GUEST 1"]
+    }
+    with mock.patch('client.device.commands.get_key_type_pair', return_value=key_type_pairs):
+        result = device_cmd.create_row("data", 1111, tid, 2222, user_id)
+
+        assert len(result) == 6
+        enc_tid = result["tid"]
+        enc_added = result["added"]
+        enc_data = result["data"]
+        assert decrypt_using_fernet_hex(col_keys["device_data:tid"], enc_tid).decode() == str(tid)
+        assert decrypt_using_ope_hex(col_keys["device_data:added"], enc_added) == 2222
+        assert decrypt_using_abe_serialized_key(
+            enc_data,
+            col_keys["device_data:data"]["public_key"],
+            col_keys["device_data:data"]["private_key"],
+        ) == "data"
+
+
 def test_is_fake():
     row_values = [-959, 1000, -980, 1]
     row_correctness_hash = '$2b$12$p6bfP/Nl15D0m.xejbTUuei.qYEsDJYd6mKjuKBST5iZwZkvgeX3G'
@@ -795,7 +853,7 @@ def test_device_receive_pk(runner, reset_tiny_db):
 
     result = runner.invoke(device_cmd.receive_pk, [data])
     table = get_tinydb_table(device_cmd.path, 'users')
-    doc = table.search(where('id').exists() & where('shared_key').exists())
+    doc = table.search(where('id').exists() & where('shared_key').exists() & where('tid').exists())
     assert doc is not None, "Keys not present in DB."
     assert len(doc) == 1
     assert doc[0]['id'] == 1
@@ -900,7 +958,7 @@ def test_get_bi_key_by_user(reset_tiny_db, col_keys):
 
 
 @pytest.mark.parametrize('reset_tiny_db', [device_cmd.path], indirect=True)
-def test_get_fake_tuple(runner, reset_tiny_db):
+def test_get_fake_tuple(runner, reset_tiny_db, integrity_data):
     user_id = 1
     device_id_doc = {"id": "23"}
     bi_key = "9ef5134c75a6745507be61bcb44a909bcb0e9d792980b2394862ee73fc359418"
@@ -922,33 +980,7 @@ def test_get_fake_tuple(runner, reset_tiny_db):
 
     insert_into_tinydb(device_cmd.path, 'users', data)
     insert_into_tinydb(device_cmd.path, 'device', device_id_doc)
-    integrity_data = {
-        "device_data": {
-            "added": {
-                "seed": 1,
-                "lower_bound": 1,
-                "upper_bound": 1,
-                "type": "OPE"
-            },
-            "num_data": {
-                "seed": 2,
-                "lower_bound": 1,
-                "upper_bound": 1,
-                "type": "OPE"
-            },
-            "data": {
-                "seed": 3,
-                "lower_bound": 1,
-                "upper_bound": 1,
-                "type": "ABE"
-            },
-            "tid": {
-                "lower_bound": 1,
-                "upper_bound": 1,
-                "type": "Fernet"
-            },
-        }
-    }
+
     with mock.patch('client.device.commands.init_integrity_data', return_value=integrity_data):
         result = runner.invoke(device_cmd.get_fake_tuple, [str(user_id), "upper_bound"])
         table = get_tinydb_table(device_cmd.path, 'users')
@@ -1063,6 +1095,20 @@ def test_process_action(runner, reset_tiny_db, col_keys):
 
     result = runner.invoke(device_cmd.process_action, [payload])
     assert "On" in result.output
+
+
+@pytest.mark.parametrize('reset_tiny_db', [device_cmd.path], indirect=True)
+def test_get_next_tid(reset_tiny_db):
+    user_id = 1
+    insert_into_tinydb(device_cmd.path, 'users', {
+        "id": user_id,
+        "shared_key": "aefe715635c3f35f7c58da3eb410453712aaf1f8fd635571aa5180236bb21acc",
+        "tid": -5
+    })
+    assert device_cmd.get_next_tid(user_id) == -5
+
+    doc = search_tinydb_doc(device_cmd.path, 'users', Query().id == user_id)
+    assert doc["tid"] == -6
 
 
 def test_encrypt_using_abe_serialized_key(col_keys):
