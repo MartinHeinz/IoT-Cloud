@@ -1,7 +1,7 @@
-FROM python:3.7-stretch
+FROM python:3.7.2-stretch
 
 RUN apt-get update
-RUN apt-get -y install \
+RUN apt-get -y --allow-unauthenticated install \
     python-psycopg2 \
     libpq-dev \
     flex \
