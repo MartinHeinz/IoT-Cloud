@@ -25,7 +25,7 @@ from app.consts import DEVICE_TYPE_ID_MISSING_ERROR_MSG, DEVICE_TYPE_ID_INCORREC
 from app.models.models import DeviceType, Device, User, Action, Scene, UserDevice
 from app.app_setup import client as mqtt_client
 from app.utils import is_valid_uuid, bytes_to_json, format_topic, validate_broker_password
-from client.crypto_utils import encrypt, correctness_hash, triangle_wave, sawtooth_wave, square_wave, sine_wave, generate, fake_tuple_to_hash, \
+from client.crypto_utils import encrypt, correctness_hash, triangle_wave, sawtooth_wave, square_wave, sine_wave, generate, \
     encrypt_row, instantiate_ope_cipher, decrypt_using_fernet_hex, decrypt_using_ope_hex, decrypt_using_abe_serialized_key
 
 from .conftest import db, assert_got_error_from_post, assert_got_data_from_post, get_data_from_post
@@ -646,7 +646,6 @@ def test_api_revoke_user(client, app_and_ctx, access_token, access_token_two):
 
 def test_correctness_hash():
     assert bcrypt.verify("ergh" + "esrge", correctness_hash("ergh", "esrge"))
-    assert bcrypt.verify("ergh" + "esrge" + "1", correctness_hash("ergh", "esrge", fake=True))
     assert not bcrypt.verify("ergh" + "esrge" + "wes", correctness_hash("ergh", "esrge"))
 
 
@@ -679,8 +678,8 @@ def test_generate_fake_tuple_and_hash():
                 "type": "ABE"
             },
             "tid": {
-                "lower_bound": 0,
-                "upper_bound": 0,
+                "lower_bound": 1,
+                "upper_bound": 1,
                 "type": "Fernet"
             }
         }
@@ -689,10 +688,7 @@ def test_generate_fake_tuple_and_hash():
     assert d["added"] == -168754978
     assert d["num_data"] == 83924723
     assert d["data"] == 2070235132
-    assert d["tid"] == 0
-
-    fake_tuple_hash = fake_tuple_to_hash(d.values())
-    assert bcrypt.verify("-168754978" + "83924723" + "2070235132" + "0" + "1", fake_tuple_hash)
+    assert d["tid"] == 1
 
 
 def test_encrypt_fake_tuple():

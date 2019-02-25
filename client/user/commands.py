@@ -603,8 +603,7 @@ def _divide_fake_and_real_data(rows, device_id, integrity_info):
         modified.pop("tid_bi")
         row_correctness_hash = modified.pop("correctness_hash")
         decrypted = decrypt_row(modified, key_type_pairs)
-        row_values = [decrypted["added"], decrypted["data"], decrypted["num_data"], decrypted["tid"]]
-        if is_fake(row_values, row_correctness_hash):
+        if is_fake(decrypted):
             decrypted["correctness_hash"] = row_correctness_hash
             fake.append(decrypted)
         else:
@@ -676,17 +675,14 @@ def decrypt_row(row, keys):
     return result
 
 
-def is_fake(row_values, row_correctness_hash):
+def is_fake(row_values):
     """
-    Check whether row is fake tuple based on "correctness_hash" attribute in row and computed hash
+    Check whether row is fake tuple based on "tid" attribute in row and computed hash
     from other attributes in row.
-    :param row_correctness_hash
     :param row_values: dict with keys as column names and values as values from server DB (decrypted using `decrypt_row`)
-        example: [-959, 1000, -980, 1]
-    :return: bool, based on correctness hash check
+    :return: bool
     """
-    secret = ''.join(map(str, row_values)) + "1"
-    return bcrypt.verify(secret, row_correctness_hash)
+    return int(row_values["tid"]) > 0  # Positive numbers are fake
 
 
 def verify_integrity_data(expected_tuples, present_rows):

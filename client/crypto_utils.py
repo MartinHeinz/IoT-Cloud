@@ -73,11 +73,8 @@ def blind_index(key, value):
     return hmac.new(key, value.encode(), hashlib.sha256).hexdigest()
 
 
-def correctness_hash(*strings, fake=False):
-    if not fake:
-        return bcrypt.using(rounds=12).hash(''.join(map(str, strings)))
-    return bcrypt.using(rounds=12).hash(''.join(map(str, strings)) + "1")
-    # TODO bcrypt.using(rounds=12).hash(''.join(map(str, strings))) + "1" <- Based on paper it should be done like this
+def correctness_hash(*strings):
+    return bcrypt.using(rounds=12).hash(''.join(map(str, strings)))
 
 
 def check_correctness_hash(query_result, *keys):
@@ -193,10 +190,6 @@ def encrypt_row(row, keys):
         else:  # if key is for ABE
             result[col] = encrypt_using_abe_serialized_key(keys[col][0], val, keys[col][2])
     return result
-
-
-def fake_tuple_to_hash(values):
-    return correctness_hash(*values, fake=True)
 
 
 def murmur_hash(val, seed):

@@ -19,12 +19,12 @@ from app.utils import is_number
 sys.stdout = sys.__stdout__
 
 try:  # for packaged CLI (setup.py)
-    from client.crypto_utils import triangle_wave, sawtooth_wave, square_wave, sine_wave, generate, fake_tuple_to_hash, encrypt_row, index_function, \
+    from client.crypto_utils import triangle_wave, sawtooth_wave, square_wave, sine_wave, generate, encrypt_row, index_function, \
         hex_to_key, key_to_hex, hex_to_fernet, decrypt_using_fernet_hex, get_random_seed, blind_index, encrypt_using_abe_serialized_key, hex_to_ope, \
         correctness_hash
     from client.utils import get_tinydb_table, search_tinydb_doc
 except ImportError:  # for un-packaged CLI
-    from crypto_utils import triangle_wave, sawtooth_wave, square_wave, sine_wave, generate, fake_tuple_to_hash, encrypt_row, index_function, \
+    from crypto_utils import triangle_wave, sawtooth_wave, square_wave, sine_wave, generate, encrypt_row, index_function, \
         hex_to_key, key_to_hex, hex_to_fernet, decrypt_using_fernet_hex, get_random_seed, blind_index, \
         correctness_hash
     from utils import get_tinydb_table, search_tinydb_doc
@@ -145,7 +145,7 @@ def get_fake_tuple(user_id, bound):
 
         keys = get_key_type_pair(doc)
 
-        fake_tuple_hash = fake_tuple_to_hash([fake_tuple["added"], fake_tuple["data"], fake_tuple["num_data"], fake_tuple["tid"]])
+        fake_tuple_hash = correctness_hash([fake_tuple["added"], fake_tuple["data"], fake_tuple["num_data"], fake_tuple["tid"]])
         encrypted_fake_tuple = encrypt_row(fake_tuple, keys)
         row = {**encrypted_fake_tuple,
                "correctness_hash": fake_tuple_hash,
