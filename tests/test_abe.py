@@ -395,6 +395,18 @@ def test_encrypt_missing_policy_string(client, attr_auth_access_token_one):
     assert_got_error_from_post(client, '/attr_auth/encrypt', data, 400, POLICY_STRING_MISSING_ERROR_MSG)
 
 
+# def test_encrypt_invalid_policy_string(client, attr_auth_access_token_one):  # TODO remove or change?
+#     data = {
+#         "access_token": attr_auth_access_token_one,
+#         "message": "any text",
+#         "policy_string": "esrg esargd szerdg)"
+#     }
+#     response = client.post('/attr_auth/encrypt', query_string=data, follow_redirects=True)
+#     assert response.status_code == 400
+#     json_data = json.loads(response.data.decode("utf-8"))
+#     assert (json_data["error"]) == INVALID_POLICY_STRING_ERROR_MSG
+
+
 def test_encrypt_succesfull(client, attr_auth_access_token_one):
     data = {
         "access_token": attr_auth_access_token_one,

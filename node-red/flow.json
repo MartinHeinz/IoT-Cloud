@@ -725,6 +725,254 @@
         "wires": []
     },
     {
+        "id": "118774a8.44dd3b",
+        "type": "inject",
+        "z": "f1dd4598.5b0fa8",
+        "name": "",
+        "topic": "",
+        "payload": "",
+        "payloadType": "date",
+        "repeat": "",
+        "crontab": "*/6 0-23 * * *",
+        "once": false,
+        "onceDelay": 0.1,
+        "x": 130,
+        "y": 1660,
+        "wires": [
+            [
+                "3f8d4a94.185b26"
+            ]
+        ]
+    },
+    {
+        "id": "3f8d4a94.185b26",
+        "type": "function",
+        "z": "f1dd4598.5b0fa8",
+        "name": "25%",
+        "func": "const random = Math.round(Math.random() * 100);\n\nif(random < 75) {\n    node.status({fill: \"red\", text: random});\n    return null;\n}\nnode.status({fill: \"green\", text: random});\n\nuser_id = 1\nbound = \"upper_bound\"\n\nvar msg = { payload: user_id + \" \" + bound };\nreturn msg;",
+        "outputs": 1,
+        "noerr": 0,
+        "x": 290,
+        "y": 1660,
+        "wires": [
+            [
+                "f225ae4.fc7f45"
+            ]
+        ]
+    },
+    {
+        "id": "f225ae4.fc7f45",
+        "type": "delay",
+        "z": "f1dd4598.5b0fa8",
+        "name": "",
+        "pauseType": "random",
+        "timeout": "5",
+        "timeoutUnits": "seconds",
+        "rate": "1",
+        "nbRateUnits": "1",
+        "rateUnits": "second",
+        "randomFirst": "1",
+        "randomLast": "5",
+        "randomUnits": "minutes",
+        "drop": false,
+        "x": 440,
+        "y": 1660,
+        "wires": [
+            [
+                "54f9b2ed.159fcc"
+            ]
+        ]
+    },
+    {
+        "id": "54f9b2ed.159fcc",
+        "type": "exec",
+        "z": "f1dd4598.5b0fa8",
+        "command": "python3 /home/martin/Projects/diplomovka/IoT-Cloud/client/cli.py --no-debug device get-fake-tuple",
+        "addpay": true,
+        "append": "",
+        "useSpawn": "false",
+        "timer": "5",
+        "oldrc": false,
+        "name": "Get Fake Tuple",
+        "x": 640,
+        "y": 1660,
+        "wires": [
+            [
+                "12bf6630.edae5a"
+            ],
+            [],
+            []
+        ]
+    },
+    {
+        "id": "5e46e773.455ff8",
+        "type": "debug",
+        "z": "f1dd4598.5b0fa8",
+        "name": "Console Dump",
+        "active": true,
+        "tosidebar": true,
+        "console": false,
+        "tostatus": false,
+        "complete": "payload",
+        "x": 1120,
+        "y": 1620,
+        "wires": []
+    },
+    {
+        "id": "12bf6630.edae5a",
+        "type": "json",
+        "z": "f1dd4598.5b0fa8",
+        "name": "",
+        "property": "payload",
+        "action": "",
+        "pretty": true,
+        "x": 870,
+        "y": 1660,
+        "wires": [
+            [
+                "5e46e773.455ff8",
+                "234760e0.5a486"
+            ]
+        ]
+    },
+    {
+        "id": "234760e0.5a486",
+        "type": "mqtt out",
+        "z": "f1dd4598.5b0fa8",
+        "name": "fake_tuple_send_add",
+        "topic": "d:23/server/save_data",
+        "qos": "",
+        "retain": "",
+        "broker": "mqtt-broker-tls",
+        "x": 1140,
+        "y": 1680,
+        "wires": []
+    },
+    {
+        "id": "f47b7601.30bca8",
+        "type": "exec",
+        "z": "f1dd4598.5b0fa8",
+        "command": "python3 /home/martin/Projects/diplomovka/IoT-Cloud/client/cli.py --no-debug device get-fake-tuple",
+        "addpay": true,
+        "append": "",
+        "useSpawn": "false",
+        "timer": "5",
+        "oldrc": false,
+        "name": "Get Fake Tuple",
+        "x": 640,
+        "y": 1800,
+        "wires": [
+            [
+                "95171d53.a8271"
+            ],
+            [],
+            []
+        ]
+    },
+    {
+        "id": "c8f2ea40.27a598",
+        "type": "debug",
+        "z": "f1dd4598.5b0fa8",
+        "name": "Console Dump",
+        "active": true,
+        "tosidebar": true,
+        "console": false,
+        "tostatus": false,
+        "complete": "payload",
+        "x": 1120,
+        "y": 1760,
+        "wires": []
+    },
+    {
+        "id": "95171d53.a8271",
+        "type": "json",
+        "z": "f1dd4598.5b0fa8",
+        "name": "",
+        "property": "payload",
+        "action": "",
+        "pretty": true,
+        "x": 870,
+        "y": 1800,
+        "wires": [
+            [
+                "c8f2ea40.27a598",
+                "969fc797.5d9c88"
+            ]
+        ]
+    },
+    {
+        "id": "969fc797.5d9c88",
+        "type": "mqtt out",
+        "z": "f1dd4598.5b0fa8",
+        "name": "fake_tuple_send_remove",
+        "topic": "d:23/server/remove_data",
+        "qos": "",
+        "retain": "",
+        "broker": "mqtt-broker-tls",
+        "x": 1150,
+        "y": 1820,
+        "wires": []
+    },
+    {
+        "id": "f3c8ebe0.8c9898",
+        "type": "inject",
+        "z": "f1dd4598.5b0fa8",
+        "name": "",
+        "topic": "",
+        "payload": "",
+        "payloadType": "date",
+        "repeat": "",
+        "crontab": "*/6 0-23 * * *",
+        "once": false,
+        "onceDelay": 0.1,
+        "x": 130,
+        "y": 1800,
+        "wires": [
+            [
+                "fe709536.50a708"
+            ]
+        ]
+    },
+    {
+        "id": "fe709536.50a708",
+        "type": "function",
+        "z": "f1dd4598.5b0fa8",
+        "name": "25%",
+        "func": "const random = Math.round(Math.random() * 100);\n\nif(random < 75) {\n    node.status({fill: \"red\", text: random});\n    return null;\n}\nnode.status({fill: \"green\", text: random});\n\nuser_id = 1\nbound = \"lower_bound\"\n\nvar msg = { payload: user_id + \" \" + bound };\nreturn msg;",
+        "outputs": 1,
+        "noerr": 0,
+        "x": 290,
+        "y": 1800,
+        "wires": [
+            [
+                "60609cdc.516934"
+            ]
+        ]
+    },
+    {
+        "id": "60609cdc.516934",
+        "type": "delay",
+        "z": "f1dd4598.5b0fa8",
+        "name": "",
+        "pauseType": "random",
+        "timeout": "5",
+        "timeoutUnits": "seconds",
+        "rate": "1",
+        "nbRateUnits": "1",
+        "rateUnits": "second",
+        "randomFirst": "1",
+        "randomLast": "5",
+        "randomUnits": "minutes",
+        "drop": false,
+        "x": 440,
+        "y": 1800,
+        "wires": [
+            [
+                "f47b7601.30bca8"
+            ]
+        ]
+    },
+    {
         "id": "mqtt-broker-tls",
         "type": "mqtt-broker",
         "z": "",
