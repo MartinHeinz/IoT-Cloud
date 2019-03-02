@@ -20,13 +20,13 @@ sys.stdout = sys.__stdout__
 
 try:  # for packaged CLI (setup.py)
     from client.crypto_utils import triangle_wave, sawtooth_wave, square_wave, sine_wave, generate, encrypt_row, index_function, \
-        hex_to_key, key_to_hex, hex_to_fernet, decrypt_using_fernet_hex, get_random_seed, blind_index, encrypt_using_abe_serialized_key, hex_to_ope, \
-        correctness_hash
+    hex_to_key, key_to_hex, hex_to_fernet, decrypt_using_fernet_hex, get_random_seed, blind_index, encrypt_using_abe_serialized_key, hex_to_ope, \
+    correctness_hash, pad_payload_attr
     from client.utils import get_tinydb_table, search_tinydb_doc
 except ImportError:  # for un-packaged CLI
     from crypto_utils import triangle_wave, sawtooth_wave, square_wave, sine_wave, generate, encrypt_row, index_function, \
         hex_to_key, key_to_hex, hex_to_fernet, decrypt_using_fernet_hex, get_random_seed, blind_index, \
-        correctness_hash
+        correctness_hash, pad_payload_attr
     from utils import get_tinydb_table, search_tinydb_doc
 
 dir_path = os.path.dirname(os.path.realpath(__file__))
@@ -142,6 +142,7 @@ def get_fake_tuple(user_id, bound):
                 doc["integrity"]["device_data"] = increment_bounds(doc["integrity"]["device_data"])
 
         fake_tuple = {**generate(doc["integrity"]["device_data"], bound=bound)}
+        fake_tuple["data"] = pad_payload_attr(str(fake_tuple["data"]))
 
         keys = get_key_type_pair(doc)
 

@@ -15,7 +15,6 @@ from cryptography.hazmat.primitives.asymmetric.ec import EllipticCurvePublicKey,
 from cryptography.hazmat.primitives.serialization import load_pem_private_key, load_pem_public_key
 from paho.mqtt import client as paho
 from tinydb import where, Query
-from passlib.hash import bcrypt
 from tinydb.operations import set
 
 sys.stdout = open(os.devnull, 'w')
@@ -26,14 +25,14 @@ sys.stdout = sys.__stdout__
 
 try:  # for packaged CLI (setup.py)
     from client.crypto_utils import correctness_hash, check_correctness_hash, int_to_bytes, instantiate_ope_cipher, int_from_bytes, hex_to_key, \
-        key_to_hex, hex_to_fernet, hex_to_ope, decrypt_using_fernet_hex, decrypt_using_ope_hex, encrypt_using_fernet_hex, murmur_hash, \
-        decrypt_using_abe_serialized_key, blind_index
+    key_to_hex, hex_to_fernet, hex_to_ope, decrypt_using_fernet_hex, decrypt_using_ope_hex, encrypt_using_fernet_hex, murmur_hash, \
+    decrypt_using_abe_serialized_key, blind_index, unpad_row, pad_payload_attr
     from client.utils import json_string_with_bytes_to_dict, _create_payload, search_tinydb_doc, get_tinydb_table, insert_into_tinydb
     from client.password_hashing import pbkdf2_hash
 except ImportError:  # for un-packaged CLI
     from crypto_utils import correctness_hash, check_correctness_hash, instantiate_ope_cipher, int_from_bytes, hex_to_key, key_to_hex, \
-        hex_to_fernet, hex_to_ope, decrypt_using_fernet_hex, decrypt_using_ope_hex, encrypt_using_fernet_hex, murmur_hash, \
-        decrypt_using_abe_serialized_key, blind_index
+    hex_to_fernet, hex_to_ope, decrypt_using_fernet_hex, decrypt_using_ope_hex, encrypt_using_fernet_hex, murmur_hash, \
+    decrypt_using_abe_serialized_key, blind_index, unpad_row, pad_payload_attr
     from utils import json_string_with_bytes_to_dict, _create_payload, search_tinydb_doc, get_tinydb_table, insert_into_tinydb
     from password_hashing import pbkdf2_hash
 
@@ -337,7 +336,14 @@ def get_device_data_by_num_range(device_id, lower=None, upper=None, token=""):
 
     if json_content["success"]:
         check_correctness_hash(rows, 'added', 'data', 'num_data', 'tid')
-    click.echo('{"device_data":' + str(rows).replace("'", '"') + '}')
+
+    result = []
+    for row in rows:
+        try:
+            result.append(unpad_row("data", row))
+        except Exception as e:
+            click.echo(str(e))
+    click.echo('{"device_data":' + str(result).replace("'", '"') + '}')
 
 
 def slice_by_range(device_id, all_tuples, lower, upper, key_name):
@@ -532,7 +538,14 @@ def get_device_data(user_id, device_id, device_name, token):  # TODO right now i
 
     verify_integrity_data(generate_fake_tuples_in_range(fake_tuple_data["device_data"]), fake_tuples)
     check_correctness_hash(rows, 'added', 'data', 'num_data', 'tid')
-    click.echo(rows)
+
+    result = []
+    for row in rows:
+        try:
+            result.append(unpad_row("data", row))
+        except Exception as e:
+            click.echo(str(e))
+    click.echo(result)
 
 
 def _handle_on_message(mqtt_client, userdata, msg, device_id, user_id):
@@ -729,7 +742,7 @@ def generate_fake_tuples_in_range(fake_tuple_info):
     for no, i in enumerate(range(lb, ub)):
         fake_tuples.append({"added": fake_tuple_col_values["added"][no],
                             "num_data": fake_tuple_col_values["num_data"][no],
-                            "data": str(fake_tuple_col_values["data"][no]),
+                            "data": pad_payload_attr(str(fake_tuple_col_values["data"][no])),
                             "tid": str(fake_tuple_col_values["tid"][no])})
     return fake_tuples
 

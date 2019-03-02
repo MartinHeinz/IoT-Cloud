@@ -271,3 +271,20 @@ def decrypt_using_abe_serialized_key(serialized_ciphertext, serialized_pk, seria
     plaintext = cp_abe.decrypt(public_key, private_key, ciphertext)
 
     return plaintext.decode("utf-8")
+
+
+def pad_payload_attr(value):
+    if len(value) > 256:
+        raise Exception("Attribute value too long.")
+    return value.ljust(256)
+
+
+def unpad_payload_attr(value):
+    if len(value) != 256:
+        raise Exception("Attribute padded incorrectly.")
+    return value.strip()
+
+
+def unpad_row(attr_name, row):
+    row[attr_name] = unpad_payload_attr(row[attr_name])
+    return row
