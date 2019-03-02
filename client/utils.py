@@ -1,6 +1,6 @@
 import json
 
-from tinydb import TinyDB
+from tinydb import TinyDB, Query
 
 
 def json_string_with_bytes_to_dict(value):
@@ -38,3 +38,9 @@ def insert_into_tinydb(path, table_name, value):
     db = TinyDB(path)
     table = db.table(name=table_name)
     table.insert(value)
+
+
+def get_shared_key_by_device_id(path, device_id):
+    doc = search_tinydb_doc(path, "device_keys", Query().device_id == str(device_id))
+    if doc and "shared_key" in doc:
+        return doc["shared_key"]

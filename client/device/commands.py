@@ -20,13 +20,13 @@ sys.stdout = sys.__stdout__
 
 try:  # for packaged CLI (setup.py)
     from client.crypto_utils import triangle_wave, sawtooth_wave, square_wave, sine_wave, generate, encrypt_row, index_function, \
-    hex_to_key, key_to_hex, hex_to_fernet, decrypt_using_fernet_hex, get_random_seed, blind_index, encrypt_using_abe_serialized_key, hex_to_ope, \
-    correctness_hash, pad_payload_attr
+        hex_to_key, key_to_hex, hex_to_fernet, decrypt_using_fernet_hex, get_random_seed, blind_index, encrypt_using_abe_serialized_key, hex_to_ope, \
+        correctness_hash, pad_payload_attr, encrypt_using_fernet_hex
     from client.utils import get_tinydb_table, search_tinydb_doc
 except ImportError:  # for un-packaged CLI
     from crypto_utils import triangle_wave, sawtooth_wave, square_wave, sine_wave, generate, encrypt_row, index_function, \
         hex_to_key, key_to_hex, hex_to_fernet, decrypt_using_fernet_hex, get_random_seed, blind_index, \
-        correctness_hash, pad_payload_attr
+        correctness_hash, pad_payload_attr, encrypt_using_fernet_hex
     from utils import get_tinydb_table, search_tinydb_doc
 
 dir_path = os.path.dirname(os.path.realpath(__file__))
@@ -184,17 +184,25 @@ def get_fake_tuple_info(data):
             if "integrity" not in doc:
                 raise Exception(f"Integrity data not initialized.")
 
-            payload = "{\"device_data\": {"
-            for k, v in doc["integrity"]["device_data"].items():
-                payload += f'"{k}": {dict_to_payload(**v)}, '
-            payload = payload[:-2] + "}}"  # TODO encrypt payload with shared_key?
-
+            doc = search_tinydb_doc(path, 'users', Query().id == data["user_id"])
+            payload = encrypt_fake_tuple_info(doc)
             click.echo(payload)
 
     except Exception as e:
         _, _, exc_tb = sys.exc_info()
         line = exc_tb.tb_lineno
         click.echo(f"{repr(e)} at line: {line}")
+
+
+def encrypt_fake_tuple_info(doc):
+    payload = "{\"device_data\": \""
+    data = "{"
+    for k, v in doc["integrity"]["device_data"].items():
+        data += f'"{k}": {dict_to_payload(**v)}, '
+    data = data[:-2] + "}"
+    payload += encrypt_using_fernet_hex(doc["shared_key"], data).decode()
+    payload += " \"}"
+    return payload
 
 
 @device.command()

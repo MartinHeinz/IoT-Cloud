@@ -25,15 +25,17 @@ sys.stdout = sys.__stdout__
 
 try:  # for packaged CLI (setup.py)
     from client.crypto_utils import correctness_hash, check_correctness_hash, int_to_bytes, instantiate_ope_cipher, int_from_bytes, hex_to_key, \
-    key_to_hex, hex_to_fernet, hex_to_ope, decrypt_using_fernet_hex, decrypt_using_ope_hex, encrypt_using_fernet_hex, murmur_hash, \
-    decrypt_using_abe_serialized_key, blind_index, unpad_row, pad_payload_attr
-    from client.utils import json_string_with_bytes_to_dict, _create_payload, search_tinydb_doc, get_tinydb_table, insert_into_tinydb
+        key_to_hex, hex_to_fernet, hex_to_ope, decrypt_using_fernet_hex, decrypt_using_ope_hex, encrypt_using_fernet_hex, murmur_hash, \
+        decrypt_using_abe_serialized_key, blind_index, unpad_row, pad_payload_attr
+    from client.utils import json_string_with_bytes_to_dict, _create_payload, search_tinydb_doc, get_tinydb_table, insert_into_tinydb, \
+        get_shared_key_by_device_id
     from client.password_hashing import pbkdf2_hash
 except ImportError:  # for un-packaged CLI
     from crypto_utils import correctness_hash, check_correctness_hash, instantiate_ope_cipher, int_from_bytes, hex_to_key, key_to_hex, \
-    hex_to_fernet, hex_to_ope, decrypt_using_fernet_hex, decrypt_using_ope_hex, encrypt_using_fernet_hex, murmur_hash, \
-    decrypt_using_abe_serialized_key, blind_index, unpad_row, pad_payload_attr
-    from utils import json_string_with_bytes_to_dict, _create_payload, search_tinydb_doc, get_tinydb_table, insert_into_tinydb
+        hex_to_fernet, hex_to_ope, decrypt_using_fernet_hex, decrypt_using_ope_hex, encrypt_using_fernet_hex, murmur_hash, \
+        decrypt_using_abe_serialized_key, blind_index, unpad_row, pad_payload_attr
+    from utils import json_string_with_bytes_to_dict, _create_payload, search_tinydb_doc, get_tinydb_table, insert_into_tinydb, \
+        get_shared_key_by_device_id
     from password_hashing import pbkdf2_hash
 
 URL_BASE = "https://localhost/api/"
@@ -327,10 +329,13 @@ def get_device_data_by_num_range(device_id, lower=None, upper=None, token=""):
     r = requests.post(URL_GET_DEVICE_DATA_BY_RANGE, params=data, verify=VERIFY_CERTS)
     content = r.content.decode('unicode-escape')
     json_content = json_string_with_bytes_to_dict(content)
-    _get_fake_tuple_data(user_id, int(device_id))
 
-    fake_tuples, rows = _divide_fake_and_real_data(json_content["device_data"], str(device_id), fake_tuple_data)
-    generated_tuples = generate_fake_tuples_in_range(fake_tuple_data["device_data"])
+    _get_fake_tuple_data(user_id, int(device_id))  # TODO decrypt fake_tuple_data
+    decrypted_fake_tuple_data = {
+        "device_data": json.loads(decrypt_using_fernet_hex(get_shared_key_by_device_id(path, device_id), fake_tuple_data["device_data"]).decode())}
+
+    fake_tuples, rows = _divide_fake_and_real_data(json_content["device_data"], str(device_id), decrypted_fake_tuple_data)
+    generated_tuples = generate_fake_tuples_in_range(decrypted_fake_tuple_data["device_data"])
     expected_fake_rows = slice_by_range(device_id, generated_tuples, int(lower), int(upper), "device_data:num_data")
     verify_integrity_data(expected_fake_rows, fake_tuples)
 
@@ -446,7 +451,7 @@ def send_column_keys(user_id, device_id):
 
     keys = {
         "action:name": None,
-        "device_type:description": None,
+        "device_type:description": None,  # TODO remove this
         "device_data:added": None,
         "device_data:num_data": None,
         "device_data:tid": None
@@ -532,11 +537,14 @@ def get_device_data(user_id, device_id, device_name, token):  # TODO right now i
     r = requests.post(URL_GET_DEVICE_DATA, params=data, verify=VERIFY_CERTS)
     content = r.content.decode('unicode-escape')
     json_content = json_string_with_bytes_to_dict(content)
+
     _get_fake_tuple_data(user_id, int(device_id))
+    decrypted_fake_tuple_data = {
+        "device_data": json.loads(decrypt_using_fernet_hex(get_shared_key_by_device_id(path, device_id), fake_tuple_data["device_data"]).decode())}
 
-    fake_tuples, rows = _divide_fake_and_real_data(json_content["device_data"], device_id, fake_tuple_data)
+    fake_tuples, rows = _divide_fake_and_real_data(json_content["device_data"], device_id, decrypted_fake_tuple_data)
 
-    verify_integrity_data(generate_fake_tuples_in_range(fake_tuple_data["device_data"]), fake_tuples)
+    verify_integrity_data(generate_fake_tuples_in_range(decrypted_fake_tuple_data["device_data"]), fake_tuples)
     check_correctness_hash(rows, 'added', 'data', 'num_data', 'tid')
 
     result = []
