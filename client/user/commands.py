@@ -15,7 +15,7 @@ from cryptography.hazmat.primitives.asymmetric.ec import EllipticCurvePublicKey,
 from cryptography.hazmat.primitives.serialization import load_pem_private_key, load_pem_public_key
 from paho.mqtt import client as paho
 from tinydb import where, Query
-from tinydb.operations import set
+from tinydb.operations import set, delete
 
 sys.stdout = open(os.devnull, 'w')
 sys.path.insert(0, '../app')
@@ -163,33 +163,37 @@ def create_device(device_type_id, device_name, password, token):
 @click.argument('description')
 @click.option('--token', envvar='ACCESS_TOKEN')
 def create_scene(name, description, token):
-    init_scene_keys()
-    table = get_tinydb_table(path, 'scene_keys')
-    doc = table.all()[0]
-    name_ciphertext = encrypt_using_fernet_hex(doc["name"], name)
-    desc_ciphertext = encrypt_using_fernet_hex(doc["description"], description)
-    data = {
-        "access_token": token,
-        "name": name_ciphertext,
-        "correctness_hash": correctness_hash(name),
-        "name_bi": blind_index(get_global_bi_key(), name),
-        "description": desc_ciphertext
-    }
-    r = requests.post(URL_CREATE_SCENE, params=data, verify=VERIFY_CERTS)
-    click.echo(r.content.decode('unicode-escape'))
+    if not is_global_bi_key_missing(init_global_keys, "Blind index key for scene name is missing"):
+        init_scene_keys()
+        table = get_tinydb_table(path, 'scene_keys')
+        doc = table.all()[0]
+        name_ciphertext = encrypt_using_fernet_hex(doc["name"], name)
+        desc_ciphertext = encrypt_using_fernet_hex(doc["description"], description)
+        data = {
+            "access_token": token,
+            "name": name_ciphertext,
+            "correctness_hash": correctness_hash(name),
+            "name_bi": blind_index(get_global_bi_key(), name),
+            "description": desc_ciphertext
+        }
+        r = requests.post(URL_CREATE_SCENE, params=data, verify=VERIFY_CERTS)
+        click.echo(r.content.decode('unicode-escape'))
 
 
 def init_scene_keys():
-    table = get_tinydb_table(path, 'global')
-    table.upsert({
-        'bi_key': key_to_hex(os.urandom(32)),
-    }, where('bi_key').exists())
-
     table = get_tinydb_table(path, 'scene_keys')
     table.upsert({
         'name': key_to_hex(os.urandom(32)),
         'description': key_to_hex(os.urandom(32))
     }, where('name').exists() & where('description').exists())
+
+
+@user.command()
+def init_global_keys():
+    table = get_tinydb_table(path, 'global')
+    table.upsert({
+        'bi_key': key_to_hex(os.urandom(32)),
+    }, where('bi_key').exists())
 
 
 @user.command()
@@ -215,7 +219,7 @@ def add_scene_action(scene_name, action_name, device_id, token):
 def set_action(device_id, name, token):
     doc = search_tinydb_doc(path, 'device_keys', Query().device_id == str(device_id))
     if not doc:
-        with click.Context(send_key_to_device) as ctx:
+        with click.Context(send_key_to_device) as ctx:  # TODO This should be send_column_keys
             click.echo(f"Keys for device {device_id} not present, please use: {ctx.command.name}")
             click.echo(send_key_to_device.get_help(ctx))
             return
@@ -313,7 +317,7 @@ def get_devices(device_name, device_id, token):
 @click.option('--upper', required=False)
 @click.option('--token', envvar='ACCESS_TOKEN')
 def get_device_data_by_num_range(device_id, lower=None, upper=None, token=""):
-    user_id = 1
+    user_id = 1  # TODO make it param
     if lower is not None and upper is not None:
         data = {"lower": int(lower), "upper": int(upper), "access_token": token, "device_id": device_id}
     elif lower is not None and upper is None:
@@ -325,18 +329,18 @@ def get_device_data_by_num_range(device_id, lower=None, upper=None, token=""):
     else:
         lower = -214748364800  # -100000000000
         upper = 214748364700  # 100000000000
-        data = {"lower": lower, "upper": upper, "access_token": token, "device_id": device_id}
+        data = {"lower": lower, "upper": upper, "access_token": token, "device_id": device_id}  # TODO Use device name BI
     r = requests.post(URL_GET_DEVICE_DATA_BY_RANGE, params=data, verify=VERIFY_CERTS)
     content = r.content.decode('unicode-escape')
     json_content = json_string_with_bytes_to_dict(content)
 
-    _get_fake_tuple_data(user_id, int(device_id))  # TODO decrypt fake_tuple_data
+    _get_fake_tuple_data(user_id, int(device_id))
     decrypted_fake_tuple_data = {
         "device_data": json.loads(decrypt_using_fernet_hex(get_shared_key_by_device_id(path, device_id), fake_tuple_data["device_data"]).decode())}
 
     fake_tuples, rows = _divide_fake_and_real_data(json_content["device_data"], str(device_id), decrypted_fake_tuple_data)
     generated_tuples = generate_fake_tuples_in_range(decrypted_fake_tuple_data["device_data"])
-    expected_fake_rows = slice_by_range(device_id, generated_tuples, int(lower), int(upper), "device_data:num_data")
+    expected_fake_rows = slice_by_range(generated_tuples, int(lower), int(upper), "device_data:num_data")
     verify_integrity_data(expected_fake_rows, fake_tuples)
 
     if json_content["success"]:
@@ -351,13 +355,10 @@ def get_device_data_by_num_range(device_id, lower=None, upper=None, token=""):
     click.echo('{"device_data":' + str(result).replace("'", '"') + '}')
 
 
-def slice_by_range(device_id, all_tuples, lower, upper, key_name):
-    doc = search_tinydb_doc(path, 'device_keys', Query().device_id == str(device_id))
-    plaintext_lower = decrypt_using_ope_hex(doc[key_name], lower)
-    plaintext_upper = decrypt_using_ope_hex(doc[key_name], upper)
+def slice_by_range(all_tuples, lower, upper, key_name):
     result = []
     for row in all_tuples:
-        if plaintext_lower <= row[key_name.split(":")[1]] <= plaintext_upper:
+        if lower <= row[key_name.split(":")[1]] <= upper:
             result.append(row)
 
     return result
@@ -385,7 +386,7 @@ def send_key_to_device(device_id, token):
             'device_id': device_id,
             'public_key': public_pem,
             'private_key': private_pem,
-            'key_bi': key_to_hex(get_device_bi_key(device_id))
+            'bi_key': key_to_hex(get_device_bi_key(device_id))
         }, Query().device_id == device_id)
 
         data = {
@@ -430,8 +431,10 @@ def retrieve_device_public_key(device_id, token):
     shared_key = private_key.exchange(ec.ECDH(), device_public_key)
 
     key = key_to_hex(shared_key[:32])  # NOTE: retrieve key as `key_to_hex(key)`
-    table.remove(Query().device_id == device_id)
-    table.insert({'device_id': device_id, 'shared_key': key})
+
+    table.update(delete("public_key"), Query().device_id == device_id)
+    table.update(delete("private_key"), Query().device_id == device_id)
+    table.update(set("shared_key", key), Query().device_id == device_id)
 
 
 @user.command()
@@ -463,12 +466,16 @@ def send_column_keys(user_id, device_id):
         keys[k] = key_to_hex(random_bytes)  # NOTE: retrieve key as `key_to_hex(key)`
         payload_keys[k] = fernet_key.encrypt(random_bytes).decode()
 
-    payload_keys["device_data:data"] = doc["device_data:data"]
-    payload_keys["device:name"] = doc["device:name"]
-    payload_keys["device:status"] = doc["device:status"]
-    bi_key = get_global_bi_key()
-    payload_keys["bi_key"] = fernet_key.encrypt(bi_key).decode()
-    keys["bi_key"] = key_to_hex(bi_key)
+    # payload_keys["device_data:data"] = fernet_key.encrypt(get_aa_public_key().encode()).decode()
+    abe_key_and_policy = json.dumps({
+        "public_key": get_aa_public_key(),
+        "policy": " ".join(doc["device_data:data"]["attr_list"])
+    }).encode()
+
+    payload_keys["device_data:data"] = fernet_key.encrypt(abe_key_and_policy).decode()
+    payload_keys["device:name"] = fernet_key.encrypt(hex_to_key(doc["device:name"])).decode()
+    payload_keys["device:status"] = fernet_key.encrypt(hex_to_key(doc["device:status"])).decode()
+    payload_keys["bi_key"] = fernet_key.encrypt(hex_to_key(doc["bi_key"])).decode()
 
     doc = {**doc, **keys}
     table.upsert(doc, Query().device_id == device_id)
@@ -646,7 +653,7 @@ def get_encryption_keys(device_id, db_keys):
     for key in db_keys:
         if ":" in key:
             if key == "device_data:data":
-                result[key] = [doc[key]["public_key"], doc[key]["private_key"]]
+                result[key] = [get_aa_public_key(), doc[key]["private_key"]]
             else:
                 result[key] = doc[key]
     return result
@@ -767,7 +774,7 @@ def _setup_client(user_id):
                    tls_version=ssl.PROTOCOL_TLSv1_2)
     client.tls_insecure_set(True)
     doc = search_tinydb_doc(path, 'credentials', where('broker_id').exists() & where('broker_password').exists())
-    client.username_pw_set(doc['broker_id'], doc['broker_password'])
+    client.username_pw_set(f"u:{doc['broker_id']}", doc['broker_password'])
     client.connect(MQTT_BROKER, MQTT_PORT, 30)
     return client
 
@@ -864,6 +871,11 @@ def get_global_bi_key():
 def get_device_bi_key(device_id):
     doc = search_tinydb_doc(path, 'device_keys', Query().device_id == str(device_id))
     return hex_to_key(doc["bi_key"])
+
+
+def get_aa_public_key():
+    doc = search_tinydb_doc(path, 'aa_keys', where('public_key').exists())
+    return doc["public_key"]
 
 
 def is_device_bi_key_missing(device_id, command, message):

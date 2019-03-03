@@ -81,7 +81,7 @@ def save_column_keys(data):
             keys = {}
             for k, v in data.items():
                 if k == "device_data:data":
-                    keys[k] = v
+                    keys[k] = json.loads(fernet_key.decrypt(data[k].encode()).decode())
                 else:
                     keys[k] = key_to_hex(fernet_key.decrypt(data[k].encode()))
 
@@ -211,7 +211,7 @@ def process_action(data):
     try:
         data = json.loads(data)
         if "action" in data:
-            doc = search_tinydb_doc(path, 'users', Query().id == int(data["user_id"]))
+            doc = search_tinydb_doc(path, 'users', Query().id == int(broker_username_to_id(data["user_id"])))
             if doc is None:
                 raise Exception(f"No user with ID {data['user_id']}")
 
@@ -222,6 +222,13 @@ def process_action(data):
         _, _, exc_tb = sys.exc_info()
         line = exc_tb.tb_lineno
         click.echo(f"{repr(e)} at line: {line}")
+
+
+def broker_username_to_id(username):
+    try:
+        return username.split(":")[1]
+    except IndexError:
+        raise Exception(f"Invalid user ID: {username}")
 
 
 @device.command()
@@ -271,7 +278,7 @@ def get_key_type_pair(user_data):
             if doc_key == "device_data:data":
                 keys[col] = [user_data[doc_key]["public_key"],
                              user_data["integrity"][t][col]["type"],
-                             " ".join(user_data[doc_key]["attr_list"])]
+                             user_data[doc_key]["policy"]]
             else:
                 keys[col] = [user_data[doc_key], user_data["integrity"][t][col]["type"]]
     return keys

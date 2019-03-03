@@ -286,7 +286,7 @@ def get_device_data():
     if arg_check is not True:
         return arg_check
 
-    device = Device.get_by_name_bi(device_name_bi)
+    device = Device.get_by_name_bi(device_name_bi)  # TODO if this returns None, next line breaks
 
     if not User.can_use_device(access_token, device.id):
         return http_json_response(False, 400, **{"error": UNAUTHORIZED_USER_ERROR_MSG})

@@ -62,8 +62,8 @@ class User(MixinGetByAccessToken, MixinGetById, db.Model):
     def create_mqtt_creds_for_user(self, password, session):
         session.flush()
         acls = [
-            ACL(username=self.id, topic=f"u:{self.id}/server/", acc=2),
-            ACL(username=self.id, topic=f"server/u:{self.id}/", acc=1)
+            ACL(username=f"u:{self.id}", topic=f"u:{self.id}/server/", acc=2),
+            ACL(username=f"u:{self.id}", topic=f"server/u:{self.id}/", acc=1)
         ]
         if self.mqtt_creds is None:
             self.mqtt_creds = MQTTUser(
@@ -78,9 +78,9 @@ class User(MixinGetByAccessToken, MixinGetById, db.Model):
 
     def add_acls_for_device(self, device_id):
         self.mqtt_creds.acls.extend([
-            ACL(username=self.id, topic=f"u:{self.id}/d:{device_id}/", acc=2),
-            ACL(username=self.id, topic=f"d:{device_id}/u:{self.id}/", acc=1),
-            ACL(username=self.id, topic=f"d:{device_id}/u:{self.id}/", acc=4)  # NOTE: seems to be necessary because of the way paho.mqtt connects to broker
+            ACL(username=f"u:{self.id}", topic=f"u:{self.id}/d:{device_id}/", acc=2),
+            ACL(username=f"u:{self.id}", topic=f"d:{device_id}/u:{self.id}/", acc=1),
+            ACL(username=f"u:{self.id}", topic=f"d:{device_id}/u:{self.id}/", acc=4)  # NOTE: seems to be necessary because of the way paho.mqtt connects to broker
         ])
 
     def remove_acls_for_device(self, device_id):
@@ -133,11 +133,11 @@ class Device(MixinGetById, MixinAsDict, db.Model):
             password_hash=password,
             device=self,
             acls=[
-                ACL(username=self.id, topic=f"u:{self.owner_id}/d:{self.id}/", acc=1),
-                ACL(username=self.id, topic=f"d:{self.id}/u:{self.owner_id}/", acc=2),
-                ACL(username=self.id, topic=f"d:{self.id}/server/+", acc=2),
-                ACL(username=self.id, topic=f"d:{self.id}/server/", acc=2),
-                ACL(username=self.id, topic=f"server/d:{self.id}/", acc=1)
+                ACL(username=f"d:{self.id}", topic=f"u:{self.owner_id}/d:{self.id}/", acc=1),
+                ACL(username=f"d:{self.id}", topic=f"d:{self.id}/u:{self.owner_id}/", acc=2),
+                ACL(username=f"d:{self.id}", topic=f"d:{self.id}/server/+", acc=2),
+                ACL(username=f"d:{self.id}", topic=f"d:{self.id}/server/", acc=2),
+                ACL(username=f"d:{self.id}", topic=f"server/d:{self.id}/", acc=1)
             ])
 
     def add_action(self, name, name_bi, correctness_hash):
