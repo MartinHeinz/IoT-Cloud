@@ -19,7 +19,8 @@ from app.consts import DEVICE_TYPE_ID_MISSING_ERROR_MSG, DEVICE_TYPE_ID_INCORREC
     INVALID_SCENE_OR_ACTION_BI_ERROR_MSG, \
     UNAUTHORIZED_USER_SCENE_ERROR_MSG, ACTION_ALREADY_PRESENT_ERROR_MSG, INVALID_SCENE_BI_ERROR_MSG, \
     AUTH_USER_ID_MISSING_ERROR_MSG, AUTH_USER_ID_INVALID_ERROR_MSG, AUTH_USER_ALREADY_AUTHORIZED_ERROR_MSG, \
-    REVOKE_USER_ID_MISSING_ERROR_MSG, REVOKE_USER_ID_INVALID_ERROR_MSG, REVOKE_USER_NOT_AUTHORIZED_ERROR_MSG
+    REVOKE_USER_ID_MISSING_ERROR_MSG, REVOKE_USER_ID_INVALID_ERROR_MSG, REVOKE_USER_NOT_AUTHORIZED_ERROR_MSG, \
+    DEVICE_NAME_BI_INVALID_ERROR_MSG
 from app.models.models import DeviceType, Device, DeviceData, UserDevice, User, Scene, Action
 from app.mqtt.utils import Payload
 from app.utils import http_json_response, check_missing_request_argument, is_valid_uuid, format_topic, validate_broker_password, is_number, create_payload
@@ -230,11 +231,20 @@ def get_device_by_name():
 def get_data_by_num_range():
     lower_bound = request.args.get("lower", "")
     upper_bound = request.args.get("upper", "")
-    device_id = request.args.get("device_id", None)
+    device_name_bi = request.args.get("device_name_bi", None)
+    access_token = request.args.get("access_token", "")
 
-    arg_check = check_missing_request_argument((device_id, DEVICE_ID_MISSING_ERROR_MSG))
+    arg_check = check_missing_request_argument((device_name_bi, DEVICE_NAME_BI_MISSING_ERROR_MSG))
     if arg_check is not True:
         return arg_check
+
+    device = Device.get_by_name_bi(device_name_bi)
+
+    if device is None:
+        return http_json_response(False, 400, **{"error": DEVICE_NAME_BI_INVALID_ERROR_MSG})
+
+    if not User.can_use_device(access_token, device.id):
+        return http_json_response(False, 400, **{"error": UNAUTHORIZED_USER_ERROR_MSG})
 
     if not is_number(lower_bound) and not is_number(upper_bound):
         return http_json_response(False, 400, **{"error": DATA_RANGE_MISSING_ERROR_MSG})
@@ -247,22 +257,22 @@ def get_data_by_num_range():
     data = []
     if isinstance(lower_bound, int) and isinstance(upper_bound, int):
         if -214748364800 <= lower_bound < upper_bound <= 214748364700:
-            data = db.session.query(DeviceData).filter(and_(DeviceData.num_data > lower_bound,
-                                                            DeviceData.num_data < upper_bound,
-                                                            DeviceData.device_id == device_id)).all()
+            data = db.session.query(DeviceData).join(Device).filter(and_(DeviceData.num_data > lower_bound,
+                                                                    DeviceData.num_data < upper_bound,
+                                                                    Device.name_bi == device_name_bi)).all()
         else:
             return http_json_response(False, 400, **{"error": DATA_OUT_OF_OUTPUT_RANGE_ERROR_MSG})
     elif not isinstance(upper_bound, int) and isinstance(lower_bound, int):
         if -214748364800 <= lower_bound <= 214748364700:
-            data = db.session.query(DeviceData).filter(and_(DeviceData.num_data > lower_bound,
-                                                            DeviceData.device_id == device_id)).all()
+            data = db.session.query(DeviceData).join(Device).filter(and_(DeviceData.num_data > lower_bound,
+                                                                         Device.name_bi == device_name_bi)).all()
         else:
             return http_json_response(False, 400, **{"error": DATA_OUT_OF_OUTPUT_RANGE_ERROR_MSG})
 
     elif not isinstance(lower_bound, int) and isinstance(upper_bound, int):
         if -214748364800 <= upper_bound <= 214748364700:
-            data = db.session.query(DeviceData).filter(and_(DeviceData.num_data < upper_bound,
-                                                            DeviceData.device_id == device_id)).all()
+            data = db.session.query(DeviceData).join(Device).filter(and_(DeviceData.num_data < upper_bound,
+                                                                         Device.name_bi == device_name_bi)).all()
         else:
             return http_json_response(False, 400, **{"error": DATA_OUT_OF_OUTPUT_RANGE_ERROR_MSG})
 
@@ -286,7 +296,10 @@ def get_device_data():
     if arg_check is not True:
         return arg_check
 
-    device = Device.get_by_name_bi(device_name_bi)  # TODO if this returns None, next line breaks
+    device = Device.get_by_name_bi(device_name_bi)
+
+    if device is None:
+        return http_json_response(False, 400, **{"error": DEVICE_NAME_BI_INVALID_ERROR_MSG})
 
     if not User.can_use_device(access_token, device.id):
         return http_json_response(False, 400, **{"error": UNAUTHORIZED_USER_ERROR_MSG})

@@ -306,29 +306,34 @@ def get_devices(device_name, device_id, token):
 
 
 @user.command()
+@click.argument('user_id')
 @click.argument('device_id')
+@click.argument('device_name')
 @click.option('--lower', required=False)
 @click.option('--upper', required=False)
 @click.option('--token', envvar='ACCESS_TOKEN')
-def get_device_data_by_num_range(device_id, lower=None, upper=None, token=""):
-    user_id = 1  # TODO make it param
+def get_device_data_by_num_range(user_id, device_id, device_name, lower=None, upper=None, token=""):
+    device_name_bi = blind_index(get_device_bi_key(device_id), device_name)
     if lower is not None and upper is not None:
-        data = {"lower": int(lower), "upper": int(upper), "access_token": token, "device_id": device_id}
+        data = {"lower": int(lower), "upper": int(upper), "access_token": token, "device_name_bi": device_name_bi}
     elif lower is not None and upper is None:
         upper = 214748364700  # 100000000000
-        data = {"lower": int(lower), "access_token": token, "device_id": device_id}
+        data = {"lower": int(lower), "access_token": token, "device_name_bi": device_name_bi}
     elif lower is None and upper is not None:
         lower = -214748364800  # -100000000000
-        data = {"upper": int(upper), "access_token": token, "device_id": device_id}
+        data = {"upper": int(upper), "access_token": token, "device_name_bi": device_name_bi}
     else:
         lower = -214748364800  # -100000000000
         upper = 214748364700  # 100000000000
-        data = {"lower": lower, "upper": upper, "access_token": token, "device_id": device_id}  # TODO Use device name BI
+        data = {"lower": lower,
+                "upper": upper,
+                "access_token": token,
+                "device_name_bi": device_name_bi}
     r = requests.get(URL_GET_DEVICE_DATA_BY_RANGE, params=data, verify=VERIFY_CERTS)
     content = r.content.decode('unicode-escape')
     json_content = json_string_with_bytes_to_dict(content)
 
-    _get_fake_tuple_data(user_id, int(device_id))
+    _get_fake_tuple_data(int(user_id), int(device_id))
     decrypted_fake_tuple_data = {
         "device_data": json.loads(decrypt_using_fernet_hex(get_shared_key_by_device_id(path, device_id), fake_tuple_data["device_data"]).decode())}
 
