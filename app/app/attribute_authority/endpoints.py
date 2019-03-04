@@ -43,7 +43,7 @@ NOTES:
 @require_api_token("attr_auth")
 def set_username():
     token = request.args.get("access_token", None)
-    api_username = request.args.get("api_username", None)
+    api_username = request.form.get("api_username", None)
 
     arg_check = check_missing_request_argument((api_username, API_USERNAME_MISSING_ERROR_MSG))
     if arg_check is not True:
@@ -57,7 +57,7 @@ def set_username():
     return http_json_response()
 
 
-@attr_authority.route('/setup', methods=['POST'])
+@attr_authority.route('/setup', methods=['GET'])  # NOTE: This is not idempotent
 @require_api_token("attr_auth")
 def key_setup():
     pairing_group = create_pairing_group()
@@ -83,8 +83,8 @@ def key_setup():
 @require_api_token("attr_auth")
 def keygen():
     token = request.args.get("access_token", None)
-    attr_list = request.args.get("attr_list", None)
-    receiver_id = request.args.get("receiver_id", None)
+    attr_list = request.form.get("attr_list", None)
+    receiver_id = request.form.get("receiver_id", None)
     data_owner = AttrAuthUser.get_by_access_token(token)
 
     arg_check = check_missing_request_argument(
@@ -117,7 +117,7 @@ def keygen():
 @require_api_token("attr_auth")
 def device_keygen():
     token = request.args.get("access_token", None)
-    attr_list = request.args.get("attr_list", None)
+    attr_list = request.form.get("attr_list", None)
     data_owner = AttrAuthUser.get_by_access_token(token)
 
     arg_check = check_missing_request_argument(
@@ -152,7 +152,7 @@ def retrieve_private_keys():
     return http_json_response(**{'private_keys': private_keys})
 
 
-@attr_authority.route('/encrypt', methods=['POST'])
+@attr_authority.route('/encrypt', methods=['GET'])
 @require_api_token("attr_auth")
 def encrypt():
     token = request.args.get("access_token", None)
@@ -176,7 +176,7 @@ def encrypt():
     return http_json_response(**{'ciphertext': serialize_charm_object(ciphertext, pairing_group).decode("utf-8")})
 
 
-@attr_authority.route('/decrypt', methods=['POST'])
+@attr_authority.route('/decrypt', methods=['GET'])  # NOTE: ciphertext might be too long for url
 @require_api_token("attr_auth")
 def decrypt():
     token = request.args.get("access_token", None)

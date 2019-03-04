@@ -28,7 +28,8 @@ from app.utils import is_valid_uuid, bytes_to_json, format_topic, validate_broke
 from client.crypto_utils import encrypt, correctness_hash, triangle_wave, sawtooth_wave, square_wave, sine_wave, generate, \
     encrypt_row, instantiate_ope_cipher, decrypt_using_fernet_hex, decrypt_using_ope_hex, decrypt_using_abe_serialized_key
 
-from .conftest import db, assert_got_error_from_post, assert_got_data_from_post, get_data_from_post
+from .conftest import db, assert_got_error_from_post, assert_got_data_from_post, get_data_from_post, \
+    assert_got_error_from_get, assert_got_data_from_get, get_data_from_get
 
 
 def test_mqtt_client(app_and_ctx):
@@ -349,10 +350,10 @@ def test_api_set_action(client, app_and_ctx, access_token, access_token_four):
 
 def test_api_get_device_by_name(client, app_and_ctx, access_token):
     data = {"not-name_bi": "non-empty", "access_token": access_token}
-    assert_got_error_from_post(client, '/api/device/get', data, 400, DEVICE_NAME_BI_MISSING_ERROR_MSG)
+    assert_got_error_from_get(client, '/api/device/get', data, 400, DEVICE_NAME_BI_MISSING_ERROR_MSG)
 
     data = {"name_bi": "non-empty", "access_token": access_token}
-    assert_got_data_from_post(client, '/api/device/get', data, devices=[])
+    assert_got_data_from_get(client, '/api/device/get', data, devices=[])
 
     app, ctx = app_and_ctx
 
@@ -370,7 +371,7 @@ def test_api_get_device_by_name(client, app_and_ctx, access_token):
         db.session.commit()
         data = {"name_bi": bi_hash, "access_token": access_token}
 
-    status, data_out = get_data_from_post(client, '/api/device/get', data)
+    status, data_out = get_data_from_get(client, '/api/device/get', data)
     assert status == 200
     devices = list(filter(lambda d: d["id"] == 23, data_out["devices"]))
     assert len(devices) == 1
@@ -381,27 +382,27 @@ def test_api_get_device_by_name_foreign_device_hash(client, app_and_ctx, access_
         "name_bi": "19f0eb580950646713d77c0f4e053083fedeb27865191163a72b0c49d3210969",
         "access_token": access_token
     }
-    assert_got_data_from_post(client, '/api/device/get', data, devices=[])
+    assert_got_data_from_get(client, '/api/device/get', data, devices=[])
 
 
 def test_api_get_device_data_by_range_missing_device_id(client, app_and_ctx, access_token):
     data = {"not-upper-or-lower": "non-empty", "access_token": access_token}
-    assert_got_error_from_post(client, '/api/data/get_by_num_range', data, 400, DEVICE_ID_MISSING_ERROR_MSG)
+    assert_got_error_from_get(client, '/api/data/get_by_num_range', data, 400, DEVICE_ID_MISSING_ERROR_MSG)
 
 
 def test_api_get_device_data_by_range_missing_bounds(client, app_and_ctx, access_token):
     data = {"not-upper-or-lower": "non-empty", "access_token": access_token, "device_id": 23}
-    assert_got_error_from_post(client, '/api/data/get_by_num_range', data, 400, DATA_RANGE_MISSING_ERROR_MSG)
+    assert_got_error_from_get(client, '/api/data/get_by_num_range', data, 400, DATA_RANGE_MISSING_ERROR_MSG)
 
 
 def test_api_get_device_data_by_range_non_numeric_bound(client, app_and_ctx, access_token):
     data = {"lower": "non-numeric", "access_token": access_token, "device_id": 23}
-    assert_got_error_from_post(client, '/api/data/get_by_num_range', data, 400, DATA_RANGE_MISSING_ERROR_MSG)
+    assert_got_error_from_get(client, '/api/data/get_by_num_range', data, 400, DATA_RANGE_MISSING_ERROR_MSG)
 
 
 def test_api_get_device_data_by_range_with_only_lower_bound(client, app_and_ctx, access_token):
     data = {"lower": "467297", "access_token": access_token, "device_id": 23}  # 2500
-    status_code, data_out = get_data_from_post(client, '/api/data/get_by_num_range', data)
+    status_code, data_out = get_data_from_get(client, '/api/data/get_by_num_range', data)
 
     assert status_code == 200
     assert len(data_out["device_data"]) == 2
@@ -409,7 +410,7 @@ def test_api_get_device_data_by_range_with_only_lower_bound(client, app_and_ctx,
 
 def test_api_get_device_data_by_range_with_only_upper_bound(client, app_and_ctx, access_token):
     data = {"upper": "469439", "access_token": access_token, "device_id": 23}  # 3500
-    status_code, data_out = get_data_from_post(client, '/api/data/get_by_num_range', data)
+    status_code, data_out = get_data_from_get(client, '/api/data/get_by_num_range', data)
 
     assert status_code == 200
     assert len(data_out["device_data"]) == 3
@@ -422,7 +423,7 @@ def test_api_get_device_data_by_range_with_both_bounds(client, app_and_ctx, acce
         "access_token": access_token,
         "device_id": 23
     }
-    status_code, data_out = get_data_from_post(client, '/api/data/get_by_num_range', data)
+    status_code, data_out = get_data_from_get(client, '/api/data/get_by_num_range', data)
 
     assert status_code == 200
     assert len(data_out["device_data"]) == 2
@@ -433,7 +434,7 @@ def test_api_get_device_data_by_range_with_both_bounds(client, app_and_ctx, acce
         "access_token": access_token,
         "device_id": 23
     }
-    status_code, data_out = get_data_from_post(client, '/api/data/get_by_num_range', data)
+    status_code, data_out = get_data_from_get(client, '/api/data/get_by_num_range', data)
 
     assert status_code == 200
     assert len(data_out["device_data"]) == 0
@@ -443,22 +444,22 @@ def test_api_get_device_data_by_range_out_of_range(client, app_and_ctx, access_t
     device_id = 23
     cipher_range = instantiate_ope_cipher(b"").out_range
     data = {"upper": str(cipher_range.end + 1), "access_token": access_token, "device_id": device_id}
-    assert_got_error_from_post(client, '/api/data/get_by_num_range', data, 400, DATA_OUT_OF_OUTPUT_RANGE_ERROR_MSG)
+    assert_got_error_from_get(client, '/api/data/get_by_num_range', data, 400, DATA_OUT_OF_OUTPUT_RANGE_ERROR_MSG)
 
     data = {"lower": str(cipher_range.start - 1), "access_token": access_token, "device_id": device_id}  # -1
-    assert_got_error_from_post(client, '/api/data/get_by_num_range', data, 400, DATA_OUT_OF_OUTPUT_RANGE_ERROR_MSG)
+    assert_got_error_from_get(client, '/api/data/get_by_num_range', data, 400, DATA_OUT_OF_OUTPUT_RANGE_ERROR_MSG)
 
     data = {"lower": "1", "upper": str(cipher_range.end + 1), "access_token": access_token, "device_id": device_id}  # lower OK, upper not OK
-    assert_got_error_from_post(client, '/api/data/get_by_num_range', data, 400, DATA_OUT_OF_OUTPUT_RANGE_ERROR_MSG)
+    assert_got_error_from_get(client, '/api/data/get_by_num_range', data, 400, DATA_OUT_OF_OUTPUT_RANGE_ERROR_MSG)
 
 
 def test_api_get_device_data(client, app_and_ctx, access_token_two):
     data = {"not-device_name_bi": "non-empty", "access_token": access_token_two}
-    assert_got_error_from_post(client, '/api/data/get_device_data', data, 400, DEVICE_NAME_BI_MISSING_ERROR_MSG)
+    assert_got_error_from_get(client, '/api/data/get_device_data', data, 400, DEVICE_NAME_BI_MISSING_ERROR_MSG)
 
     device_name_bi = "6c0d409f3d4d630303ca1fea9d1d0b2aa9aef33e0480266e23eb24c6b26a3fde"
     data = {"device_name_bi": device_name_bi, "access_token": access_token_two}
-    status_code, data_out = get_data_from_post(client, '/api/data/get_device_data', data)
+    status_code, data_out = get_data_from_get(client, '/api/data/get_device_data', data)
 
     assert status_code == 200
     assert len(data_out["device_data"]) == 2
@@ -471,7 +472,7 @@ def test_api_trigger_action(client, app_and_ctx, access_token):
         "name_bi": '$2b$12$1xxxxxxxxxxxxxxxxxxxxuz5Jia.EInvalid6Nte',
         "access_token": access_token
     }
-    assert_got_error_from_post(client, '/api/device/action', data, 400, ACTION_BI_INVALID_ERROR_MSG)
+    assert_got_error_from_get(client, '/api/device/action', data, 400, ACTION_BI_INVALID_ERROR_MSG)
 
     data = {
         "device_id": device_id,
@@ -483,7 +484,7 @@ def test_api_trigger_action(client, app_and_ctx, access_token):
     with app.app_context():
         ac_name_string = Action.get_by_id(2).name.decode("utf-8")
         with mock.patch('app.app_setup.client.publish') as publish:
-            assert_got_data_from_post(client, '/api/device/action', data)
+            assert_got_data_from_get(client, '/api/device/action', data)
 
             publish.assert_called_once()
             args = publish.call_args
@@ -495,13 +496,13 @@ def test_api_trigger_scene(client, app_and_ctx, access_token, access_token_two):
         "access_token": access_token,
         "name_bi": "something"
     }
-    assert_got_error_from_post(client, '/api/scene/trigger', data, 400, INVALID_SCENE_BI_ERROR_MSG)
+    assert_got_error_from_get(client, '/api/scene/trigger', data, 400, INVALID_SCENE_BI_ERROR_MSG)
 
     data = {
         "access_token": access_token,
         "name_bi": '0b0a367318926df75879294f1520905ba72d8f1bebe64865645a7e108bfaf3e4',  # other user
     }
-    assert_got_error_from_post(client, '/api/scene/trigger', data, 400, UNAUTHORIZED_USER_SCENE_ERROR_MSG)
+    assert_got_error_from_get(client, '/api/scene/trigger', data, 400, UNAUTHORIZED_USER_SCENE_ERROR_MSG)
 
     data = {
         "access_token": access_token_two,
@@ -511,7 +512,7 @@ def test_api_trigger_scene(client, app_and_ctx, access_token, access_token_two):
     app, ctx = app_and_ctx
     with app.app_context():
         with mock.patch('app.app_setup.client.publish') as publish:
-            assert_got_data_from_post(client, '/api/scene/trigger', data)
+            assert_got_data_from_get(client, '/api/scene/trigger', data)
 
             expected_calls = [
                 call('u:2/d:45/', '"{"\\"action\\"": "\\"gAAAAABcYAJr_P_8E4S0nWTFU-uyGk8t3MDexB5LzNGHKB6rd_pwKwY41bTMYYqAvuxcrCp3BBYwh7FI4F6fkswMM5JAFMcmqQ==\\"", "\\"user_id\\"": "\\"u:2\\""}"'),

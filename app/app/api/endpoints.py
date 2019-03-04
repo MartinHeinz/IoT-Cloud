@@ -11,7 +11,7 @@ from app.consts import DEVICE_TYPE_ID_MISSING_ERROR_MSG, DEVICE_TYPE_ID_INCORREC
     DATA_OUT_OF_OUTPUT_RANGE_ERROR_MSG, \
     CORRECTNESS_HASH_MISSING_ERROR_MSG, DEVICE_ID_MISSING_ERROR_MSG, PUBLIC_KEY_MISSING_ERROR_MSG, \
     UNAUTHORIZED_USER_ERROR_MSG, NO_PUBLIC_KEY_ERROR_MSG, \
-    DEVICE_NAME_INVALID_ERROR_MSG, DEVICE_PASSWORD_MISSING_ERROR_MSG, USER_MISSING_PASSWORD_HASH, \
+    DEVICE_PASSWORD_MISSING_ERROR_MSG, USER_MISSING_PASSWORD_HASH, \
     ACTION_NAME_MISSING_ERROR_MSG, \
     ACTION_NAME_BI_MISSING_ERROR_MSG, ACTION_BI_INVALID_ERROR_MSG, NOT_REGISTERED_WITH_BROKER_ERROR_MSG, \
     INVALID_BROKER_PASSWORD_ERROR_MSG, \
@@ -36,7 +36,7 @@ def publish_message():
 @api.route('/user/broker_register', methods=['POST'])
 @require_api_token()
 def register_to_broker():
-    password_hash = request.args.get("password", None)
+    password_hash = request.form.get("password", None)
     user = User.get_by_access_token(request.args.get("access_token", ""))
     arg_check = check_missing_request_argument(
         (password_hash, USER_MISSING_PASSWORD_HASH))
@@ -55,8 +55,8 @@ def register_to_broker():
 @api.route('/device_type/create', methods=['POST'])
 @require_api_token()
 def create_device_type():
-    description = request.args.get("description", None)
-    correctness_hash = request.args.get("correctness_hash", None)
+    description = request.form.get("description", None)
+    correctness_hash = request.form.get("correctness_hash", None)
     user = User.get_by_access_token(request.args.get("access_token", ""))
     arg_check = check_missing_request_argument(
         (description, DEVICE_TYPE_DESC_MISSING_ERROR_MSG),
@@ -72,11 +72,11 @@ def create_device_type():
 @api.route('/device/create', methods=['POST'])
 @require_api_token()
 def create_device():
-    device_type_id = request.args.get("type_id", None)
-    correctness_hash = request.args.get("correctness_hash", None)
-    name = request.args.get("name", None)
-    name_bi = request.args.get("name_bi", None)
-    password_hash = request.args.get("password", None)
+    device_type_id = request.form.get("type_id", None)
+    correctness_hash = request.form.get("correctness_hash", None)
+    name = request.form.get("name", None)
+    name_bi = request.form.get("name_bi", None)
+    password_hash = request.form.get("password", None)
     user = User.get_by_access_token(request.args.get("access_token", ""))
     arg_check = check_missing_request_argument(
         (device_type_id, DEVICE_TYPE_ID_MISSING_ERROR_MSG),
@@ -120,10 +120,10 @@ def create_device():
 @api.route('/scene/create', methods=['POST'])
 @require_api_token()
 def create_scene():
-    name = request.args.get("name", None)
-    description = request.args.get("description", None)
-    name_bi = request.args.get("name_bi", None)
-    correctness_hash = request.args.get("correctness_hash", None)
+    name = request.form.get("name", None)
+    description = request.form.get("description", None)
+    name_bi = request.form.get("name_bi", None)
+    correctness_hash = request.form.get("correctness_hash", None)
     arg_check = check_missing_request_argument(
         (name, SCENE_NAME_MISSING_ERROR_MSG),
         (description, SCENE_DESC_MISSING_ERROR_MSG),
@@ -143,8 +143,8 @@ def create_scene():
 @api.route('/scene/add_action', methods=['POST'])
 @require_api_token()
 def add_scene_action():
-    scene_name_bi = request.args.get("scene_name_bi", None)
-    action_name_bi = request.args.get("action_name_bi", None)
+    scene_name_bi = request.form.get("scene_name_bi", None)
+    action_name_bi = request.form.get("action_name_bi", None)
     access_token = request.args.get("access_token", "")
     user = User.get_by_access_token(access_token)
 
@@ -178,10 +178,10 @@ def add_scene_action():
 @api.route('/device/set_action', methods=['POST'])
 @require_api_token()
 def set_device_action():
-    device_id = request.args.get("device_id", None)
-    correctness_hash = request.args.get("correctness_hash", None)
-    name = request.args.get("name", None)
-    name_bi = request.args.get("name_bi", None)
+    device_id = request.form.get("device_id", None)
+    correctness_hash = request.form.get("correctness_hash", None)
+    name = request.form.get("name", None)
+    name_bi = request.form.get("name_bi", None)
     access_token = request.args.get("access_token", "")
     user = User.get_by_access_token(access_token)
 
@@ -207,7 +207,7 @@ def set_device_action():
     return http_json_response()
 
 
-@api.route('/device/get', methods=['POST'])
+@api.route('/device/get', methods=['GET'])
 @require_api_token()
 def get_device_by_name():
     device_name_bi = request.args.get("name_bi", None)
@@ -225,7 +225,7 @@ def get_device_by_name():
     return http_json_response(**{'devices': result})
 
 
-@api.route('/data/get_by_num_range', methods=['POST'])
+@api.route('/data/get_by_num_range', methods=['GET'])
 @require_api_token()
 def get_data_by_num_range():
     lower_bound = request.args.get("lower", "")
@@ -276,7 +276,7 @@ def get_data_by_num_range():
     return http_json_response(**{'device_data': result})
 
 
-@api.route('/data/get_device_data', methods=['POST'])
+@api.route('/data/get_device_data', methods=['GET'])
 @require_api_token()
 def get_device_data():
     device_name_bi = request.args.get("device_name_bi", None)
@@ -305,8 +305,8 @@ def get_device_data():
 @api.route('/exchange_session_keys', methods=['POST'])
 @require_api_token()
 def exchange_session_keys():
-    user_public_key_bytes = request.args.get("public_key", None)
-    device_id = request.args.get("device_id", None)
+    user_public_key_bytes = request.form.get("public_key", None)
+    device_id = request.form.get("device_id", None)
     user_access_token = request.args.get("access_token", "")
     user = User.get_by_access_token(user_access_token)
 
@@ -328,10 +328,10 @@ def exchange_session_keys():
     return http_json_response()
 
 
-@api.route('/retrieve_public_key', methods=['POST'])
+@api.route('/retrieve_public_key', methods=['POST'])  # NOTE: This is not idempotent
 @require_api_token()
 def retrieve_public_key():
-    device_id = request.args.get("device_id", None)
+    device_id = request.form.get("device_id", None)
     user_access_token = request.args.get("access_token", "")
     user = User.get_by_access_token(user_access_token)
 
@@ -357,10 +357,10 @@ def retrieve_public_key():
     return http_json_response(False, 400, **{"error": NO_PUBLIC_KEY_ERROR_MSG})
 
 
-@api.route('/device/action', methods=['POST'])
+@api.route('/device/action', methods=['GET'])
 @require_api_token()
 def trigger_action():
-    device_id = request.args.get("device_id", None)
+    device_id = request.args.get("device_id", None)  # TODO: Do I needs this ID?
     name_bi = request.args.get("name_bi", None)
     access_token = request.args.get("access_token", "")
     user = User.get_by_access_token(access_token)
@@ -384,7 +384,7 @@ def trigger_action():
     return http_json_response()
 
 
-@api.route('/scene/trigger', methods=['POST'])
+@api.route('/scene/trigger', methods=['GET'])
 @require_api_token()
 def trigger_scene():
     name_bi = request.args.get("name_bi", None)
@@ -417,8 +417,8 @@ def trigger_scene():
 @api.route('/device/authorize', methods=['POST'])
 @require_api_token()
 def authorize_user():
-    device_id = request.args.get("device_id", None)
-    auth_user_id = request.args.get("auth_user_id", None)  # ID of user to be authorized
+    device_id = request.form.get("device_id", None)
+    auth_user_id = request.form.get("auth_user_id", None)  # ID of user to be authorized
     access_token = request.args.get("access_token", "")
     auth_user = User.get_by_id(auth_user_id)
 
@@ -454,8 +454,8 @@ def authorize_user():
 @api.route('/device/revoke', methods=['POST'])
 @require_api_token()
 def revoke_user():
-    device_id = request.args.get("device_id", None)
-    revoke_user_id = request.args.get("revoke_user_id", None)  # ID of user to be revoked
+    device_id = request.form.get("device_id", None)
+    revoke_user_id = request.form.get("revoke_user_id", None)  # ID of user to be revoked
     access_token = request.args.get("access_token", "")
     user_to_revoke = User.get_by_id(revoke_user_id)
 

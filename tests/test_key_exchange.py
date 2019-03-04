@@ -1,5 +1,4 @@
 import base64
-import json
 from unittest import mock
 
 import pytest
@@ -16,6 +15,8 @@ from app.app_setup import db
 from app.consts import DEVICE_ID_MISSING_ERROR_MSG, PUBLIC_KEY_MISSING_ERROR_MSG, UNAUTHORIZED_USER_ERROR_MSG, NO_PUBLIC_KEY_ERROR_MSG
 from app.models.models import UserDevice
 from client.crypto_utils import derive_key
+from tests.conftest import assert_got_error_from_post, assert_got_data_from_post, assert_got_error_from_get, \
+    get_data_from_post
 
 
 def test_dh_exchange():
@@ -104,10 +105,7 @@ def test_exchange_session_keys_missing_public_key(client, access_token):
     data = {
         "access_token": access_token
     }
-    response = client.post('/api/exchange_session_keys', query_string=data, follow_redirects=True)
-    assert response.status_code == 400
-    json_data = json.loads(response.data.decode("utf-8"))
-    assert (json_data["error"]) == PUBLIC_KEY_MISSING_ERROR_MSG
+    assert_got_error_from_post(client, '/api/exchange_session_keys', data, 400, PUBLIC_KEY_MISSING_ERROR_MSG)
 
 
 @pytest.mark.parametrize("endpoint", [
@@ -120,10 +118,7 @@ def test_exchange_session_keys_and_retrieve_public_key_missing_device_id(client,
         "public_key": '-----BEGIN PUBLIC KEY-----\nMHYwEAYHKoZIzj0CAQYFK4EEACIDYgAEDM0W/Tn8gv7VjDzvGMqke8rcfZe2zWAG\nRdABvWRRZNmioOeH8U/gFBgiDd9Nd61JuTa3BQx'
                       'WUYPEMNsSF3yWjlWlzgJCxwJX\nE80D4mcE/gNLI3+86bs4q3wWcJY0fk3I\n-----END PUBLIC KEY-----\n'
     }
-    response = client.post(f'/api/{endpoint}', query_string=data, follow_redirects=True)
-    assert response.status_code == 400
-    json_data = json.loads(response.data.decode("utf-8"))
-    assert (json_data["error"]) == DEVICE_ID_MISSING_ERROR_MSG
+    assert_got_error_from_post(client, f'/api/{endpoint}', data, 400, DEVICE_ID_MISSING_ERROR_MSG)
 
 
 @pytest.mark.parametrize("endpoint", [
@@ -137,10 +132,8 @@ def test_exchange_session_keys_and_retrieve_public_key_unauthorized_user(client,
                       'WUYPEMNsSF3yWjlWlzgJCxwJX\nE80D4mcE/gNLI3+86bs4q3wWcJY0fk3I\n-----END PUBLIC KEY-----\n',
         "device_id": 23
     }
-    response = client.post(f'/api/{endpoint}', query_string=data, follow_redirects=True)
-    assert response.status_code == 400
-    json_data = json.loads(response.data.decode("utf-8"))
-    assert (json_data["error"]) == UNAUTHORIZED_USER_ERROR_MSG
+
+    assert_got_error_from_post(client, f'/api/{endpoint}', data, 400, UNAUTHORIZED_USER_ERROR_MSG)
 
 
 def test_exchange_session_keys_success(client, access_token_two):
@@ -153,8 +146,7 @@ def test_exchange_session_keys_success(client, access_token_two):
         "device_id": 34
     }
     with mock.patch('app.app_setup.client.publish') as publish:
-        response = client.post('/api/exchange_session_keys', query_string=data, follow_redirects=True)
-        assert response.status_code == 200
+        assert_got_data_from_post(client, '/api/exchange_session_keys', data)
         publish.assert_called_once()
 
 
@@ -163,10 +155,7 @@ def test_retrieve_public_key_no_such_key(client, access_token):
         "device_id": 23,
         "access_token": access_token
     }
-    response = client.post(f'/api/retrieve_public_key', query_string=data, follow_redirects=True)
-    assert response.status_code == 400
-    json_data = json.loads(response.data.decode("utf-8"))
-    assert (json_data["error"]) == NO_PUBLIC_KEY_ERROR_MSG
+    assert_got_error_from_post(client, '/api/retrieve_public_key', data, 400, NO_PUBLIC_KEY_ERROR_MSG)
 
 
 @pytest.mark.parametrize('setup_user_device_public_key',
@@ -185,10 +174,9 @@ def test_retrieve_public_key_success(client, app_and_ctx, access_token, setup_us
         "device_id": device_id,
         "access_token": access_token
     }
+    status_code, json_data = get_data_from_post(client, '/api/retrieve_public_key', data)
 
-    response = client.post(f'/api/retrieve_public_key', query_string=data, follow_redirects=True)
-    assert response.status_code == 200
-    json_data = json.loads(response.data.decode("utf-8"))
+    assert status_code == 200
     assert (json_data["device_public_key"]).startswith("-----BEGIN PUBLIC KEY----")
     app, ctx = app_and_ctx
     with app.app_context():

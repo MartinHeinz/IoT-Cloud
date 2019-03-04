@@ -1,3 +1,4 @@
+import copy
 import json
 import os
 import re
@@ -219,7 +220,10 @@ def device_col_keys():
 
 
 def assert_got_error_from_post(client, url, data, error_code, error_string="", follow_redirects=True):
-    response = client.post(url, query_string=data, follow_redirects=follow_redirects)
+    access_token_params = {"access_token": data["access_token"]}
+    data_copy = copy.deepcopy(data)
+    data_copy.pop("access_token")
+    response = client.post(url, query_string=access_token_params, data=data_copy, follow_redirects=follow_redirects)
     assert response.status_code == error_code
     json_data = json.loads(response.data.decode("utf-8"))
     if error_string != "":
@@ -227,7 +231,10 @@ def assert_got_error_from_post(client, url, data, error_code, error_string="", f
 
 
 def assert_got_data_from_post(client, url, data_in, follow_redirects=True, **data_out):
-    response = client.post(url, query_string=data_in, follow_redirects=follow_redirects)
+    access_token_params = {"access_token": data_in["access_token"]}
+    data_copy = copy.deepcopy(data_in)
+    data_copy.pop("access_token")
+    response = client.post(url, query_string=access_token_params, data=data_copy, follow_redirects=follow_redirects)
     assert response.status_code == 200
     json_data = json.loads(response.data.decode("utf-8"))
     for k, v in data_out.items():
@@ -235,6 +242,31 @@ def assert_got_data_from_post(client, url, data_in, follow_redirects=True, **dat
 
 
 def get_data_from_post(client, url, data, follow_redirects=True):
-    response = client.post(url, query_string=data, follow_redirects=follow_redirects)
+    access_token_params = {"access_token": data["access_token"]}
+    data_copy = copy.deepcopy(data)
+    data_copy.pop("access_token")
+    response = client.post(url, query_string=access_token_params, data=data_copy, follow_redirects=follow_redirects)
+    json_data = json.loads(response.data.decode("utf-8"))
+    return response.status_code, json_data
+
+
+def assert_got_error_from_get(client, url, data, error_code, error_string="", follow_redirects=True):
+    response = client.get(url, query_string=data, follow_redirects=follow_redirects)
+    assert response.status_code == error_code
+    json_data = json.loads(response.data.decode("utf-8"))
+    if error_string != "":
+        assert json_data["error"] == error_string
+
+
+def assert_got_data_from_get(client, url, data_in, follow_redirects=True, **data_out):
+    response = client.get(url, query_string=data_in, follow_redirects=follow_redirects)
+    assert response.status_code == 200
+    json_data = json.loads(response.data.decode("utf-8"))
+    for k, v in data_out.items():
+        assert json_data[k] == v
+
+
+def get_data_from_get(client, url, data, follow_redirects=True):
+    response = client.get(url, query_string=data, follow_redirects=follow_redirects)
     json_data = json.loads(response.data.decode("utf-8"))
     return response.status_code, json_data

@@ -109,8 +109,8 @@ def send_message(user_id, device_id, data):
 @click.option('--token', envvar='ACCESS_TOKEN')
 def register_to_broker(password, token):
     password_hash = pbkdf2_hash(password)
-    data = {"password": password_hash, "access_token": token}
-    r = requests.post(URL_REGISTER_TO_BROKER, params=data, verify=VERIFY_CERTS)
+    data = {"password": password_hash}
+    r = requests.post(URL_REGISTER_TO_BROKER, params={"access_token": token}, data=data, verify=VERIFY_CERTS)
     content = json.loads(r.content.decode('unicode-escape'))
     table = get_tinydb_table(path, 'credentials')
     table.upsert({
@@ -123,8 +123,8 @@ def register_to_broker(password, token):
 @click.argument('description')
 @click.option('--token', envvar='ACCESS_TOKEN')
 def create_device_type(description, token):
-    data = {"description": description, "access_token": token, "correctness_hash": correctness_hash(description)}
-    r = requests.post(URL_CREATE_DEVICE_TYPE, params=data, verify=VERIFY_CERTS)
+    data = {"description": description, "correctness_hash": correctness_hash(description)}
+    r = requests.post(URL_CREATE_DEVICE_TYPE, params={"access_token": token}, data=data, verify=VERIFY_CERTS)
     click.echo(r.content.decode('unicode-escape'))
 
 
@@ -140,13 +140,12 @@ def create_device(device_type_id, device_name, password, token):
     device_status_key = key_to_hex(os.urandom(32))
     data = {
         "type_id": device_type_id,
-        "access_token": token,
         "name": hex_to_fernet(device_name_key).encrypt(device_name.encode()),
         "correctness_hash": correctness_hash(device_name),
         "name_bi": blind_index(bi_key, device_name),
         "password": password_hash
     }
-    r = requests.post(URL_CREATE_DEVICE, params=data, verify=VERIFY_CERTS)
+    r = requests.post(URL_CREATE_DEVICE, params={"access_token": token}, data=data, verify=VERIFY_CERTS)
     content = json.loads(r.content.decode('unicode-escape'))
     if content["success"]:
         insert_into_tinydb(path, 'device_keys', {
@@ -170,13 +169,12 @@ def create_scene(name, description, token):
         name_ciphertext = encrypt_using_fernet_hex(doc["name"], name)
         desc_ciphertext = encrypt_using_fernet_hex(doc["description"], description)
         data = {
-            "access_token": token,
             "name": name_ciphertext,
             "correctness_hash": correctness_hash(name),
             "name_bi": blind_index(get_global_bi_key(), name),
             "description": desc_ciphertext
         }
-        r = requests.post(URL_CREATE_SCENE, params=data, verify=VERIFY_CERTS)
+        r = requests.post(URL_CREATE_SCENE, params={"access_token": token}, data=data, verify=VERIFY_CERTS)
         click.echo(r.content.decode('unicode-escape'))
 
 
@@ -204,11 +202,10 @@ def init_global_keys():
 def add_scene_action(scene_name, action_name, device_id, token):
     if not is_global_bi_key_missing(create_device, "Blind index key for scene name is missing"):
         data = {
-            "access_token": token,
             "scene_name_bi": blind_index(get_global_bi_key(), scene_name),
             "action_name_bi": blind_index(get_device_bi_key(device_id), action_name),
         }
-        r = requests.post(URL_ADD_ACTION_TO_SCENE, params=data, verify=VERIFY_CERTS)
+        r = requests.post(URL_ADD_ACTION_TO_SCENE, params={"access_token": token}, data=data, verify=VERIFY_CERTS)
         click.echo(r.content.decode('unicode-escape'))
 
 
@@ -228,10 +225,9 @@ def set_action(device_id, name, token):
         "device_id": device_id,
         "name": encrypt_using_fernet_hex(doc["action:name"], name),
         "correctness_hash": correctness_hash(name),
-        "name_bi": blind_index(get_device_bi_key(device_id), name),
-        "access_token": token
+        "name_bi": blind_index(get_device_bi_key(device_id), name)
     }
-    r = requests.post(URL_SET_ACTION, params=data, verify=VERIFY_CERTS)
+    r = requests.post(URL_SET_ACTION, params={"access_token": token}, data=data, verify=VERIFY_CERTS)
     click.echo(r.content.decode('unicode-escape'))
 
 
@@ -245,7 +241,7 @@ def trigger_action(device_id, name, token):
         "name_bi": blind_index(get_device_bi_key(device_id), name),
         "access_token": token
     }
-    r = requests.post(URL_TRIGGER_ACTION, params=data, verify=VERIFY_CERTS)
+    r = requests.get(URL_TRIGGER_ACTION, params=data, verify=VERIFY_CERTS)
     click.echo(r.content.decode('unicode-escape'))
 
 
@@ -257,7 +253,7 @@ def trigger_scene(name, token):
         "name_bi": blind_index(get_global_bi_key(), name),
         "access_token": token
     }
-    r = requests.post(URL_TRIGGER_SCENE, params=data, verify=VERIFY_CERTS)
+    r = requests.get(URL_TRIGGER_SCENE, params=data, verify=VERIFY_CERTS)
     click.echo(r.content.decode('unicode-escape'))
 
 
@@ -268,10 +264,9 @@ def trigger_scene(name, token):
 def authorize_user(device_id, auth_user_id, token):
     data = {
         "device_id": device_id,
-        "auth_user_id": auth_user_id,
-        "access_token": token
+        "auth_user_id": auth_user_id
     }
-    r = requests.post(URL_AUTHORIZE_USER, params=data, verify=VERIFY_CERTS)
+    r = requests.post(URL_AUTHORIZE_USER, params={"access_token": token}, data=data, verify=VERIFY_CERTS)
     click.echo(r.content.decode('unicode-escape'))
 
 
@@ -282,10 +277,9 @@ def authorize_user(device_id, auth_user_id, token):
 def revoke_user(device_id, revoke_user_id, token):
     data = {
         "device_id": device_id,
-        "revoke_user_id": revoke_user_id,
-        "access_token": token
+        "revoke_user_id": revoke_user_id
     }
-    r = requests.post(URL_REVOKE_USER, params=data, verify=VERIFY_CERTS)
+    r = requests.post(URL_REVOKE_USER, params={"access_token": token}, data=data, verify=VERIFY_CERTS)
     click.echo(r.content.decode('unicode-escape'))
 
 
@@ -296,7 +290,7 @@ def revoke_user(device_id, revoke_user_id, token):
 def get_devices(device_name, device_id, token):
     device_name_bi = blind_index(get_device_bi_key(device_id), device_name)
     data = {"name_bi": device_name_bi, "access_token": token}
-    r = requests.post(URL_GET_DEVICE, params=data, verify=VERIFY_CERTS)
+    r = requests.get(URL_GET_DEVICE, params=data, verify=VERIFY_CERTS)
     content = json.loads(r.content.decode('unicode-escape'))
 
     table = get_tinydb_table(path, 'device_keys')
@@ -330,7 +324,7 @@ def get_device_data_by_num_range(device_id, lower=None, upper=None, token=""):
         lower = -214748364800  # -100000000000
         upper = 214748364700  # 100000000000
         data = {"lower": lower, "upper": upper, "access_token": token, "device_id": device_id}  # TODO Use device name BI
-    r = requests.post(URL_GET_DEVICE_DATA_BY_RANGE, params=data, verify=VERIFY_CERTS)
+    r = requests.get(URL_GET_DEVICE_DATA_BY_RANGE, params=data, verify=VERIFY_CERTS)
     content = r.content.decode('unicode-escape')
     json_content = json_string_with_bytes_to_dict(content)
 
@@ -391,10 +385,9 @@ def send_key_to_device(device_id, token):
 
         data = {
             'device_id': device_id,
-            'public_key': public_pem,
-            'access_token': token
+            'public_key': public_pem
         }
-        r = requests.post(URL_START_KEY_EXCHANGE, params=data, verify=VERIFY_CERTS)
+        r = requests.post(URL_START_KEY_EXCHANGE, params={'access_token': token}, data=data, verify=VERIFY_CERTS)
         click.echo(r.content.decode('unicode-escape'))
 
 
@@ -403,7 +396,6 @@ def send_key_to_device(device_id, token):
 @click.option('--token', envvar='ACCESS_TOKEN')
 def retrieve_device_public_key(device_id, token):
     data = {
-        "access_token": token,
         "device_id": device_id
     }
 
@@ -416,7 +408,7 @@ def retrieve_device_public_key(device_id, token):
             click.echo(get_attr_auth_keys.get_help(ctx))
             return
 
-    r = requests.post(URL_RECEIVE_PUBLIC_KEY, params=data, verify=VERIFY_CERTS)
+    r = requests.post(URL_RECEIVE_PUBLIC_KEY, params={"access_token": token}, data=data, verify=VERIFY_CERTS)
     if r.status_code != 200:
         click.echo(r.content.decode('unicode-escape'))
         return
@@ -503,10 +495,9 @@ def attr_auth_device_keygen(attr_list, device_id, token):
 
     attr_list = re.sub('[\']', '', attr_list)
     data = {
-        "access_token": token,
         "attr_list": attr_list
     }
-    r = requests.post(AA_URL_DEVICE_KEYGEN, params=data, verify=VERIFY_CERTS)
+    r = requests.post(AA_URL_DEVICE_KEYGEN, params={"access_token": token}, data=data, verify=VERIFY_CERTS)
     content = r.content.decode('unicode-escape')
     json_content = json_string_with_bytes_to_dict(content)
 
@@ -541,7 +532,7 @@ def get_device_data(user_id, device_id, device_name, token):  # TODO right now i
     device_name_bi = blind_index(get_device_bi_key(device_id), device_name)
     data = {"device_name_bi": device_name_bi, "access_token": token}
 
-    r = requests.post(URL_GET_DEVICE_DATA, params=data, verify=VERIFY_CERTS)
+    r = requests.get(URL_GET_DEVICE_DATA, params=data, verify=VERIFY_CERTS)
     content = r.content.decode('unicode-escape')
     json_content = json_string_with_bytes_to_dict(content)
 
@@ -783,8 +774,8 @@ def _setup_client(user_id):
 @click.argument('username')
 @click.option('--token', envvar='AA_ACCESS_TOKEN')
 def attr_auth_set_api_username(username, token):
-    data = {"api_username": username, "access_token": token}
-    r = requests.post(AA_URL_SET_USERNAME, params=data, verify=VERIFY_CERTS)
+    data = {"api_username": username}
+    r = requests.post(AA_URL_SET_USERNAME, params={"access_token": token}, data=data, verify=VERIFY_CERTS)
     click.echo(r.content.decode('unicode-escape'))
 
 
@@ -792,7 +783,7 @@ def attr_auth_set_api_username(username, token):
 @click.option('--token', envvar='AA_ACCESS_TOKEN')
 def get_attr_auth_keys(token):
     data = {"access_token": token}
-    r = requests.post(AA_URL_SETUP, params=data, verify=VERIFY_CERTS)
+    r = requests.get(AA_URL_SETUP, params=data, verify=VERIFY_CERTS)
     content = json.loads(r.content.decode('unicode-escape'))
     click.echo(f"Saving keys to {path}")
     table = get_tinydb_table(path, 'aa_keys')
@@ -816,11 +807,10 @@ def attr_auth_keygen(attr_list, receiver_id, token):
             click.echo(get_attr_auth_keys.get_help(ctx))
             return
     data = {
-        "access_token": token,
         "attr_list": re.sub('[\']', '', attr_list),
         "receiver_id": receiver_id
     }
-    r = requests.post(AA_URL_KEYGEN, params=data, verify=VERIFY_CERTS)
+    r = requests.post(AA_URL_KEYGEN, params={"access_token": token}, data=data, verify=VERIFY_CERTS)
     click.echo(r.content.decode('unicode-escape'))
 
 
@@ -834,7 +824,7 @@ def attr_auth_encrypt(message, policy_string, token):
         "message": message,
         "policy_string": policy_string
     }
-    r = requests.post(AA_URL_ENCRYPT, params=data, verify=VERIFY_CERTS)
+    r = requests.get(AA_URL_ENCRYPT, params=data, verify=VERIFY_CERTS)
     click.echo(r.content.decode('unicode-escape'))
 
 
@@ -848,7 +838,7 @@ def attr_auth_decrypt(owner_username, ciphertext, token):
         "api_username": owner_username,
         "ciphertext": ciphertext
     }
-    r = requests.post(AA_URL_DECRYPT, params=data, verify=VERIFY_CERTS)
+    r = requests.get(AA_URL_DECRYPT, params=data, verify=VERIFY_CERTS)
     click.echo(r.content.decode('unicode-escape'))
 
 

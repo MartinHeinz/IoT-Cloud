@@ -1,4 +1,3 @@
-import json
 from unittest.mock import Mock
 
 import pytest
@@ -8,13 +7,14 @@ from charm.toolbox.pairinggroup import PairingGroup
 
 from app.consts import INCORRECT_RECEIVER_ID_ERROR_MSG, INVALID_ATTR_LIST_ERROR_MSG, MESSAGE_MISSING_ERROR_MSG, POLICY_STRING_MISSING_ERROR_MSG, \
     CIPHERTEXT_MISSING_ERROR_MSG, COULD_NOT_DECRYPT_ERROR_MSG, INVALID_OWNER_API_USERNAME_ERROR_MSG, OWNER_API_USERNAME_MISSING_ERROR_MSG, \
-    API_USERNAME_MISSING_ERROR_MSG, MASTER_KEY_MISSING_ERROR_MSG, ATTR_LIST_MISSING_ERROR_MSG
+    API_USERNAME_MISSING_ERROR_MSG, ATTR_LIST_MISSING_ERROR_MSG
 from app.attribute_authority.utils import create_pairing_group, create_cp_abe, serialize_charm_object, deserialize_charm_object, already_has_key_from_owner, \
     create_attributes, \
     replace_existing_key, parse_attr_list, get_private_key_based_on_owner, is_valid, create_private_key
 from app.auth.utils import INVALID_ACCESS_TOKEN_ERROR_MSG
 from app.models.models import AttrAuthUser, PrivateKey
-from tests.conftest import assert_got_error_from_post, assert_got_data_from_post, get_data_from_post
+from tests.conftest import assert_got_error_from_post, assert_got_data_from_post, get_data_from_post, \
+    assert_got_error_from_get, get_data_from_get
 
 
 def test_charm_crypto():
@@ -64,7 +64,7 @@ def test_serialize_and_deserialize_pk():
 
 def test_require_attr_auth_access_token_missing(client):
     data = {"access_token": "missing"}
-    assert_got_error_from_post(client, '/attr_auth/setup', data, 400, INVALID_ACCESS_TOKEN_ERROR_MSG)
+    assert_got_error_from_get(client, '/attr_auth/setup', data, 400, INVALID_ACCESS_TOKEN_ERROR_MSG)
 
 
 def test_set_username_missing_api_username(client, attr_auth_access_token_one):
@@ -118,7 +118,7 @@ def test_decrypt_missing_owner_api_username(client, attr_auth_access_token_one):
     data = {
         "access_token": attr_auth_access_token_one
     }
-    assert_got_error_from_post(client, '/attr_auth/decrypt', data, 400, OWNER_API_USERNAME_MISSING_ERROR_MSG)
+    assert_got_error_from_get(client, '/attr_auth/decrypt', data, 400, OWNER_API_USERNAME_MISSING_ERROR_MSG)
 
 
 def test_decrypt_missing_ciphertext(client, attr_auth_access_token_one):
@@ -126,7 +126,7 @@ def test_decrypt_missing_ciphertext(client, attr_auth_access_token_one):
         "access_token": attr_auth_access_token_one,
         "api_username": "MartinHeinz"
     }
-    assert_got_error_from_post(client, '/attr_auth/decrypt', data, 400, CIPHERTEXT_MISSING_ERROR_MSG)
+    assert_got_error_from_get(client, '/attr_auth/decrypt', data, 400, CIPHERTEXT_MISSING_ERROR_MSG)
 
 
 def test_decrypt_invalid_owner(client, attr_auth_access_token_one, attr_auth_access_token_two):
@@ -135,7 +135,7 @@ def test_decrypt_invalid_owner(client, attr_auth_access_token_one, attr_auth_acc
         "api_username": "INVALID",
         "ciphertext": "anything-doesnt-matter"
     }
-    assert_got_error_from_post(client, '/attr_auth/decrypt', data, 400, INVALID_OWNER_API_USERNAME_ERROR_MSG)
+    assert_got_error_from_get(client, '/attr_auth/decrypt', data, 400, INVALID_OWNER_API_USERNAME_ERROR_MSG)
 
 
 def test_decrypt_could_not_decrypt(client, attr_auth_access_token_one, attr_auth_access_token_two):
@@ -149,11 +149,11 @@ def test_decrypt_could_not_decrypt(client, attr_auth_access_token_one, attr_auth
         "message": plaintext,
         "policy_string": "(TODAY)"  # INVALID
     }
-    status_code, json_data = get_data_from_post(client, '/attr_auth/encrypt', data_encrypt)
+    status_code, json_data = get_data_from_get(client, '/attr_auth/encrypt', data_encrypt)
     assert json_data["ciphertext"] is not None
     data["ciphertext"] = json_data["ciphertext"]
 
-    assert_got_error_from_post(client, '/attr_auth/decrypt', data, 400, COULD_NOT_DECRYPT_ERROR_MSG)
+    assert_got_error_from_get(client, '/attr_auth/decrypt', data, 400, COULD_NOT_DECRYPT_ERROR_MSG)
 
 
 def test_decrypt_succesfull(client, attr_auth_access_token_one, attr_auth_access_token_two):
@@ -167,12 +167,12 @@ def test_decrypt_succesfull(client, attr_auth_access_token_one, attr_auth_access
         "message": plaintext,
         "policy_string": "(GUESTTODAY)"
     }
-    status_code, json_data = get_data_from_post(client, '/attr_auth/encrypt', data_encrypt)
+    status_code, json_data = get_data_from_get(client, '/attr_auth/encrypt', data_encrypt)
     assert status_code == 200
     assert json_data["ciphertext"] is not None
     data["ciphertext"] = json_data["ciphertext"]
 
-    status_code, json_data = get_data_from_post(client, '/attr_auth/decrypt', data)
+    status_code, json_data = get_data_from_get(client, '/attr_auth/decrypt', data)
     assert status_code == 200
     assert json_data["plaintext"] == plaintext
 
@@ -370,7 +370,7 @@ def test_get_private_key_based_on_owner_missing():
 def test_key_setup(client, app_and_ctx, attr_auth_access_token_one):
     data = {"access_token": attr_auth_access_token_one}
 
-    status_code, json_data = get_data_from_post(client, '/attr_auth/setup', data)
+    status_code, json_data = get_data_from_get(client, '/attr_auth/setup', data)
     assert status_code == 200
     serialized_public_key_response = json_data["public_key"]
 
@@ -384,7 +384,7 @@ def test_encrypt_missing_plaintext(client, attr_auth_access_token_one):
     data = {
         "access_token": attr_auth_access_token_one
     }
-    assert_got_error_from_post(client, '/attr_auth/encrypt', data, 400, MESSAGE_MISSING_ERROR_MSG)
+    assert_got_error_from_get(client, '/attr_auth/encrypt', data, 400, MESSAGE_MISSING_ERROR_MSG)
 
 
 def test_encrypt_missing_policy_string(client, attr_auth_access_token_one):
@@ -392,7 +392,7 @@ def test_encrypt_missing_policy_string(client, attr_auth_access_token_one):
         "access_token": attr_auth_access_token_one,
         "message": "any text"
     }
-    assert_got_error_from_post(client, '/attr_auth/encrypt', data, 400, POLICY_STRING_MISSING_ERROR_MSG)
+    assert_got_error_from_get(client, '/attr_auth/encrypt', data, 400, POLICY_STRING_MISSING_ERROR_MSG)
 
 
 def test_encrypt_succesfull(client, attr_auth_access_token_one):
@@ -401,7 +401,7 @@ def test_encrypt_succesfull(client, attr_auth_access_token_one):
         "message": "any text",
         "policy_string": "(TODAY)"
     }
-    status_code, json_data = get_data_from_post(client, '/attr_auth/encrypt', data)
+    status_code, json_data = get_data_from_get(client, '/attr_auth/encrypt', data)
     assert status_code == 200
     assert json_data["ciphertext"] is not None
 
