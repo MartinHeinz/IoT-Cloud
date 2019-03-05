@@ -5,7 +5,7 @@ import click
 try:  # for packaged CLI (setup.py)
     from client import user_cli
     from client import device_cli
-except ImportError:  # for un-packaged CLI
+except ImportError:  # pragma: no un-packaged CLI cover
     from user import commands as user_cli
     from device import commands as device_cli
 

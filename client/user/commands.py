@@ -30,7 +30,7 @@ try:  # for packaged CLI (setup.py)
     from client.utils import json_string_with_bytes_to_dict, _create_payload, search_tinydb_doc, get_tinydb_table, insert_into_tinydb, \
         get_shared_key_by_device_id
     from client.password_hashing import pbkdf2_hash
-except ImportError:  # for un-packaged CLI
+except ImportError:  # pragma: no un-packaged CLI cover
     from crypto_utils import correctness_hash, check_correctness_hash, instantiate_ope_cipher, int_from_bytes, hex_to_key, key_to_hex, \
         hex_to_fernet, hex_to_ope, decrypt_using_fernet_hex, decrypt_using_ope_hex, encrypt_using_fernet_hex, murmur_hash, \
         decrypt_using_abe_serialized_key, blind_index, unpad_row, pad_payload_attr

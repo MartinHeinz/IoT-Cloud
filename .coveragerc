@@ -1,0 +1,26 @@
+[run]
+omit =
+    */benchmark/*
+    */test_utils/*
+
+[report]
+exclude_lines =
+    pragma: no cover
+    pragma: no exc cover
+    pragma: no un-packaged CLI cover
+
+[xml]
+output = ./reports/cov_report.xml
+
+[html]
+directory = ./reports/cov_report.html
+
+# To Run:
+# export TESTING_ENV=host_testing
+# Go to ./tests directory
+# pytest . --junitxml=./reports/test_report.xml --html=./reports/test_report.html --self-contained-html --cov=../ --cov-config=../.coveragerc  --cov-report term
+
+# required libs:
+#   pytest-cov
+#   pytest-html
+#   pytest-benchmark (only for running benchmarks in ./benchmarks directory)

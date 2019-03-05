@@ -23,7 +23,7 @@ try:  # for packaged CLI (setup.py)
         hex_to_key, key_to_hex, hex_to_fernet, decrypt_using_fernet_hex, get_random_seed, blind_index, encrypt_using_abe_serialized_key, hex_to_ope, \
         correctness_hash, pad_payload_attr, encrypt_using_fernet_hex
     from client.utils import get_tinydb_table, search_tinydb_doc
-except ImportError:  # for un-packaged CLI
+except ImportError:  # pragma: no un-packaged CLI cover
     from crypto_utils import triangle_wave, sawtooth_wave, square_wave, sine_wave, generate, encrypt_row, index_function, \
         hex_to_key, key_to_hex, hex_to_fernet, decrypt_using_fernet_hex, get_random_seed, blind_index, \
         correctness_hash, pad_payload_attr, encrypt_using_fernet_hex
@@ -59,7 +59,7 @@ def parse_msg(data):
             plaintext = decrypt_using_fernet_hex(doc["shared_key"], data["ciphertext"])
             click.echo(plaintext)
 
-    except Exception as e:
+    except Exception as e:  # pragma: no exc cover
         _, _, exc_tb = sys.exc_info()
         line = exc_tb.tb_lineno
         click.echo(f"{repr(e)} at line: {line}")
@@ -88,7 +88,7 @@ def save_column_keys(data):
             doc = {**doc, **keys}
             table.update(doc)
 
-    except Exception as e:
+    except Exception as e:  # pragma: no exc cover
         _, _, exc_tb = sys.exc_info()
         line = exc_tb.tb_lineno
         click.echo(f"{repr(e)} at line: {line}")
@@ -122,7 +122,7 @@ def receive_pk(data):
         payload = f'{{"user_id": {int(user_id)}, "device_public_key": "{public_pem}"}}'
         click.echo(payload)
 
-    except Exception as e:
+    except Exception as e:  # pragma: no exc cover
         _, _, exc_tb = sys.exc_info()
         line = exc_tb.tb_lineno
         click.echo(f"{repr(e)} at line: {line}")
@@ -159,7 +159,7 @@ def get_fake_tuple(user_id, bound):
         table.update(doc)
         click.echo(payload)
 
-    except Exception as e:
+    except Exception as e:  # pragma: no exc cover
         _, _, exc_tb = sys.exc_info()
         line = exc_tb.tb_lineno
         click.echo(f"{repr(e)} at line: {line}")
@@ -188,7 +188,7 @@ def get_fake_tuple_info(data):
             payload = encrypt_fake_tuple_info(doc)
             click.echo(payload)
 
-    except Exception as e:
+    except Exception as e:  # pragma: no exc cover
         _, _, exc_tb = sys.exc_info()
         line = exc_tb.tb_lineno
         click.echo(f"{repr(e)} at line: {line}")
@@ -218,7 +218,7 @@ def process_action(data):
             action_name = decrypt_using_fernet_hex(doc["action:name"], data["action"])
             click.echo(action_name)
 
-    except Exception as e:
+    except Exception as e:  # pragma: no exc cover
         _, _, exc_tb = sys.exc_info()
         line = exc_tb.tb_lineno
         click.echo(f"{repr(e)} at line: {line}")
@@ -250,7 +250,7 @@ def save_data(user_id, data, num_data):
         payload = dict_to_payload(**create_row(data, num_data, get_next_tid(user_id), current_time_millis, user_id))
         click.echo(payload)
 
-    except Exception as e:
+    except Exception as e:  # pragma: no exc cover
         _, _, exc_tb = sys.exc_info()
         line = exc_tb.tb_lineno
         click.echo(f"{repr(e)} at line: {line}")

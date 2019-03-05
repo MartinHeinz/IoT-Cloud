@@ -21,10 +21,10 @@ from app.cli import populate
 import client.user.commands as cmd
 import client.device.commands as device_cmd
 from app.models.models import MQTTUser, User, Action, Device, DeviceType, Scene
-from crypto_utils import check_correctness_hash, hex_to_fernet, hex_to_ope, decrypt_using_fernet_hex, \
+from client.crypto_utils import check_correctness_hash, hex_to_fernet, hex_to_ope, decrypt_using_fernet_hex, \
     decrypt_using_ope_hex, decrypt_using_abe_serialized_key, blind_index, hex_to_key, encrypt_using_abe_serialized_key, pad_payload_attr, unpad_payload_attr, \
     unpad_row
-from utils import json_string_with_bytes_to_dict, get_tinydb_table, search_tinydb_doc, insert_into_tinydb
+from client.utils import json_string_with_bytes_to_dict, get_tinydb_table, search_tinydb_doc, insert_into_tinydb
 
 cmd.path = '/tmp/keystore.json'
 
