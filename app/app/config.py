@@ -82,10 +82,22 @@ class DockerConfig(Config):
     }
 
 
+class DBSetupConfig(Config):
+    ASSETS_DEBUG = True
+    ENV = 'development'
+    SQLALCHEMY_DATABASE_URI = os.getenv('GEN_DATABASE_URL', 'postgres+psycopg2://postgres:postgres@<local-ip>:5430/postgres_gen')
+    SQLALCHEMY_BINDS = {
+        'attr_auth': os.getenv('GEN_DATABASE_ATTR_AUTH_URL', 'postgres+psycopg2://postgres:postgres@<local-ip>:5430/attr_auth_gen')
+    }
+
+
+DB_SETUP_CONFIG_NAME = 'data_setup'
+
 config = {
     'development': DevelopmentConfig,
     'testing': TestingConfig,
     'host_testing': HostTestingConfig,
     'docker': DockerConfig,
+    DB_SETUP_CONFIG_NAME: DBSetupConfig,
     'default': DevelopmentConfig,
 }
