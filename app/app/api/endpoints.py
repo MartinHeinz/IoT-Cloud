@@ -21,7 +21,7 @@ from app.consts import DEVICE_TYPE_ID_MISSING_ERROR_MSG, DEVICE_TYPE_ID_INCORREC
     AUTH_USER_ID_MISSING_ERROR_MSG, AUTH_USER_ID_INVALID_ERROR_MSG, AUTH_USER_ALREADY_AUTHORIZED_ERROR_MSG, \
     REVOKE_USER_ID_MISSING_ERROR_MSG, REVOKE_USER_ID_INVALID_ERROR_MSG, REVOKE_USER_NOT_AUTHORIZED_ERROR_MSG, \
     DEVICE_NAME_BI_INVALID_ERROR_MSG
-from app.models.models import DeviceType, Device, DeviceData, UserDevice, User, Scene, Action
+from app.models.models import DeviceType, Device, DeviceData, UserDevice, User, Scene, Action, ACL
 from app.mqtt.utils import Payload
 from app.utils import http_json_response, check_missing_request_argument, is_valid_uuid, format_topic, validate_broker_password, is_number, create_payload
 
@@ -458,7 +458,10 @@ def authorize_user():
     ud.user = auth_user
     db.session.add(ud)
     auth_user.add_acls_for_device(device_id)
+    device.add_acls_for_user(auth_user_id)
 
+    db.session.add(auth_user)
+    db.session.add(device)
     db.session.commit()
 
     return http_json_response()
@@ -492,6 +495,8 @@ def revoke_user():
     device.users.remove(ud_to_remove)
     db.session.add(device)
     user_to_revoke.remove_acls_for_device(device_id)
+    device.remove_acls_for_user(revoke_user_id)
+    db.session.add(device)
     db.session.add(user_to_revoke)
     db.session.commit()
 

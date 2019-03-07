@@ -41,10 +41,11 @@ def device():
 @device.command()
 @click.argument('device_id')
 @click.argument('password')
+@click.argument('owner_id')
 @click.argument('action_names', nargs=-1)
-def init(device_id, password, action_names):
+def init(device_id, password, owner_id, action_names):
     table = get_tinydb_table(path, 'device')
-    table.upsert({'id': device_id, 'password': password, "actions": action_names}, Query().id.exists())
+    table.upsert({'id': device_id, 'password': password, "owner_id": owner_id, "actions": action_names}, Query().id.exists())
 
 
 @device.command()
@@ -55,7 +56,7 @@ def parse_msg(data):
         data = json.loads(data)
 
         if "ciphertext" in data:
-            doc = search_tinydb_doc(path, 'users', Query().id == data["user_id"])
+            doc = get_user_data()
             plaintext = decrypt_using_fernet_hex(doc["shared_key"], data["ciphertext"])
             click.echo(plaintext)
 
@@ -73,8 +74,11 @@ def save_column_keys(data):
         data = json.loads(data)
 
         if "ciphertext" not in data:
+            if get_owner_id() != int(data["user_id"]):
+                click.echo("This command is only available for device owner.")
+                return
             table = get_tinydb_table(path, 'users')
-            doc = table.get(Query().id == data["user_id"])
+            doc = table.all()[0]
             data.pop("user_id", None)
 
             fernet_key = hex_to_fernet(doc["shared_key"])
@@ -99,8 +103,13 @@ def save_column_keys(data):
 def receive_pk(data):
     try:
         json_data = json.loads(data.replace("'", '"'), strict=False)
+
         pk_user_pem = json.dumps(json_data['user_public_key'])
         user_id = int(json.dumps(json_data['user_id'])[1:-1])
+
+        if get_owner_id() != user_id:
+            click.echo("This command is only available for device owner.")
+            return
 
         key = pk_user_pem[1:-1].encode('utf-8').replace(b"\\n", b"\n")
         public_key = load_pem_public_key(key, backend=default_backend())
@@ -129,12 +138,11 @@ def receive_pk(data):
 
 
 @device.command()
-@click.argument('user_id')
 @click.argument('bound')
-def get_fake_tuple(user_id, bound):
+def get_fake_tuple(bound):
     try:
         table = get_tinydb_table(path, 'users')
-        doc = table.get(Query().id == int(user_id))
+        doc = get_user_data()
         if bound == "upper_bound":
             if "integrity" not in doc:  # If it doesn't exist create it with starting lower and upper bounds
                 doc["integrity"] = init_integrity_data()
@@ -150,7 +158,7 @@ def get_fake_tuple(user_id, bound):
         encrypted_fake_tuple = encrypt_row(fake_tuple, keys)
         row = {**encrypted_fake_tuple,
                "correctness_hash": fake_tuple_hash,
-               "tid_bi": blind_index(hex_to_key(get_bi_key_by_user(int(user_id))), str(fake_tuple["tid"]))}
+               "tid_bi": blind_index(hex_to_key(get_bi_key()), str(fake_tuple["tid"]))}
 
         if bound == "lower_bound":
             doc["integrity"]["device_data"] = increment_bounds(doc["integrity"]["device_data"], bound=bound)
@@ -177,14 +185,11 @@ def get_fake_tuple_info(data):
     try:
         data = json.loads(data)
         if "request" in data and data["request"] == "fake_tuple_info":
-            doc = search_tinydb_doc(path, 'users', Query().id == int(data["user_id"]))
-            if doc is None:
-                raise Exception(f"No user with ID {data['user_id']}")
+            doc = get_user_data()
 
             if "integrity" not in doc:
                 raise Exception(f"Integrity data not initialized.")
 
-            doc = search_tinydb_doc(path, 'users', Query().id == data["user_id"])
             payload = encrypt_fake_tuple_info(doc)
             click.echo(payload)
 
@@ -211,9 +216,7 @@ def process_action(data):
     try:
         data = json.loads(data)
         if "action" in data:
-            doc = search_tinydb_doc(path, 'users', Query().id == int(broker_username_to_id(data["user_id"])))
-            if doc is None:
-                raise Exception(f"No user with ID {data['user_id']}")
+            doc = get_user_data()
 
             action_name = decrypt_using_fernet_hex(doc["action:name"], data["action"])
             click.echo(action_name)
@@ -224,7 +227,7 @@ def process_action(data):
         click.echo(f"{repr(e)} at line: {line}")
 
 
-def broker_username_to_id(username):
+def broker_username_to_id(username):  # TODO not needed
     try:
         return username.split(":")[1]
     except IndexError:
@@ -240,14 +243,9 @@ def save_data(user_id, data, num_data):
         if not is_number(num_data) or not is_number(user_id):
             return
         num_data = int(num_data)
-        user_id = int(user_id)
-
-        doc = get_user_data(user_id)
-        if doc is None:
-            raise Exception(f"No user with ID {user_id}")
 
         current_time_millis = int(round(time.time()))
-        payload = dict_to_payload(**create_row(data, num_data, get_next_tid(user_id), current_time_millis, user_id))
+        payload = dict_to_payload(**create_row(data, num_data, get_next_tid(), current_time_millis))
         click.echo(payload)
 
     except Exception as e:  # pragma: no exc cover
@@ -256,8 +254,8 @@ def save_data(user_id, data, num_data):
         click.echo(f"{repr(e)} at line: {line}")
 
 
-def create_row(data, num_data, tid, added, user_id):
-    user_data = get_user_data(user_id)
+def create_row(data, num_data, tid, added):
+    user_data = get_user_data()
     encrypted = encrypt_row({
         "added": added,
         "num_data": num_data,
@@ -265,7 +263,7 @@ def create_row(data, num_data, tid, added, user_id):
         "tid": str(tid)
     }, get_key_type_pair(user_data))
     encrypted["correctness_hash"] = correctness_hash(added, data, num_data, tid)
-    encrypted["tid_bi"] = blind_index(hex_to_key(get_bi_key_by_user(user_id)), str(tid))
+    encrypted["tid_bi"] = blind_index(hex_to_key(get_bi_key()), str(tid))
 
     return encrypted
 
@@ -284,16 +282,16 @@ def get_key_type_pair(user_data):
     return keys
 
 
-def get_next_tid(user_id):
+def get_next_tid():
     table = get_tinydb_table(path, 'users')
-    tid = table.get(Query().id == int(user_id))["tid"]
-    table.update(decrement('tid'), Query().id == int(user_id))
+    tid = table.all()[0]["tid"]
+    table.update(decrement('tid'))
     return tid
 
 
-def get_user_data(user_id):
+def get_user_data():
     table = get_tinydb_table(path, 'users')
-    return table.get(Query().id == user_id)
+    return table.all()[0]
 
 
 def dict_to_payload(**kwargs):
@@ -346,6 +344,11 @@ def increment_bounds(table, bound="upper_bound"):
     return table
 
 
-def get_bi_key_by_user(user_id):
-    doc = search_tinydb_doc(path, 'users', Query().id == int(user_id))
-    return doc["bi_key"]
+def get_bi_key():
+    table = get_tinydb_table(path, 'users')
+    return table.all()[0]["bi_key"]
+
+
+def get_owner_id():
+    table = get_tinydb_table(path, 'device')
+    return int(table.all()[0]["owner_id"])

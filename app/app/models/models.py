@@ -147,6 +147,15 @@ class Device(MixinGetById, MixinAsDict, db.Model):
                    correctness_hash=correctness_hash)
         )
 
+    def add_acls_for_user(self, user_id):
+        self.mqtt_creds.acls.extend([
+            ACL(username=f"d:{self.id}", topic=f"u:{user_id}/d:{self.id}/", acc=1),
+            ACL(username=f"d:{self.id}", topic=f"d:{self.id}/u:{user_id}/", acc=2)
+        ])
+
+    def remove_acls_for_user(self, user_id):
+        self.mqtt_creds.acls[:] = [acl for acl in self.mqtt_creds.acls if f"u:{user_id}/" not in acl.topic]
+
     @classmethod
     def get_action_by_bi(cls, device_id, bi):
         return db.session.query(Action)\

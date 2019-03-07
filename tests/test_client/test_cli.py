@@ -364,8 +364,6 @@ def test_save_data(runner, reset_tiny_db, device_col_keys, integrity_data):
     device_col_keys['tid'] = tid
     device_col_keys["integrity"] = integrity_data
     insert_into_tinydb(device_cmd.path, 'users', device_col_keys)
-    result = runner.invoke(device_cmd.save_data, ['55', data, str(num_data)])
-    assert f'No user with ID 55' in result.output
 
     result = runner.invoke(device_cmd.save_data, [str(user_id), data, str(num_data)])
     doc = search_tinydb_doc(device_cmd.path, 'users', Query().id == int(user_id))
@@ -375,7 +373,6 @@ def test_save_data(runner, reset_tiny_db, device_col_keys, integrity_data):
 
 @pytest.mark.parametrize('reset_tiny_db', [device_cmd.path], indirect=True)
 def test_create_row(device_col_keys, col_keys, integrity_data, reset_tiny_db):
-    user_id = 1
     tid = -5
     device_col_keys['tid'] = tid
     device_col_keys["integrity"] = integrity_data
@@ -390,7 +387,7 @@ def test_create_row(device_col_keys, col_keys, integrity_data, reset_tiny_db):
                  "1-23 1-GUEST 1"]
     }
     with mock.patch('client.device.commands.get_key_type_pair', return_value=key_type_pairs):
-        result = device_cmd.create_row("data", 1111, tid, 2222, user_id)
+        result = device_cmd.create_row("data", 1111, tid, 2222)
 
         assert len(result) == 6
         enc_tid = result["tid"]
@@ -450,9 +447,14 @@ def test_save_column_keys(runner, reset_tiny_db, col_keys):
     fernet_key = hex_to_fernet(col_keys["shared_key"])
     plaintext_abe_data = fernet_key.encrypt(json.dumps({"public_key": "stuff", "attr_list": "1 1-23"}).encode()).decode()
 
-    data = f'{{"device_data:data": "{plaintext_abe_data}", "device_data:num_data": "gAAAAABcRHibuWXtMvF7XgSN7FR-cHyNl2eDb_HHPCuTjqtdMN2VxxZnSxGCjkoJxRNIGMcpBW-z4n1wynPoCCb1VanmH3EukMPwpf7Vwk9WytkNR9h51ApyGt1QEkaj_JF2A5jKu-vw", "action:name": "gAAAAABcRHibSiR3cHtaSUSk1ipKP_7csl3xTCd4J-JesU8GPlC2iwfblksE3kvuV3U2mAYqiYe3UuYw04JPbYDYaFePY-YTUAzie3OCRzwuMTE6tE9UBJtJ8wUNJSctZnrvSi0rcPzQ", "device_type:description": "gAAAAABcRHibvjQEIYiaSi9yXLm2VPbgPsmye1mKv9DYF9ktCixOf6Cq03dKc1-ZpxucfrKJXOyT7vyq17cfxyrN9k-Bj4pi3BV7M68fLTR__03lK32W8LOLkMLWdMvxcURU1W8gg91f", "device:name": "gAAAAABcRHib0mxfmRE3mg4ALX3XPjP7ZuVQ69NiRdebiNCE-40wZuzzNV1krKcnZeRZVWXwYf4xjYLNNygY-kbbgxltBWNJ5rLanpBIqTeoq8uI9up1bZ_vFFCiGPIjHTpYkMnF5XIN", "device:status": "gAAAAABcRHiboBSiAuKLxvSqS1yu4vOR8FlqGBOnzJSQ85e5UShmQ9avtLAXx_w9fKad2xILHWbi_uFywJML8ukoDGB7iiHkLT39iOnrUCAQHFyOdFERixgl-iFHMji-S1YfGKGwxRIU", "device_data:added": "gAAAAABcRHibuWXtMvF7XgSN7FR-cHyNl2eDb_HHPCuTjqtdMN2VxxZnSxGCjkoJxRNIGMcpBW-z4n1wynPoCCb1VanmH3EukMPwpf7Vwk9WytkNR9h51ApyGt1QEkaj_JF2A5jKu-vw", "scene:name": "gAAAAABcRHibVgsVHRls8IGj95TdFKraKbGfyf_TvDzjg0KV_vu-HawiISBzRaxwrFV_QHI5jA73CTM2dF4ePENaMe0QtIJljtqCBUSRhoQideCy0JL4hDAIJUzpGXFK5RMC2fJHUJ17", "scene:description": "gAAAAABcRHib1iH0Bs9sHff-dt7FY9XOUDzARN-mwaq7eI7iLYYwtmBcMkB3T5ChNnoNWhIRLnh_lQLmvCT_itBvjoIHydBVdIcTjzsyHcTMBUdlxPmohokOjunxdMSCY0B48-pYqzsn", "user_id": 1}}'
-
     insert_into_tinydb(device_cmd.path, 'users', {"id": 1, "shared_key": "aefe715635c3f35f7c58da3eb410453712aaf1f8fd635571aa5180236bb21acc"})
+    runner.invoke(device_cmd.init, ["23", "test_password", "1", "name_1", "name_2", "name_3", "name_4"])
+
+    data_wrong_user = f'{{"device_data:data": "{plaintext_abe_data}", "device_data:num_data": "gAAAAABcRHibuWXtMvF7XgSN7FR-cHyNl2eDb_HHPCuTjqtdMN2VxxZnSxGCjkoJxRNIGMcpBW-z4n1wynPoCCb1VanmH3EukMPwpf7Vwk9WytkNR9h51ApyGt1QEkaj_JF2A5jKu-vw", "action:name": "gAAAAABcRHibSiR3cHtaSUSk1ipKP_7csl3xTCd4J-JesU8GPlC2iwfblksE3kvuV3U2mAYqiYe3UuYw04JPbYDYaFePY-YTUAzie3OCRzwuMTE6tE9UBJtJ8wUNJSctZnrvSi0rcPzQ", "device_type:description": "gAAAAABcRHibvjQEIYiaSi9yXLm2VPbgPsmye1mKv9DYF9ktCixOf6Cq03dKc1-ZpxucfrKJXOyT7vyq17cfxyrN9k-Bj4pi3BV7M68fLTR__03lK32W8LOLkMLWdMvxcURU1W8gg91f", "device:name": "gAAAAABcRHib0mxfmRE3mg4ALX3XPjP7ZuVQ69NiRdebiNCE-40wZuzzNV1krKcnZeRZVWXwYf4xjYLNNygY-kbbgxltBWNJ5rLanpBIqTeoq8uI9up1bZ_vFFCiGPIjHTpYkMnF5XIN", "device:status": "gAAAAABcRHiboBSiAuKLxvSqS1yu4vOR8FlqGBOnzJSQ85e5UShmQ9avtLAXx_w9fKad2xILHWbi_uFywJML8ukoDGB7iiHkLT39iOnrUCAQHFyOdFERixgl-iFHMji-S1YfGKGwxRIU", "device_data:added": "gAAAAABcRHibuWXtMvF7XgSN7FR-cHyNl2eDb_HHPCuTjqtdMN2VxxZnSxGCjkoJxRNIGMcpBW-z4n1wynPoCCb1VanmH3EukMPwpf7Vwk9WytkNR9h51ApyGt1QEkaj_JF2A5jKu-vw", "scene:name": "gAAAAABcRHibVgsVHRls8IGj95TdFKraKbGfyf_TvDzjg0KV_vu-HawiISBzRaxwrFV_QHI5jA73CTM2dF4ePENaMe0QtIJljtqCBUSRhoQideCy0JL4hDAIJUzpGXFK5RMC2fJHUJ17", "scene:description": "gAAAAABcRHib1iH0Bs9sHff-dt7FY9XOUDzARN-mwaq7eI7iLYYwtmBcMkB3T5ChNnoNWhIRLnh_lQLmvCT_itBvjoIHydBVdIcTjzsyHcTMBUdlxPmohokOjunxdMSCY0B48-pYqzsn", "user_id": 2}}'
+    result = runner.invoke(device_cmd.save_column_keys, [data_wrong_user])
+    assert "This command is only available for device owner." in result.output
+
+    data = f'{{"device_data:data": "{plaintext_abe_data}", "device_data:num_data": "gAAAAABcRHibuWXtMvF7XgSN7FR-cHyNl2eDb_HHPCuTjqtdMN2VxxZnSxGCjkoJxRNIGMcpBW-z4n1wynPoCCb1VanmH3EukMPwpf7Vwk9WytkNR9h51ApyGt1QEkaj_JF2A5jKu-vw", "action:name": "gAAAAABcRHibSiR3cHtaSUSk1ipKP_7csl3xTCd4J-JesU8GPlC2iwfblksE3kvuV3U2mAYqiYe3UuYw04JPbYDYaFePY-YTUAzie3OCRzwuMTE6tE9UBJtJ8wUNJSctZnrvSi0rcPzQ", "device_type:description": "gAAAAABcRHibvjQEIYiaSi9yXLm2VPbgPsmye1mKv9DYF9ktCixOf6Cq03dKc1-ZpxucfrKJXOyT7vyq17cfxyrN9k-Bj4pi3BV7M68fLTR__03lK32W8LOLkMLWdMvxcURU1W8gg91f", "device:name": "gAAAAABcRHib0mxfmRE3mg4ALX3XPjP7ZuVQ69NiRdebiNCE-40wZuzzNV1krKcnZeRZVWXwYf4xjYLNNygY-kbbgxltBWNJ5rLanpBIqTeoq8uI9up1bZ_vFFCiGPIjHTpYkMnF5XIN", "device:status": "gAAAAABcRHiboBSiAuKLxvSqS1yu4vOR8FlqGBOnzJSQ85e5UShmQ9avtLAXx_w9fKad2xILHWbi_uFywJML8ukoDGB7iiHkLT39iOnrUCAQHFyOdFERixgl-iFHMji-S1YfGKGwxRIU", "device_data:added": "gAAAAABcRHibuWXtMvF7XgSN7FR-cHyNl2eDb_HHPCuTjqtdMN2VxxZnSxGCjkoJxRNIGMcpBW-z4n1wynPoCCb1VanmH3EukMPwpf7Vwk9WytkNR9h51ApyGt1QEkaj_JF2A5jKu-vw", "scene:name": "gAAAAABcRHibVgsVHRls8IGj95TdFKraKbGfyf_TvDzjg0KV_vu-HawiISBzRaxwrFV_QHI5jA73CTM2dF4ePENaMe0QtIJljtqCBUSRhoQideCy0JL4hDAIJUzpGXFK5RMC2fJHUJ17", "scene:description": "gAAAAABcRHib1iH0Bs9sHff-dt7FY9XOUDzARN-mwaq7eI7iLYYwtmBcMkB3T5ChNnoNWhIRLnh_lQLmvCT_itBvjoIHydBVdIcTjzsyHcTMBUdlxPmohokOjunxdMSCY0B48-pYqzsn", "user_id": 1}}'
     runner.invoke(device_cmd.save_column_keys, [data])
 
     table = get_tinydb_table(device_cmd.path, 'users')
@@ -895,7 +897,7 @@ def test_aa_encrypt(runner, attr_auth_access_token_one):
 
 @pytest.mark.parametrize('reset_tiny_db', [device_cmd.path], indirect=True)
 def test_device_init(runner, reset_tiny_db):
-    runner.invoke(device_cmd.init, ["23", "test_password", "name_1", "name_2", "name_3", "name_4"])
+    runner.invoke(device_cmd.init, ["23", "test_password", "1", "name_1", "name_2", "name_3", "name_4"])
     table = get_tinydb_table(device_cmd.path, 'device')
     doc = table.search(where('id').exists())
     assert doc is not None, "Keys not present in DB."
@@ -906,6 +908,11 @@ def test_device_init(runner, reset_tiny_db):
 
 @pytest.mark.parametrize('reset_tiny_db', [device_cmd.path], indirect=True)
 def test_device_receive_pk(runner, reset_tiny_db):
+    data_wrong_user = "{'user_public_key': '-----BEGIN PUBLIC KEY-----\nMHYwEAYHKoZIzj0CAQYFK4EEACIDYgAE8z5FnI9EoJZmxSXmKItAvZcdL/bjd4VM\nI2KCZU5gud4R034+VKfy0ameLSty3ImUzoOCClkXAvSBqIe+qKRuteGBeCrnVaIV\nWyk8DgOt4Y2Pp3W9Tm/5dRdxxl8RkCg7\n-----END PUBLIC KEY-----\n', 'user_id': '55'}"
+    runner.invoke(device_cmd.init, ["23", "test_password", "1", "name_1", "name_2", "name_3", "name_4"])
+    result = runner.invoke(device_cmd.receive_pk, [data_wrong_user])
+    assert "This command is only available for device owner." in result.output
+
     data = "{'user_public_key': '-----BEGIN PUBLIC KEY-----\nMHYwEAYHKoZIzj0CAQYFK4EEACIDYgAE8z5FnI9EoJZmxSXmKItAvZcdL/bjd4VM\nI2KCZU5gud4R034+VKfy0ameLSty3ImUzoOCClkXAvSBqIe+qKRuteGBeCrnVaIV\nWyk8DgOt4Y2Pp3W9Tm/5dRdxxl8RkCg7\n-----END PUBLIC KEY-----\n', 'user_id': '1'}"
 
     result = runner.invoke(device_cmd.receive_pk, [data])
@@ -1001,17 +1008,15 @@ def test_increment_upper_bounds():
 
 
 @pytest.mark.parametrize('reset_tiny_db', [device_cmd.path], indirect=True)
-def test_get_bi_key_by_user(reset_tiny_db, col_keys):
-    user_id = 1
+def test_get_bi_key(reset_tiny_db, col_keys):
     bi_key = "9ef5134c75a6745507be61bcb44a909bcb0e9d792980b2394862ee73fc359418"
 
     data = {
-        "id": user_id,
         "bi_key": bi_key,
     }
     insert_into_tinydb(device_cmd.path, 'users', data)
 
-    assert device_cmd.get_bi_key_by_user(user_id) == bi_key
+    assert device_cmd.get_bi_key() == bi_key
 
 
 @pytest.mark.parametrize('reset_tiny_db', [device_cmd.path], indirect=True)
@@ -1038,7 +1043,7 @@ def test_get_fake_tuple(runner, reset_tiny_db, integrity_data, col_keys):
     insert_into_tinydb(device_cmd.path, 'device', device_id_doc)
 
     with mock.patch('client.device.commands.init_integrity_data', return_value=integrity_data):
-        result = runner.invoke(device_cmd.get_fake_tuple, [str(user_id), "upper_bound"])
+        result = runner.invoke(device_cmd.get_fake_tuple, ["upper_bound"])
         table = get_tinydb_table(device_cmd.path, 'users')
         doc = table.get(Query().id == user_id)
         assert "integrity" in doc, "Integrity sub-document wasn't inserted."
@@ -1059,7 +1064,7 @@ def test_get_fake_tuple(runner, reset_tiny_db, integrity_data, col_keys):
         column, tid_bi = next(pair for pair in search_res if pair[0] == "tid_bi")
         assert blind_index(hex_to_key(bi_key), "1") == tid_bi
 
-        result = runner.invoke(device_cmd.get_fake_tuple, [str(user_id), "upper_bound"])
+        result = runner.invoke(device_cmd.get_fake_tuple, ["upper_bound"])
         search_res = re.findall('\"(tid|data|num_data|added|correctness_hash)\": \"?([^:,\"]+)\"?', result.output)
 
         assert len(search_res) == 5
@@ -1074,7 +1079,7 @@ def test_get_fake_tuple(runner, reset_tiny_db, integrity_data, col_keys):
         assert doc["integrity"]["device_data"]["data"]["upper_bound"] == 2
         assert doc["integrity"]["device_data"]["tid"]["upper_bound"] == 2
 
-        result = runner.invoke(device_cmd.get_fake_tuple, [str(user_id), "lower_bound"])
+        result = runner.invoke(device_cmd.get_fake_tuple, ["lower_bound"])
         search_res = re.findall('\"(tid|data|num_data|added|correctness_hash)\": \"?([^:,\"]+)\"?', result.output)
 
         assert len(search_res) == 5
@@ -1102,7 +1107,6 @@ def test_get_fake_tuple_info(runner, reset_tiny_db):
     user_id = 1
 
     payload_no_request = '{"user_id": 99}'
-    payload_wrong_user = '{"user_id": 99, "request": "fake_tuple_info"}'
     payload = '{"user_id": 1, "request": "fake_tuple_info"}'
 
     data = {"id": user_id,
@@ -1125,10 +1129,6 @@ def test_get_fake_tuple_info(runner, reset_tiny_db):
     assert result.output == ""
 
     with pytest.raises(Exception) as e:
-        runner.invoke(device_cmd.get_fake_tuple_info, [payload_wrong_user])
-        assert e.value.message == "No user with ID 99"
-
-    with pytest.raises(Exception) as e:
         runner.invoke(device_cmd.get_fake_tuple_info, [payload])
         assert e.value.message == "Integrity data not initialized."
 
@@ -1146,13 +1146,8 @@ def test_get_fake_tuple_info(runner, reset_tiny_db):
 
 @pytest.mark.parametrize('reset_tiny_db', [device_cmd.path], indirect=True)
 def test_process_action(runner, reset_tiny_db, col_keys):
-    payload_no_user = '{"not_user_id": 99}'
     payload = '{"user_id": "u:1", "action": "gAAAAABcXcF9yNe9emKXALJImsb7v4meic8cR6YnEulQSi8xOxF8d33scDotxPKQBTC80r-QolW2mRroUZOfLuqAqr20Z5333A=="}'  # b'On' encrypted with col_keys["action:name"]
     insert_into_tinydb(device_cmd.path, 'users', {"id": 1, "action:name": "a70c6a23f6b0ef9163040f4cc02819c22d7e35de6469672d250519077b36fe4d"})
-
-    with pytest.raises(Exception) as e:
-        runner.invoke(device_cmd.process_action, [payload_no_user])
-        assert e.value.message == "No user with ID 99"
 
     result = runner.invoke(device_cmd.process_action, [payload])
     assert "On" in result.output
@@ -1166,7 +1161,7 @@ def test_get_next_tid(reset_tiny_db):
         "shared_key": "aefe715635c3f35f7c58da3eb410453712aaf1f8fd635571aa5180236bb21acc",
         "tid": -5
     })
-    assert device_cmd.get_next_tid(user_id) == -5
+    assert device_cmd.get_next_tid() == -5
 
     doc = search_tinydb_doc(device_cmd.path, 'users', Query().id == user_id)
     assert doc["tid"] == -6
@@ -1228,3 +1223,15 @@ def test_broker_username_to_id():
         assert e.value.message == f"Invalid user ID: {invalid_username}"
 
     assert device_cmd.broker_username_to_id(username) == "3"
+
+
+@pytest.mark.parametrize('reset_tiny_db', [device_cmd.path], indirect=True)
+def test_get_user_data(reset_tiny_db, device_col_keys):
+    insert_into_tinydb(device_cmd.path, 'users', device_col_keys)
+    assert device_cmd.get_user_data() == device_col_keys
+
+
+@pytest.mark.parametrize('reset_tiny_db', [device_cmd.path], indirect=True)
+def test_get_owner_id(runner, reset_tiny_db):
+    runner.invoke(device_cmd.init, ["23", "test_password", "1", "name_1", "name_2", "name_3", "name_4"])
+    assert device_cmd.get_owner_id() == 1

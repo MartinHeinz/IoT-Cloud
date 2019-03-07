@@ -578,13 +578,15 @@ def test_api_authorize_user(client, app_and_ctx, access_token, access_token_two)
     app, ctx = app_and_ctx
     with app.app_context():
         auth_user = User.get_by_access_token(access_token_two)
-        auth_device = Device.get_by_id(45)
+        auth_device = Device.get_by_id(23)
 
         assert next((ud for ud in auth_device.users if ud.user_id == auth_user.id), None) is not None
         assert next((ud for ud in auth_user.devices if ud.device_id == auth_device.id), None) is not None
 
-        new_creds = [acl for acl in auth_user.mqtt_creds.acls if f"d:23" in acl.topic]
-        assert len(new_creds) == 3
+        new_creds_user = [acl for acl in auth_user.mqtt_creds.acls if f"d:23" in acl.topic]
+        new_creds_device = [acl for acl in auth_device.mqtt_creds.acls if f"u:2" in acl.topic]
+        assert len(new_creds_user) == 3
+        assert len(new_creds_device) == 2
 
     data = {
         "access_token": access_token,
@@ -637,9 +639,12 @@ def test_api_revoke_user(client, app_and_ctx, access_token, access_token_two):
     app, ctx = app_and_ctx
     with app.app_context():
         auth_user = User.get_by_access_token(access_token_two)
+        auth_device = Device.get_by_id(23)
         assert UserDevice.get_by_ids(23, 2) is None
-        removed_creds = [acl for acl in auth_user.mqtt_creds.acls if f"d:23" in acl.topic]
-        assert len(removed_creds) == 0
+        removed_creds_user = [acl for acl in auth_user.mqtt_creds.acls if f"d:23" in acl.topic]
+        removed_creds_device = [acl for acl in auth_device.mqtt_creds.acls if f"u:2" in acl.topic]
+        assert len(removed_creds_user) == 0
+        assert len(removed_creds_device) == 0
 
     data = {
         "access_token": access_token_two,
