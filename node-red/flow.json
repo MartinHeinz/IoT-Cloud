@@ -7,6 +7,43 @@
         "info": ""
     },
     {
+        "id": "mqtt-broker-tls",
+        "type": "mqtt-broker",
+        "z": "",
+        "name": "Local MQTT Broker",
+        "broker": "172.26.0.8",
+        "port": "8883",
+        "tls": "ec6f7e8b.9cb98",
+        "clientid": "",
+        "usetls": true,
+        "compatmode": true,
+        "keepalive": "60",
+        "cleansession": true,
+        "birthTopic": "",
+        "birthQos": "0",
+        "birthPayload": "",
+        "closeTopic": "",
+        "closeQos": "0",
+        "closePayload": "",
+        "willTopic": "",
+        "willQos": "0",
+        "willPayload": ""
+    },
+    {
+        "id": "ec6f7e8b.9cb98",
+        "type": "tls-config",
+        "z": "",
+        "name": "Local Dev Certs",
+        "cert": "",
+        "key": "",
+        "ca": "",
+        "certname": "server.crt",
+        "keyname": "",
+        "caname": "ca.crt",
+        "servername": "",
+        "verifyservercert": false
+    },
+    {
         "id": "39d671ff.8f0f6e",
         "type": "mqtt out",
         "z": "f1dd4598.5b0fa8",
@@ -507,8 +544,7 @@
         "y": 1260,
         "wires": [
             [
-                "ee9a2a1b.f76cf8",
-                "fb77bfbe.bfeb6"
+                "a741231e.c7489"
             ]
         ]
     },
@@ -521,8 +557,8 @@
         "qos": "",
         "retain": "",
         "broker": "mqtt-broker-tls",
-        "x": 870,
-        "y": 1260,
+        "x": 1030,
+        "y": 1220,
         "wires": []
     },
     {
@@ -534,9 +570,9 @@
         "tosidebar": true,
         "console": false,
         "tostatus": false,
-        "complete": "payload",
-        "x": 890,
-        "y": 1340,
+        "complete": "true",
+        "x": 1050,
+        "y": 1300,
         "wires": []
     },
     {
@@ -736,7 +772,7 @@
         "crontab": "*/6 0-23 * * *",
         "once": false,
         "onceDelay": 0.1,
-        "x": 130,
+        "x": 120,
         "y": 1660,
         "wires": [
             [
@@ -925,7 +961,7 @@
         "crontab": "*/6 0-23 * * *",
         "once": false,
         "onceDelay": 0.1,
-        "x": 130,
+        "x": 120,
         "y": 1800,
         "wires": [
             [
@@ -973,40 +1009,31 @@
         ]
     },
     {
-        "id": "mqtt-broker-tls",
-        "type": "mqtt-broker",
-        "z": "",
-        "name": "Local MQTT Broker",
-        "broker": "172.26.0.8",
-        "port": "8883",
-        "tls": "ec6f7e8b.9cb98",
-        "clientid": "",
-        "usetls": true,
-        "compatmode": true,
-        "keepalive": "60",
-        "cleansession": true,
-        "birthTopic": "",
-        "birthQos": "0",
-        "birthPayload": "",
-        "closeTopic": "",
-        "closeQos": "0",
-        "closePayload": "",
-        "willTopic": "",
-        "willQos": "0",
-        "willPayload": ""
-    },
-    {
-        "id": "ec6f7e8b.9cb98",
-        "type": "tls-config",
-        "z": "",
-        "name": "Local Dev Certs",
-        "cert": "",
-        "key": "",
-        "ca": "",
-        "certname": "server.crt",
-        "keyname": "",
-        "caname": "ca.crt",
-        "servername": "",
-        "verifyservercert": false
+        "id": "a741231e.c7489",
+        "type": "change",
+        "z": "f1dd4598.5b0fa8",
+        "name": "Reverse Topic",
+        "rules": [
+            {
+                "t": "set",
+                "p": "topic",
+                "pt": "msg",
+                "to": "payload.topic",
+                "tot": "msg"
+            }
+        ],
+        "action": "",
+        "property": "",
+        "from": "",
+        "to": "",
+        "reg": false,
+        "x": 800,
+        "y": 1260,
+        "wires": [
+            [
+                "fb77bfbe.bfeb6",
+                "ee9a2a1b.f76cf8"
+            ]
+        ]
     }
 ]

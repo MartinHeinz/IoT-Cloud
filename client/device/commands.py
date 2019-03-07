@@ -190,7 +190,7 @@ def get_fake_tuple_info(data):
             if "integrity" not in doc:
                 raise Exception(f"Integrity data not initialized.")
 
-            payload = encrypt_fake_tuple_info(doc)
+            payload = encrypt_fake_tuple_info(doc, data["user_id"])
             click.echo(payload)
 
     except Exception as e:  # pragma: no exc cover
@@ -199,14 +199,14 @@ def get_fake_tuple_info(data):
         click.echo(f"{repr(e)} at line: {line}")
 
 
-def encrypt_fake_tuple_info(doc):
+def encrypt_fake_tuple_info(doc, user_id):
     payload = "{\"device_data\": \""
     data = "{"
     for k, v in doc["integrity"]["device_data"].items():
         data += f'"{k}": {dict_to_payload(**v)}, '
     data = data[:-2] + "}"
     payload += encrypt_using_fernet_hex(doc["shared_key"], data).decode()
-    payload += " \"}"
+    payload += f"\", \"topic\":\"d:{get_self_id()}/u:{user_id}/\"}}"
     return payload
 
 

@@ -153,7 +153,9 @@ def test_get_device_data(runner, access_token, app_and_ctx, reset_tiny_db, col_k
                 }
             }
         }
-    cmd.fake_tuple_data = json.loads(device_cmd.encrypt_fake_tuple_info(fake_tuple_info))
+
+    runner.invoke(device_cmd.init, [str(device_id), "test_password", user_id, "name_1", "name_2", "name_3", "name_4"])
+    cmd.fake_tuple_data = json.loads(device_cmd.encrypt_fake_tuple_info(fake_tuple_info, user_id))
 
     insert_into_tinydb(cmd.path, 'device_keys', col_keys)
     insert_into_tinydb(cmd.path, 'aa_keys', {"public_key": aa_public_key})
@@ -180,7 +182,7 @@ def test_get_device_data(runner, access_token, app_and_ctx, reset_tiny_db, col_k
                         }
                     }
                 }
-                cmd.fake_tuple_data = json.loads(device_cmd.encrypt_fake_tuple_info(fake_tuple_info))
+                cmd.fake_tuple_data = json.loads(device_cmd.encrypt_fake_tuple_info(fake_tuple_info, user_id))
 
                 result = runner.invoke(cmd.get_device_data, [user_id, str(device_id), device_name, '--token', access_token])
                 assert result.exit_code != 1, "Attribute padded incorrectly."
@@ -705,7 +707,8 @@ def test_get_device_data_by_num_range(runner, client, access_token, reset_tiny_d
             }
         }
     }
-    cmd.fake_tuple_data = json.loads(device_cmd.encrypt_fake_tuple_info(fake_tuple_info))
+    runner.invoke(device_cmd.init, [device_id, "test_password", user_id, "name_1", "name_2", "name_3", "name_4"])
+    cmd.fake_tuple_data = json.loads(device_cmd.encrypt_fake_tuple_info(fake_tuple_info, user_id))
 
     insert_into_tinydb(cmd.path, 'device_keys', col_keys)
     insert_into_tinydb(cmd.path, 'aa_keys', {"public_key": aa_public_key})
@@ -1133,6 +1136,7 @@ def test_get_fake_tuple_info(runner, reset_tiny_db):
         assert e.value.message == "Integrity data not initialized."
 
     insert_into_tinydb(device_cmd.path, 'users', data)
+    runner.invoke(device_cmd.init, ["23", "test_password", str(user_id), "name_1", "name_2", "name_3", "name_4"])
 
     result = runner.invoke(device_cmd.get_fake_tuple_info, [payload])
 
