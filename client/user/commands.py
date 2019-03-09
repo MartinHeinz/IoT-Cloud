@@ -26,14 +26,14 @@ sys.stdout = sys.__stdout__
 try:  # for packaged CLI (setup.py)
     from client.crypto_utils import correctness_hash, check_correctness_hash, int_to_bytes, instantiate_ope_cipher, int_from_bytes, hex_to_key, \
         key_to_hex, hex_to_fernet, hex_to_ope, decrypt_using_fernet_hex, decrypt_using_ope_hex, encrypt_using_fernet_hex, murmur_hash, \
-        decrypt_using_abe_serialized_key, blind_index, unpad_row, pad_payload_attr
+        decrypt_using_abe_serialized_key, blind_index, unpad_row, pad_payload_attr, unpad_payload_attr
     from client.utils import json_string_with_bytes_to_dict, _create_payload, search_tinydb_doc, get_tinydb_table, insert_into_tinydb, \
         get_shared_key_by_device_id
     from client.password_hashing import pbkdf2_hash
 except ImportError:  # pragma: no un-packaged CLI cover
     from crypto_utils import correctness_hash, check_correctness_hash, instantiate_ope_cipher, int_from_bytes, hex_to_key, key_to_hex, \
         hex_to_fernet, hex_to_ope, decrypt_using_fernet_hex, decrypt_using_ope_hex, encrypt_using_fernet_hex, murmur_hash, \
-        decrypt_using_abe_serialized_key, blind_index, unpad_row, pad_payload_attr
+        decrypt_using_abe_serialized_key, blind_index, unpad_row, pad_payload_attr, unpad_payload_attr
     from utils import json_string_with_bytes_to_dict, _create_payload, search_tinydb_doc, get_tinydb_table, insert_into_tinydb, \
         get_shared_key_by_device_id
     from password_hashing import pbkdf2_hash
@@ -523,11 +523,44 @@ def attr_auth_retrieve_private_keys(token):
 
 
 @user.command()
+@click.argument('device_id')
+@click.argument('abe_pk')  # TODO get this from file or env var
+@click.argument('bi_key')
+@click.option('--token', envvar='ACCESS_TOKEN')
+def setup_authorized_device(device_id, abe_pk, bi_key, token):
+    data = {
+        "access_token": token
+    }
+    r = requests.post(AA_URL_SK_RETRIEVE, params=data, verify=VERIFY_CERTS)
+    content = json.loads(r.content.decode('unicode-escape'))
+    abe_sk = next((key for key in content['private_keys'] if str(key["device_id"]) == device_id), None)
+    if abe_sk is None:
+        click.echo(f"Key for device: {device_id} is not present.")
+        return
+    del abe_sk["key_update"]
+    del abe_sk["challenger_id"]
+    del abe_sk["device_id"]
+    abe_sk["private_key"] = abe_sk.pop("data")
+    abe_sk["attr_list"] = abe_sk.pop("attributes")
+
+    data = {
+        "device_data:data": {
+            **abe_sk,
+            "public_key": abe_pk
+        },
+        "device_id": device_id,
+        "bi_key": bi_key,
+    }
+    insert_into_tinydb(path, 'device_keys', data)
+
+
+@user.command()
 @click.argument('user_id')
 @click.argument('device_id')
 @click.argument('device_name')
+@click.option('--owner/--no-owner', default=True)
 @click.option('--token', envvar='ACCESS_TOKEN')
-def get_device_data(user_id, device_id, device_name, token):  # TODO right now it requires device to 1st use `get_fake_tuple` (`init_integrity_data`) before 1st call to this
+def get_device_data(user_id, device_id, device_name, owner, token):  # TODO right now it requires device to 1st use `get_fake_tuple` (`init_integrity_data`) before 1st call to this
     """
     Queries server for data of :param device_id device and then verifies the received data using
     integrity information from device (received using MQTT Broker) and correctness hash attribute
@@ -541,19 +574,38 @@ def get_device_data(user_id, device_id, device_name, token):  # TODO right now i
     content = r.content.decode('unicode-escape')
     json_content = json_string_with_bytes_to_dict(content)
 
-    _get_fake_tuple_data(user_id, int(device_id))
-    decrypted_fake_tuple_data = {
-        "device_data": json.loads(decrypt_using_fernet_hex(get_shared_key_by_device_id(path, device_id), fake_tuple_data["device_data"]).decode())}
+    if owner:
+        _get_fake_tuple_data(user_id, int(device_id))
+        decrypted_fake_tuple_data = {
+            "device_data": json.loads(decrypt_using_fernet_hex(get_shared_key_by_device_id(path, device_id), fake_tuple_data["device_data"]).decode())}
 
-    fake_tuples, rows = _divide_fake_and_real_data(json_content["device_data"], device_id, decrypted_fake_tuple_data)
+        fake_tuples, rows = _divide_fake_and_real_data(json_content["device_data"], device_id, decrypted_fake_tuple_data)
 
-    verify_integrity_data(generate_fake_tuples_in_range(decrypted_fake_tuple_data["device_data"]), fake_tuples)
-    check_correctness_hash(rows, 'added', 'data', 'num_data', 'tid')
+        verify_integrity_data(generate_fake_tuples_in_range(decrypted_fake_tuple_data["device_data"]), fake_tuples)
+        check_correctness_hash(rows, 'added', 'data', 'num_data', 'tid')
+
+        result = []
+        for row in rows:
+            try:
+                result.append(unpad_row("data", row))
+            except Exception as e:
+                click.echo(str(e))
+        click.echo(result)
+    else:
+        get_foreign_device_data(device_id, json_content)
+
+
+def get_foreign_device_data(device_id, data):
+    doc = search_tinydb_doc(path, 'device_keys', Query().device_id == str(device_id))
 
     result = []
-    for row in rows:
+    for row in data["device_data"]:
+        result.append(decrypt_using_abe_serialized_key(row["data"],
+                                                       doc["device_data:data"]["public_key"],
+                                                       doc["device_data:data"]["private_key"]))
+    for i, val in enumerate(result):
         try:
-            result.append(unpad_row("data", row))
+            result[i] = unpad_payload_attr(val)
         except Exception as e:
             click.echo(str(e))
     click.echo(result)
@@ -801,10 +853,11 @@ def get_attr_auth_keys(token):
 
 
 @user.command()
-@click.argument('attr_list')
+@click.argument('attr_list')  # TODO make this last args with variable number of values
 @click.argument('receiver_id')
+@click.argument('device_id')
 @click.option('--token', envvar='AA_ACCESS_TOKEN')
-def attr_auth_keygen(attr_list, receiver_id, token):
+def attr_auth_keygen(attr_list, receiver_id, device_id, token):
     doc = search_tinydb_doc(path, 'aa_keys', where('public_key').exists())
     if not doc:
         with click.Context(get_attr_auth_keys) as ctx:
@@ -813,7 +866,8 @@ def attr_auth_keygen(attr_list, receiver_id, token):
             return
     data = {
         "attr_list": re.sub('[\']', '', attr_list),
-        "receiver_id": receiver_id
+        "receiver_id": receiver_id,
+        "device_id": device_id
     }
     r = requests.post(AA_URL_KEYGEN, params={"access_token": token}, data=data, verify=VERIFY_CERTS)
     click.echo(r.content.decode('unicode-escape'))

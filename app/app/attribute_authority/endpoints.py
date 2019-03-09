@@ -7,7 +7,7 @@ from app.attribute_authority.utils import serialize_charm_object, create_cp_abe,
 from app.auth.utils import require_api_token
 from app.consts import ATTR_LIST_MISSING_ERROR_MSG, RECEIVER_ID_MISSING_ERROR_MSG, INCORRECT_RECEIVER_ID_ERROR_MSG, \
     INVALID_ATTR_LIST_ERROR_MSG, MESSAGE_MISSING_ERROR_MSG, POLICY_STRING_MISSING_ERROR_MSG, CIPHERTEXT_MISSING_ERROR_MSG, COULD_NOT_DECRYPT_ERROR_MSG, \
-    INVALID_OWNER_API_USERNAME_ERROR_MSG, OWNER_API_USERNAME_MISSING_ERROR_MSG, API_USERNAME_MISSING_ERROR_MSG
+    INVALID_OWNER_API_USERNAME_ERROR_MSG, OWNER_API_USERNAME_MISSING_ERROR_MSG, API_USERNAME_MISSING_ERROR_MSG, DEVICE_ID_MISSING_ERROR_MSG
 from app.models.models import AttrAuthUser, MasterKeypair, PrivateKey
 from app.utils import http_json_response, check_missing_request_argument
 
@@ -85,11 +85,13 @@ def keygen():
     token = request.args.get("access_token", None)
     attr_list = request.form.get("attr_list", None)
     receiver_id = request.form.get("receiver_id", None)
+    device_id = request.form.get("device_id", None)
     data_owner = AttrAuthUser.get_by_access_token(token)
 
     arg_check = check_missing_request_argument(
         (attr_list, ATTR_LIST_MISSING_ERROR_MSG),
-        (receiver_id, RECEIVER_ID_MISSING_ERROR_MSG))
+        (receiver_id, RECEIVER_ID_MISSING_ERROR_MSG),
+        (device_id, DEVICE_ID_MISSING_ERROR_MSG))
     if arg_check is not True:
         return arg_check
 
@@ -108,6 +110,7 @@ def keygen():
     # delegate to receiver of generated key
     receiver.private_keys.append(PrivateKey(data=serialized_private_key,
                                             challenger=data_owner,
+                                            device_id=device_id,  # TODO if key for this device exists and receiver exists, then it should overwrite
                                             attributes=create_attributes(attr_list)))
     db.session.commit()
     return http_json_response()
@@ -147,6 +150,7 @@ def retrieve_private_keys():
         "key_update": key.key_update,
         "attributes": [a.value for a in key.attributes],
         "challenger_id": key.challenger_id,
+        "device_id": key.device_id,
 
     } for key in user.private_keys]
     return http_json_response(**{'private_keys': private_keys})

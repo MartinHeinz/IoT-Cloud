@@ -307,6 +307,8 @@ class PrivateKey(db.Model):
     challenger_id = db.Column(db.Integer, db.ForeignKey('attr_auth_user.id'))
     challenger = relationship("AttrAuthUser", uselist=False, foreign_keys=[challenger_id])
 
+    device_id = db.Column(db.Integer, nullable=False)
+
 
 class MasterKeypair(db.Model):
     __table_args__ = {'extend_existing': True}
