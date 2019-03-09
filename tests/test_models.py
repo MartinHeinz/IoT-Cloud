@@ -1,3 +1,4 @@
+from app.auth.utils import token_to_hash
 from app.models.models import DeviceType, User, Device, MQTTUser, Scene, UserDevice
 from app.utils import is_valid_uuid
 from client.crypto_utils import correctness_hash
@@ -10,25 +11,25 @@ def test_can_use_device(app_and_ctx, access_token, access_token_two):
     device_id = 23
 
     with app.app_context():
-        assert not User.can_use_device(access_token, "non a number")
-        assert not User.can_use_device(access_token, 45)
-        assert User.can_use_device(access_token, device_id)
+        assert not User.can_use_device(token_to_hash(access_token), "non a number")
+        assert not User.can_use_device(token_to_hash(access_token), 45)
+        assert User.can_use_device(token_to_hash(access_token), device_id)
 
-        assert not User.can_use_device(access_token_two, device_id)
+        assert not User.can_use_device(token_to_hash(access_token_two), device_id)
         ud = UserDevice()
         dv = Device.get_by_id(device_id)
-        user = User.get_by_access_token(access_token_two)
+        user = User.get_by_access_token(token_to_hash(access_token_two))
         ud.device = dv
         with db.session.no_autoflush:
             ud.user = user
         db.session.add(ud)
         db.session.commit()
-        assert User.can_use_device(access_token_two, device_id)
+        assert User.can_use_device(token_to_hash(access_token_two), device_id)
 
         ud = UserDevice.get_by_ids(device_id, user.id)  # Clean-up
         dv.users.remove(ud)
         db.session.add(dv)
-        assert not User.can_use_device(access_token_two, device_id)
+        assert not User.can_use_device(token_to_hash(access_token_two), device_id)
 
 
 def test_device_type_uuid(app_and_ctx):
@@ -70,7 +71,7 @@ def test_scene_owner(app_and_ctx, access_token_two):
 
     with app.app_context():
         sc = db.session.query(Scene).filter(Scene.name_bi == '0b0a367318926df75879294f1520905ba72d8f1bebe64865645a7e108bfaf3e4').first()
-        assert sc.owner.access_token == access_token_two
+        assert sc.owner.access_token == token_to_hash(access_token_two)
 
     sc_no_owner = Scene()
     assert sc_no_owner.owner is None

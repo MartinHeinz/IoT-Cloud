@@ -4,7 +4,7 @@ from app.attribute_authority.utils import create_attributes, parse_attr_list, ge
 from app.app_setup import db
 from app.attribute_authority import attr_authority
 from app.attribute_authority.utils import serialize_charm_object, create_cp_abe, create_pairing_group, deserialize_charm_object
-from app.auth.utils import require_api_token
+from app.auth.utils import require_api_token, token_to_hash
 from app.consts import ATTR_LIST_MISSING_ERROR_MSG, RECEIVER_ID_MISSING_ERROR_MSG, INCORRECT_RECEIVER_ID_ERROR_MSG, \
     INVALID_ATTR_LIST_ERROR_MSG, MESSAGE_MISSING_ERROR_MSG, POLICY_STRING_MISSING_ERROR_MSG, CIPHERTEXT_MISSING_ERROR_MSG, COULD_NOT_DECRYPT_ERROR_MSG, \
     INVALID_OWNER_API_USERNAME_ERROR_MSG, OWNER_API_USERNAME_MISSING_ERROR_MSG, API_USERNAME_MISSING_ERROR_MSG, DEVICE_ID_MISSING_ERROR_MSG
@@ -42,7 +42,7 @@ NOTES:
 @attr_authority.route('/set_username', methods=['POST'])
 @require_api_token("attr_auth")
 def set_username():
-    token = request.args.get("access_token", None)
+    token = token_to_hash(request.args.get("access_token", None))
     api_username = request.form.get("api_username", None)
 
     arg_check = check_missing_request_argument((api_username, API_USERNAME_MISSING_ERROR_MSG))
@@ -66,7 +66,7 @@ def key_setup():
     public_key, master_key = cp_abe.setup()
 
     # "store keypair in DB"
-    token = request.args.get("access_token", None)
+    token = token_to_hash(request.args.get("access_token", None))
     user = AttrAuthUser.get_by_access_token(token)
     serialized_public_key = serialize_charm_object(public_key, pairing_group)
     serialized_master_key = serialize_charm_object(master_key, pairing_group)
@@ -82,7 +82,7 @@ def key_setup():
 @attr_authority.route('/user/keygen', methods=['POST'])
 @require_api_token("attr_auth")
 def keygen():
-    token = request.args.get("access_token", None)
+    token = token_to_hash(request.args.get("access_token", None))
     attr_list = request.form.get("attr_list", None)
     receiver_id = request.form.get("receiver_id", None)
     device_id = request.form.get("device_id", None)
@@ -119,7 +119,7 @@ def keygen():
 @attr_authority.route('/device/keygen', methods=['POST'])
 @require_api_token("attr_auth")
 def device_keygen():
-    token = request.args.get("access_token", None)
+    token = token_to_hash(request.args.get("access_token", None))
     attr_list = request.form.get("attr_list", None)
     data_owner = AttrAuthUser.get_by_access_token(token)
 
@@ -143,7 +143,7 @@ def device_keygen():
 @attr_authority.route('/user/retrieve_private_keys', methods=['POST'])
 @require_api_token("attr_auth")
 def retrieve_private_keys():
-    user_access_token = request.args.get("access_token", "")
+    user_access_token = token_to_hash(request.args.get("access_token", ""))
     user = AttrAuthUser.get_by_access_token(user_access_token)
     private_keys = [{
         "data": key.data.decode("utf-8"),
@@ -159,7 +159,7 @@ def retrieve_private_keys():
 @attr_authority.route('/encrypt', methods=['GET'])
 @require_api_token("attr_auth")
 def encrypt():
-    token = request.args.get("access_token", None)
+    token = token_to_hash(request.args.get("access_token", None))
     plaintext = request.args.get("message", None)
     policy_string = request.args.get("policy_string", None)
     # TODO can't tell if `policy_string` is valid or not based on produced ciphertext, could use pyparsing... too complex
@@ -183,7 +183,7 @@ def encrypt():
 @attr_authority.route('/decrypt', methods=['GET'])  # NOTE: ciphertext might be too long for url
 @require_api_token("attr_auth")
 def decrypt():
-    token = request.args.get("access_token", None)
+    token = token_to_hash(request.args.get("access_token", None))
     owner_api_username = request.args.get("api_username", None)
     serialized_ciphertext = request.args.get("ciphertext", None)
 

@@ -17,6 +17,7 @@ from sqlalchemy.exc import SADeprecationWarning
 from tinydb import where, Query
 
 from app.app_setup import db, create_app
+from app.auth.utils import token_to_hash
 from app.cli import populate
 import client.user.commands as cmd
 import client.device.commands as device_cmd
@@ -526,7 +527,7 @@ def test_register_to_broker(change_to_dev_db, runner, access_token_three, reset_
     password = "some_bad_pass"
     app, ctx = change_to_dev_db
     with app.app_context():
-        creds = db.session.query(User).filter(User.access_token == access_token_three).first().mqtt_creds
+        creds = db.session.query(User).filter(User.access_token == token_to_hash(access_token_three)).first().mqtt_creds
 
     runner.invoke(cmd.register_to_broker, [password, '--token', access_token_three])
     table = get_tinydb_table(cmd.path, 'credentials')
@@ -536,7 +537,7 @@ def test_register_to_broker(change_to_dev_db, runner, access_token_three, reset_
     assert doc[0]["broker_password"] == password
 
     with app.app_context():
-        creds_new = db.session.query(User).filter(User.access_token == access_token_three).first().mqtt_creds
+        creds_new = db.session.query(User).filter(User.access_token == token_to_hash(access_token_three)).first().mqtt_creds
         assert creds is None
         assert len(creds_new.acls) == 2
         to_delete = db.session.query(MQTTUser).filter(MQTTUser.username == creds_new.username).first()

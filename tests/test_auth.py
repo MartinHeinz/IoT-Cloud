@@ -4,7 +4,7 @@ from unittest.mock import Mock
 
 import pytest
 
-from app.auth.utils import parse_email, validate_token, save_user, require_api_token, INVALID_ACCESS_TOKEN_ERROR_MSG
+from app.auth.utils import parse_email, validate_token, save_user, require_api_token, INVALID_ACCESS_TOKEN_ERROR_MSG, token_to_hash
 from app.models.models import User, AttrAuthUser
 from .conftest import db
 
@@ -70,7 +70,7 @@ def test_save_user_github(app_and_ctx):
             save_user(remote, user_info, token)
             user = db.session.query(User).filter(User.id == user_info["sub"]).first()
             assert user is not None
-            assert user.access_token == token["access_token"]
+            assert user.access_token == token_to_hash(token["access_token"])
             assert user.id == int(user_info["sub"])
             assert user.email is not None
 
@@ -101,7 +101,7 @@ def test_save_user_stackoverflow(app_and_ctx):
         user_github = db.session.query(User).filter(User.id == user_info["sub"]).first()
         assert user is not None
         assert user_github is None
-        assert user.access_token == token["access_token"]
+        assert user.access_token == token_to_hash(token["access_token"])
         assert user.id == int(user_info["sub"])
 
 

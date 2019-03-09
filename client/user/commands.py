@@ -595,7 +595,7 @@ def get_device_data(user_id, device_id, device_name, owner, token):  # TODO righ
         get_foreign_device_data(device_id, json_content)
 
 
-def get_foreign_device_data(device_id, data):
+def get_foreign_device_data(device_id, data):  # TODO print message if user doesn't have keys for device (= is not authorized)
     doc = search_tinydb_doc(path, 'device_keys', Query().device_id == str(device_id))
 
     result = []

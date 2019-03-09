@@ -5,12 +5,17 @@ from functools import wraps
 import requests
 from flask import request
 from sqlalchemy import exists
+from passlib.hash import pbkdf2_sha256
 
 from app.utils import http_json_response
 from app.app_setup import db
 from app.models.models import User, AttrAuthUser
 
 INVALID_ACCESS_TOKEN_ERROR_MSG = "The Access Token you provided is invalid."
+
+
+def token_to_hash(token):
+    return pbkdf2_sha256.using(salt=b"Default").hash(token)
 
 
 def handle_authorize(remote, token, user_info):
@@ -25,7 +30,7 @@ def save_user(remote, user_info, token):
             user = User(id=user_info["sub"], name=user_info["preferred_username"], email=parse_email(query_github_api(token["access_token"])))
         else:
             user = AttrAuthUser(id=user_info["sub"], name=user_info["preferred_username"])
-    user.access_token = token["access_token"]
+    user.access_token = token_to_hash(token["access_token"])
     user.access_token_update = datetime.datetime.utcnow()
     db.session.add(user)
     db.session.commit()
@@ -64,6 +69,7 @@ def require_api_token(bind=None):
 
 
 def validate_token(bind, token):
+    token_hash = token_to_hash(token)
     if bind is None:
-        return db.session.query(exists().where(User.access_token == token)).scalar()
-    return db.session.query(exists().where(AttrAuthUser.access_token == token)).scalar()
+        return db.session.query(exists().where(User.access_token == token_hash)).scalar()
+    return db.session.query(exists().where(AttrAuthUser.access_token == token_hash)).scalar()
