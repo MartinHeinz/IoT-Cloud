@@ -123,7 +123,12 @@ def register_to_broker(password, token):
 @click.argument('description')
 @click.option('--token', envvar='ACCESS_TOKEN')
 def create_device_type(description, token):
-    data = {"description": description, "correctness_hash": correctness_hash(description)}
+    if len(get_tinydb_table(path, 'device_type_keys')) == 0:
+        init_device_type_keys()
+    table = get_tinydb_table(path, 'device_type_keys')
+    doc = table.all()[0]
+    desc_ciphertext = encrypt_using_fernet_hex(doc["description"], description)
+    data = {"description": desc_ciphertext, "correctness_hash": correctness_hash(description)}
     r = requests.post(URL_CREATE_DEVICE_TYPE, params={"access_token": token}, data=data, verify=VERIFY_CERTS)
     click.echo(r.content.decode('unicode-escape'))
 
@@ -163,7 +168,8 @@ def create_device(device_type_id, device_name, password, token):
 @click.option('--token', envvar='ACCESS_TOKEN')
 def create_scene(name, description, token):
     if not is_global_bi_key_missing(init_global_keys, "Blind index key for scene name is missing"):
-        init_scene_keys()
+        if len(get_tinydb_table(path, 'scene_keys')) == 0:
+            init_scene_keys()  # TODO Test with flow (run this command 2 in row and make sure keys don't change)
         table = get_tinydb_table(path, 'scene_keys')
         doc = table.all()[0]
         name_ciphertext = encrypt_using_fernet_hex(doc["name"], name)
@@ -184,6 +190,13 @@ def init_scene_keys():
         'name': key_to_hex(os.urandom(32)),
         'description': key_to_hex(os.urandom(32))
     }, where('name').exists() & where('description').exists())
+
+
+def init_device_type_keys():
+    table = get_tinydb_table(path, 'device_type_keys')
+    table.upsert({
+        'description': key_to_hex(os.urandom(32)),
+    }, where('description').exists())
 
 
 @user.command()
@@ -216,9 +229,9 @@ def add_scene_action(scene_name, action_name, device_id, token):
 def set_action(device_id, name, token):
     doc = search_tinydb_doc(path, 'device_keys', Query().device_id == str(device_id))
     if not doc:
-        with click.Context(send_key_to_device) as ctx:  # TODO This should be send_column_keys
+        with click.Context(send_column_keys) as ctx:
             click.echo(f"Keys for device {device_id} not present, please use: {ctx.command.name}")
-            click.echo(send_key_to_device.get_help(ctx))
+            click.echo(send_column_keys.get_help(ctx))
             return
 
     data = {
@@ -451,7 +464,6 @@ def send_column_keys(user_id, device_id):
 
     keys = {
         "action:name": None,
-        "device_type:description": None,  # TODO remove this
         "device_data:added": None,
         "device_data:num_data": None,
         "device_data:tid": None
@@ -595,8 +607,10 @@ def get_device_data(user_id, device_id, device_name, owner, token):  # TODO righ
         get_foreign_device_data(device_id, json_content)
 
 
-def get_foreign_device_data(device_id, data):  # TODO print message if user doesn't have keys for device (= is not authorized)
+def get_foreign_device_data(device_id, data):
     doc = search_tinydb_doc(path, 'device_keys', Query().device_id == str(device_id))
+    if not doc:
+        click.echo(f"Keys for device: {device_id} are missing. You are probably not authorized to use it.")
 
     result = []
     for row in data["device_data"]:

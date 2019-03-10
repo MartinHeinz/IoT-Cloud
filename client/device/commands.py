@@ -237,7 +237,7 @@ def broker_username_to_id(username):  # TODO not needed
 @click.argument('user_id')
 @click.argument('data')
 @click.argument('num_data')
-def save_data(user_id, data, num_data):  # TODO pad data
+def save_data(user_id, data, num_data):
     try:
         if not is_number(num_data) or not is_number(user_id):
             return
@@ -258,10 +258,10 @@ def create_row(data, num_data, tid, added):
     encrypted = encrypt_row({
         "added": added,
         "num_data": num_data,
-        "data": data,
+        "data": pad_payload_attr(str(data)),
         "tid": str(tid)
     }, get_key_type_pair(user_data))
-    encrypted["correctness_hash"] = correctness_hash(added, data, num_data, tid)
+    encrypted["correctness_hash"] = correctness_hash(added, pad_payload_attr(str(data)), num_data, tid)
     encrypted["tid_bi"] = blind_index(hex_to_key(get_bi_key()), str(tid))
 
     return encrypted
