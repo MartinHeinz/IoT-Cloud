@@ -672,24 +672,24 @@ def test_generate_fake_tuple_and_hash():
     columns = {
             "added": {
                 "seed": 345453,
-                "lower_bound": 0,
+                "lower_bound": -1,
                 "upper_bound": 0,
                 "type": "OPE"
             },
             "num_data": {
                 "seed": 345236,
-                "lower_bound": 0,
+                "lower_bound": -1,
                 "upper_bound": 0,
                 "type": "OPE"
             },
             "data": {
                 "seed": -2345625462,
-                "lower_bound": 0,
+                "lower_bound": -1,
                 "upper_bound": 0,
                 "type": "ABE"
             },
             "tid": {
-                "lower_bound": 1,
+                "lower_bound": 0,
                 "upper_bound": 1,
                 "type": "Fernet"
             }

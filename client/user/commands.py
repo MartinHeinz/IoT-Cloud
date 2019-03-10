@@ -796,7 +796,7 @@ def generate_fake_tuples_in_range(fake_tuple_info):
     fake_tuples = []
     lb, ub = 0, 0
     for col, val in fake_tuple_info.items():
-        lb = fake_tuple_info[col]["lower_bound"]
+        lb = fake_tuple_info[col]["lower_bound"] + 1
         ub = fake_tuple_info[col]["upper_bound"] + 1
         if "seed" in fake_tuple_info[col]:
             fake_tuple_col_values[col] = [murmur_hash(str(i), fake_tuple_info[col]["seed"]) for i in range(lb, ub)]

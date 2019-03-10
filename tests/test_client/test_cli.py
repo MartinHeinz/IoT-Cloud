@@ -171,10 +171,10 @@ def test_get_device_data(runner, access_token, app_and_ctx, reset_tiny_db, col_k
         "shared_key": "aefe715635c3f35f7c58da3eb410453712aaf1f8fd635571aa5180236bb21acc",
         "integrity": {
                 'device_data': {
-                    'added': {'seed': 1, 'lower_bound': 2, 'upper_bound': 2, "type": "OPE"},
-                    'num_data': {'seed': 2, 'lower_bound': 2, 'upper_bound': 2, "type": "OPE"},
-                    'data': {'seed': 3, 'lower_bound': 2, 'upper_bound': 2, "type": "ABE"},
-                    'tid': {'lower_bound': 2, 'upper_bound': 2, "type": "Fernet"}
+                    'added': {'seed': 1, 'lower_bound': 1, 'upper_bound': 2, "type": "OPE"},
+                    'num_data': {'seed': 2, 'lower_bound': 1, 'upper_bound': 2, "type": "OPE"},
+                    'data': {'seed': 3, 'lower_bound': 1, 'upper_bound': 2, "type": "ABE"},
+                    'tid': {'lower_bound': 1, 'upper_bound': 2, "type": "Fernet"}
                 }
             }
         }
@@ -200,10 +200,10 @@ def test_get_device_data(runner, access_token, app_and_ctx, reset_tiny_db, col_k
                     "shared_key": "aefe715635c3f35f7c58da3eb410453712aaf1f8fd635571aa5180236bb21acc",
                     "integrity": {
                         'device_data': {
-                            'added': {'seed': 1, 'lower_bound': 1, 'upper_bound': 2, "type": "OPE"},
-                            'num_data': {'seed': 2, 'lower_bound': 1, 'upper_bound': 2, "type": "OPE"},
-                            'data': {'seed': 3, 'lower_bound': 1, 'upper_bound': 2, "type": "ABE"},
-                            'tid': {'lower_bound': 1, 'upper_bound': 2, "type": "Fernet"}
+                            'added': {'seed': 1, 'lower_bound': 0, 'upper_bound': 2, "type": "OPE"},
+                            'num_data': {'seed': 2, 'lower_bound': 0, 'upper_bound': 2, "type": "OPE"},
+                            'data': {'seed': 3, 'lower_bound': 0, 'upper_bound': 2, "type": "ABE"},
+                            'tid': {'lower_bound': 0, 'upper_bound': 2, "type": "Fernet"}
                         }
                     }
                 }
@@ -306,10 +306,10 @@ def test_divide_fake_and_real_data(reset_tiny_db, col_keys, aa_public_key):
     }]
 
     integrity_info = {'device_data': {
-        'added': {'seed': 1, 'lower_bound': 1, 'upper_bound': 4, "type": "OPE"},
-        'num_data': {'seed': 2, 'lower_bound': 1, 'upper_bound': 4, "type": "OPE"},
-        'tid': {'lower_bound': 1, 'upper_bound': 4, "type": "Fernet"},
-        'data': {'seed': 4, 'lower_bound': 1, 'upper_bound': 4, "type": "ABE"}
+        'added': {'seed': 1, 'lower_bound': 0, 'upper_bound': 4, "type": "OPE"},
+        'num_data': {'seed': 2, 'lower_bound': 0, 'upper_bound': 4, "type": "OPE"},
+        'tid': {'lower_bound': 0, 'upper_bound': 4, "type": "Fernet"},
+        'data': {'seed': 4, 'lower_bound': 0, 'upper_bound': 4, "type": "ABE"}
     }}
 
     insert_into_tinydb(cmd.path, 'device_keys', col_keys)
@@ -358,12 +358,12 @@ def test_get_col_encryption_type():
         'device_data': {
             'added': {
                 'seed': 1,
-                'lower_bound': 1,
+                'lower_bound': 0,
                 'upper_bound': 1,
                 "type": "OPE"},
             'data': {
                 'seed': 2,
-                'lower_bound': 1,
+                'lower_bound': 0,
                 'upper_bound': 1,
                 "type": "ABE"}}}
 
@@ -474,10 +474,10 @@ def test_is_fake():
 
 def test_generate_fake_tuples_in_range():
     fake_tuple_info = {
-        "added": {'seed': 1, "lower_bound": 2, "upper_bound": 5, "type": "OPE"},
-        "num_data": {'seed': 2, "lower_bound": 2, "upper_bound": 5, "type": "OPE"},
-        "data": {'seed': 3, "lower_bound": 2, "upper_bound": 5, "type": "ABE"},
-        "tid": {"lower_bound": 2, "upper_bound": 5, "type": "Fernet"},
+        "added": {'seed': 1, "lower_bound": 1, "upper_bound": 5, "type": "OPE"},
+        "num_data": {'seed': 2, "lower_bound": 1, "upper_bound": 5, "type": "OPE"},
+        "data": {'seed': 3, "lower_bound": 1, "upper_bound": 5, "type": "ABE"},
+        "tid": {"lower_bound": 1, "upper_bound": 5, "type": "Fernet"},
     }
     fake_tuples = cmd.generate_fake_tuples_in_range(fake_tuple_info)
 
@@ -751,10 +751,10 @@ def test_get_device_data_by_num_range(runner, client, access_token, reset_tiny_d
         'shared_key': 'aefe715635c3f35f7c58da3eb410453712aaf1f8fd635571aa5180236bb21acc',
         'integrity': {
             'device_data': {
-                'added': {'seed': 1, 'lower_bound': 1, 'upper_bound': 1, "type": "OPE"},
-                'num_data': {'seed': 2, 'lower_bound': 1, 'upper_bound': 1, "type": "OPE"},
-                'data': {'seed': 3, 'lower_bound': 1, 'upper_bound': 1, "type": "ABE"},
-                'tid': {'lower_bound': 1, 'upper_bound': 1, "type": "Fernet"}
+                'added': {'seed': 1, 'lower_bound': 0, 'upper_bound': 1, "type": "OPE"},
+                'num_data': {'seed': 2, 'lower_bound': 0, 'upper_bound': 1, "type": "OPE"},
+                'data': {'seed': 3, 'lower_bound': 0, 'upper_bound': 1, "type": "ABE"},
+                'tid': {'lower_bound': 0, 'upper_bound': 1, "type": "Fernet"}
             }
         }
     }
@@ -1036,19 +1036,19 @@ def test_increment_upper_bounds():
         "device_data": {
             "added": {
                 'seed': 1,
-                "lower_bound": 1,
+                "lower_bound": 0,
                 "upper_bound": 1,
                 "type": "OPE"
             },
             "num_data": {
                 'seed': 2,
-                "lower_bound": 1,
+                "lower_bound": 0,
                 "upper_bound": 25,
                 "type": "OPE"
             },
             "data": {
                 'seed': 3,
-                "lower_bound": 1,
+                "lower_bound": 0,
                 "upper_bound": 43,
                 "type": "ABE"
             },
@@ -1143,10 +1143,10 @@ def test_get_fake_tuple(runner, reset_tiny_db, integrity_data, col_keys):
         assert plaintext == 875522973  # mmh3.hash(str(1), 2)
 
         doc = search_tinydb_doc(device_cmd.path, 'users', Query().id == user_id)
-        assert doc["integrity"]["device_data"]["num_data"]["lower_bound"] == 2
-        assert doc["integrity"]["device_data"]["added"]["lower_bound"] == 2
-        assert doc["integrity"]["device_data"]["data"]["lower_bound"] == 2
-        assert doc["integrity"]["device_data"]["tid"]["lower_bound"] == 2
+        assert doc["integrity"]["device_data"]["num_data"]["lower_bound"] == 1
+        assert doc["integrity"]["device_data"]["added"]["lower_bound"] == 1
+        assert doc["integrity"]["device_data"]["data"]["lower_bound"] == 1
+        assert doc["integrity"]["device_data"]["tid"]["lower_bound"] == 1
 
 
 @pytest.mark.parametrize('reset_tiny_db', [device_cmd.path], indirect=True)

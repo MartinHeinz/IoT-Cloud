@@ -118,24 +118,24 @@ def integrity_data():
         "device_data": {
             "added": {
                 "seed": 1,
-                "lower_bound": 1,
+                "lower_bound": 0,
                 "upper_bound": 1,
                 "type": "OPE"
             },
             "num_data": {
                 "seed": 2,
-                "lower_bound": 1,
+                "lower_bound": 0,
                 "upper_bound": 1,
                 "type": "OPE"
             },
             "data": {
                 "seed": 3,
-                "lower_bound": 1,
+                "lower_bound": 0,
                 "upper_bound": 1,
                 "type": "ABE"
             },
             "tid": {
-                "lower_bound": 1,
+                "lower_bound": 0,
                 "upper_bound": 1,
                 "type": "Fernet"
             },

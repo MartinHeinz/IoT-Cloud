@@ -148,6 +148,8 @@ def get_fake_tuple(bound):
                 doc["integrity"] = init_integrity_data()
             else:  # If it does exist increment upper bounds
                 doc["integrity"]["device_data"] = increment_bounds(doc["integrity"]["device_data"])
+        if bound == "lower_bound":
+            doc["integrity"]["device_data"] = increment_bounds(doc["integrity"]["device_data"], bound=bound)
 
         fake_tuple = {**generate(doc["integrity"]["device_data"], bound=bound)}
         fake_tuple["data"] = pad_payload_attr(str(fake_tuple["data"]))
@@ -159,9 +161,6 @@ def get_fake_tuple(bound):
         row = {**encrypted_fake_tuple,
                "correctness_hash": fake_tuple_hash,
                "tid_bi": blind_index(hex_to_key(get_bi_key()), str(fake_tuple["tid"]))}
-
-        if bound == "lower_bound":
-            doc["integrity"]["device_data"] = increment_bounds(doc["integrity"]["device_data"], bound=bound)
 
         payload = dict_to_payload(**row)
         table.update(doc)
@@ -311,24 +310,24 @@ def init_integrity_data():
         "device_data": {
             "added": {
                 "seed": get_random_seed(),
-                "lower_bound": 1,
+                "lower_bound": 0,
                 "upper_bound": 1,
                 "type": "OPE"
             },
             "num_data": {
                 "seed": get_random_seed(),
-                "lower_bound": 1,
+                "lower_bound": 0,
                 "upper_bound": 1,
                 "type": "OPE"
             },
             "data": {
                 "seed": get_random_seed(),
-                "lower_bound": 1,
+                "lower_bound": 0,
                 "upper_bound": 1,
                 "type": "ABE"
             },
             "tid": {
-                "lower_bound": 1,
+                "lower_bound": 0,
                 "upper_bound": 1,
                 "type": "Fernet"
             },
