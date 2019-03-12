@@ -15,6 +15,7 @@ from paho.mqtt.client import MQTTMessage
 from pyope.ope import OPE
 from sqlalchemy.exc import SADeprecationWarning
 from tinydb import where, Query
+from tinydb.operations import set
 
 from app.app_setup import db, create_app
 from app.auth.utils import token_to_hash
@@ -499,8 +500,10 @@ def test_save_column_keys(runner, reset_tiny_db, col_keys):
     fernet_key = hex_to_fernet(col_keys["shared_key"])
     plaintext_abe_data = fernet_key.encrypt(json.dumps({"public_key": "stuff", "attr_list": "1 1-23"}).encode()).decode()
 
-    insert_into_tinydb(device_cmd.path, 'users', {"id": 1, "shared_key": "aefe715635c3f35f7c58da3eb410453712aaf1f8fd635571aa5180236bb21acc"})
     runner.invoke(device_cmd.init, ["23", "test_password", "1", "name_1", "name_2", "name_3", "name_4"])
+    table = get_tinydb_table(device_cmd.path, "users")
+    table.update(set('shared_key', "aefe715635c3f35f7c58da3eb410453712aaf1f8fd635571aa5180236bb21acc"), where('integrity').exists())
+    table.update(set('id', 1), where('integrity').exists())
 
     data_wrong_user = f'{{"device_data:data": "{plaintext_abe_data}", "device_data:num_data": "gAAAAABcRHibuWXtMvF7XgSN7FR-cHyNl2eDb_HHPCuTjqtdMN2VxxZnSxGCjkoJxRNIGMcpBW-z4n1wynPoCCb1VanmH3EukMPwpf7Vwk9WytkNR9h51ApyGt1QEkaj_JF2A5jKu-vw", "action:name": "gAAAAABcRHibSiR3cHtaSUSk1ipKP_7csl3xTCd4J-JesU8GPlC2iwfblksE3kvuV3U2mAYqiYe3UuYw04JPbYDYaFePY-YTUAzie3OCRzwuMTE6tE9UBJtJ8wUNJSctZnrvSi0rcPzQ", "device:name": "gAAAAABcRHib0mxfmRE3mg4ALX3XPjP7ZuVQ69NiRdebiNCE-40wZuzzNV1krKcnZeRZVWXwYf4xjYLNNygY-kbbgxltBWNJ5rLanpBIqTeoq8uI9up1bZ_vFFCiGPIjHTpYkMnF5XIN", "device:status": "gAAAAABcRHiboBSiAuKLxvSqS1yu4vOR8FlqGBOnzJSQ85e5UShmQ9avtLAXx_w9fKad2xILHWbi_uFywJML8ukoDGB7iiHkLT39iOnrUCAQHFyOdFERixgl-iFHMji-S1YfGKGwxRIU", "device_data:added": "gAAAAABcRHibuWXtMvF7XgSN7FR-cHyNl2eDb_HHPCuTjqtdMN2VxxZnSxGCjkoJxRNIGMcpBW-z4n1wynPoCCb1VanmH3EukMPwpf7Vwk9WytkNR9h51ApyGt1QEkaj_JF2A5jKu-vw", "scene:name": "gAAAAABcRHibVgsVHRls8IGj95TdFKraKbGfyf_TvDzjg0KV_vu-HawiISBzRaxwrFV_QHI5jA73CTM2dF4ePENaMe0QtIJljtqCBUSRhoQideCy0JL4hDAIJUzpGXFK5RMC2fJHUJ17", "scene:description": "gAAAAABcRHib1iH0Bs9sHff-dt7FY9XOUDzARN-mwaq7eI7iLYYwtmBcMkB3T5ChNnoNWhIRLnh_lQLmvCT_itBvjoIHydBVdIcTjzsyHcTMBUdlxPmohokOjunxdMSCY0B48-pYqzsn", "user_id": 2}}'
     result = runner.invoke(device_cmd.save_column_keys, [data_wrong_user])
@@ -512,7 +515,7 @@ def test_save_column_keys(runner, reset_tiny_db, col_keys):
     table = get_tinydb_table(device_cmd.path, 'users')
     doc = table.get(Query().id == 1)
     assert "action:name" in doc
-    assert len(doc) == 10
+    assert len(doc) == 11
     fernet_key = hex_to_fernet(doc["device:status"])
     assert isinstance(fernet_key, Fernet)
     cipher = hex_to_ope(doc["device_data:added"])
@@ -994,6 +997,9 @@ def test_device_init(runner, reset_tiny_db):
     assert int(doc[0]['id']) == 23
     assert len(doc[0]['actions']) == 4
 
+    doc = get_tinydb_table(device_cmd.path, 'users').all()[0]
+    assert "integrity" in doc
+
 
 @pytest.mark.parametrize('reset_tiny_db', [device_cmd.path], indirect=True)
 def test_device_receive_pk(runner, reset_tiny_db):
@@ -1125,62 +1131,62 @@ def test_get_fake_tuple(runner, reset_tiny_db, integrity_data, col_keys):
             },
             "device_data:tid": "aefe715635c3f35f7c58da3eb410453712aaf1f8fd635571aa5180236bb21acc",
             "scene:name": "7c2a6bb5e7021e30c7326bdb99003fd43b2b0770b0a4a07f7b3876634b11ff94",
-            "scene:description": "d011b0fa5a23b3c2efadb2e0fea094647ff7b03b9a93022aeae6c1edf3eb1871"}
+            "scene:description": "d011b0fa5a23b3c2efadb2e0fea094647ff7b03b9a93022aeae6c1edf3eb1871",
+            "integrity": integrity_data}
 
     insert_into_tinydb(device_cmd.path, 'users', data)
     insert_into_tinydb(device_cmd.path, 'device', device_id_doc)
 
-    with mock.patch('client.device.commands.init_integrity_data', return_value=integrity_data):
-        result = runner.invoke(device_cmd.get_fake_tuple, ["upper_bound"])
-        table = get_tinydb_table(device_cmd.path, 'users')
-        doc = table.get(Query().id == user_id)
-        assert "integrity" in doc, "Integrity sub-document wasn't inserted."
-        assert all(val in doc["integrity"]["device_data"] for val in ["data", "num_data", "added"])
+    result = runner.invoke(device_cmd.get_fake_tuple, ["upper_bound"])
+    table = get_tinydb_table(device_cmd.path, 'users')
+    doc = table.get(Query().id == user_id)
+    assert "integrity" in doc, "Integrity sub-document wasn't inserted."
+    assert all(val in doc["integrity"]["device_data"] for val in ["data", "num_data", "added"])
 
-        search_res = re.findall('\"(tid_bi|tid|data|num_data|added|correctness_hash)\": \"?([^:,\"]+)\"?', result.output)
+    search_res = re.findall('\"(tid_bi|tid|data|num_data|added|correctness_hash)\": \"?([^:,\"]+)\"?', result.output)
 
-        assert len(search_res) == 6
+    assert len(search_res) == 6
 
-        column, ciphertext = next(pair for pair in search_res if pair[0] == "data")
-        plaintext = decrypt_using_abe_serialized_key(ciphertext, data[f"device_data:{column}"]["public_key"], col_keys[f"device_data:{column}"]["private_key"])
-        assert plaintext == pad_payload_attr("-126235597")  # mmh3.hash(str(1), 3)
+    column, ciphertext = next(pair for pair in search_res if pair[0] == "data")
+    plaintext = decrypt_using_abe_serialized_key(ciphertext, data[f"device_data:{column}"]["public_key"], col_keys[f"device_data:{column}"]["private_key"])
+    assert plaintext == pad_payload_attr("384918240")  # mmh3.hash(str(0), 3)
 
-        column, ciphertext = next(pair for pair in search_res if pair[0] == "tid")
-        plaintext = decrypt_using_fernet_hex(data[f"device_data:{column}"], ciphertext)
-        assert plaintext.decode() == "1"
+    column, ciphertext = next(pair for pair in search_res if pair[0] == "tid")
+    plaintext = decrypt_using_fernet_hex(data[f"device_data:{column}"], ciphertext)
+    assert plaintext.decode() == "0"
 
-        column, tid_bi = next(pair for pair in search_res if pair[0] == "tid_bi")
-        assert blind_index(hex_to_key(bi_key), "1") == tid_bi
+    column, tid_bi = next(pair for pair in search_res if pair[0] == "tid_bi")
+    assert blind_index(hex_to_key(bi_key), "0") == tid_bi
 
-        result = runner.invoke(device_cmd.get_fake_tuple, ["upper_bound"])
-        search_res = re.findall('\"(tid|data|num_data|added|correctness_hash)\": \"?([^:,\"]+)\"?', result.output)
+    result = runner.invoke(device_cmd.get_fake_tuple, ["upper_bound"])
+    search_res = re.findall('\"(tid|data|num_data|added|correctness_hash)\": \"?([^:,\"]+)\"?', result.output)
 
-        assert len(search_res) == 5
+    assert len(search_res) == 5
 
-        column, ciphertext = next(pair for pair in search_res if pair[0] == "num_data")
-        plaintext = decrypt_using_ope_hex(data[f"device_data:{column}"], ciphertext)
-        assert plaintext == -623552190  # mmh3.hash(str(2), 2)
+    column, ciphertext = next(pair for pair in search_res if pair[0] == "num_data")
+    plaintext = decrypt_using_ope_hex(data[f"device_data:{column}"], ciphertext)
+    assert plaintext == 875522973  # mmh3.hash(str(1), 2)
 
-        doc = search_tinydb_doc(device_cmd.path, 'users', Query().id == user_id)
-        assert doc["integrity"]["device_data"]["num_data"]["upper_bound"] == 2
-        assert doc["integrity"]["device_data"]["added"]["upper_bound"] == 2
-        assert doc["integrity"]["device_data"]["data"]["upper_bound"] == 2
-        assert doc["integrity"]["device_data"]["tid"]["upper_bound"] == 2
+    doc = search_tinydb_doc(device_cmd.path, 'users', Query().id == user_id)
+    assert doc["integrity"]["device_data"]["num_data"]["upper_bound"] == 2
+    assert doc["integrity"]["device_data"]["added"]["upper_bound"] == 2
+    assert doc["integrity"]["device_data"]["data"]["upper_bound"] == 2
+    assert doc["integrity"]["device_data"]["tid"]["upper_bound"] == 2
 
-        result = runner.invoke(device_cmd.get_fake_tuple, ["lower_bound"])
-        search_res = re.findall('\"(tid|data|num_data|added|correctness_hash)\": \"?([^:,\"]+)\"?', result.output)
+    result = runner.invoke(device_cmd.get_fake_tuple, ["lower_bound"])
+    search_res = re.findall('\"(tid|data|num_data|added|correctness_hash)\": \"?([^:,\"]+)\"?', result.output)
 
-        assert len(search_res) == 5
+    assert len(search_res) == 5
 
-        column, ciphertext = next(pair for pair in search_res if pair[0] == "num_data")
-        plaintext = decrypt_using_ope_hex(data[f"device_data:{column}"], ciphertext)
-        assert plaintext == 875522973  # mmh3.hash(str(1), 2)
+    column, ciphertext = next(pair for pair in search_res if pair[0] == "num_data")
+    plaintext = decrypt_using_ope_hex(data[f"device_data:{column}"], ciphertext)
+    assert plaintext == 1355481018  # mmh3.hash(str(0), 2)
 
-        doc = search_tinydb_doc(device_cmd.path, 'users', Query().id == user_id)
-        assert doc["integrity"]["device_data"]["num_data"]["lower_bound"] == 1
-        assert doc["integrity"]["device_data"]["added"]["lower_bound"] == 1
-        assert doc["integrity"]["device_data"]["data"]["lower_bound"] == 1
-        assert doc["integrity"]["device_data"]["tid"]["lower_bound"] == 1
+    doc = search_tinydb_doc(device_cmd.path, 'users', Query().id == user_id)
+    assert doc["integrity"]["device_data"]["num_data"]["lower_bound"] == 1
+    assert doc["integrity"]["device_data"]["added"]["lower_bound"] == 1
+    assert doc["integrity"]["device_data"]["data"]["lower_bound"] == 1
+    assert doc["integrity"]["device_data"]["tid"]["lower_bound"] == 1
 
 
 @pytest.mark.parametrize('reset_tiny_db', [device_cmd.path], indirect=True)
@@ -1216,13 +1222,8 @@ def test_get_fake_tuple_info(runner, reset_tiny_db):
     result = runner.invoke(device_cmd.get_fake_tuple_info, [payload_no_request])
     assert result.output == ""
 
-    with pytest.raises(Exception) as e:
-        runner.invoke(device_cmd.get_fake_tuple_info, [payload])
-        assert e.value.message == "Integrity data not initialized."
-
     insert_into_tinydb(device_cmd.path, 'users', data)
-    runner.invoke(device_cmd.init, ["23", "test_password", str(user_id), "name_1", "name_2", "name_3", "name_4"])
-
+    insert_into_tinydb(device_cmd.path, "device", {"id": "23"})
     result = runner.invoke(device_cmd.get_fake_tuple_info, [payload])
 
     json_data = json.loads(result.output)

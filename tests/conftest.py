@@ -119,24 +119,24 @@ def integrity_data():
             "added": {
                 "seed": 1,
                 "lower_bound": 0,
-                "upper_bound": 1,
+                "upper_bound": 0,
                 "type": "OPE"
             },
             "num_data": {
                 "seed": 2,
                 "lower_bound": 0,
-                "upper_bound": 1,
+                "upper_bound": 0,
                 "type": "OPE"
             },
             "data": {
                 "seed": 3,
                 "lower_bound": 0,
-                "upper_bound": 1,
+                "upper_bound": 0,
                 "type": "ABE"
             },
             "tid": {
                 "lower_bound": 0,
-                "upper_bound": 1,
+                "upper_bound": 0,
                 "type": "Fernet"
             },
         }

@@ -9,7 +9,7 @@ from cryptography.hazmat.primitives import serialization
 from cryptography.hazmat.primitives.asymmetric import ec
 from cryptography.hazmat.primitives.asymmetric.ec import EllipticCurvePublicKey
 from cryptography.hazmat.primitives.serialization import load_pem_public_key
-from tinydb import Query
+from tinydb import Query, TinyDB
 from tinydb.operations import decrement
 
 sys.stdout = open(os.devnull, 'w')
@@ -46,6 +46,10 @@ def device():
 def init(device_id, password, owner_id, action_names):
     table = get_tinydb_table(path, 'device')
     table.upsert({'id': device_id, 'password': password, "owner_id": owner_id, "actions": action_names}, Query().id.exists())
+    db = TinyDB(path)
+    db.purge_table('users')
+    table = get_tinydb_table(path, 'users')
+    table.insert({'integrity': init_integrity_data()})
 
 
 @device.command()
@@ -143,13 +147,6 @@ def get_fake_tuple(bound):
     try:
         table = get_tinydb_table(path, 'users')
         doc = get_user_data()
-        if bound == "upper_bound":
-            if "integrity" not in doc:  # If it doesn't exist create it with starting lower and upper bounds
-                doc["integrity"] = init_integrity_data()
-            else:  # If it does exist increment upper bounds
-                doc["integrity"]["device_data"] = increment_bounds(doc["integrity"]["device_data"])
-        if bound == "lower_bound":
-            doc["integrity"]["device_data"] = increment_bounds(doc["integrity"]["device_data"], bound=bound)
 
         fake_tuple = {**generate(doc["integrity"]["device_data"], bound=bound)}
         fake_tuple["data"] = pad_payload_attr(str(fake_tuple["data"]))
@@ -161,6 +158,11 @@ def get_fake_tuple(bound):
         row = {**encrypted_fake_tuple,
                "correctness_hash": fake_tuple_hash,
                "tid_bi": blind_index(hex_to_key(get_bi_key()), str(fake_tuple["tid"]))}
+
+        if bound == "upper_bound":
+                doc["integrity"]["device_data"] = increment_bounds(doc["integrity"]["device_data"])
+        if bound == "lower_bound":
+            doc["integrity"]["device_data"] = increment_bounds(doc["integrity"]["device_data"], bound=bound)
 
         payload = dict_to_payload(**row)
         table.update(doc)
@@ -185,9 +187,6 @@ def get_fake_tuple_info(data):
         data = json.loads(data)
         if "request" in data and data["request"] == "fake_tuple_info":
             doc = get_user_data()
-
-            if "integrity" not in doc:
-                raise Exception(f"Integrity data not initialized.")
 
             payload = encrypt_fake_tuple_info(doc, data["user_id"])
             click.echo(payload)
@@ -311,24 +310,24 @@ def init_integrity_data():
             "added": {
                 "seed": get_random_seed(),
                 "lower_bound": 0,
-                "upper_bound": 1,
+                "upper_bound": 0,
                 "type": "OPE"
             },
             "num_data": {
                 "seed": get_random_seed(),
                 "lower_bound": 0,
-                "upper_bound": 1,
+                "upper_bound": 0,
                 "type": "OPE"
             },
             "data": {
                 "seed": get_random_seed(),
                 "lower_bound": 0,
-                "upper_bound": 1,
+                "upper_bound": 0,
                 "type": "ABE"
             },
             "tid": {
                 "lower_bound": 0,
-                "upper_bound": 1,
+                "upper_bound": 0,
                 "type": "Fernet"
             },
         }

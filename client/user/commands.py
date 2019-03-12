@@ -572,7 +572,7 @@ def setup_authorized_device(device_id, abe_pk, bi_key, token):
 @click.argument('device_name')
 @click.option('--owner/--no-owner', default=True)
 @click.option('--token', envvar='ACCESS_TOKEN')
-def get_device_data(user_id, device_id, device_name, owner, token):  # TODO right now it requires device to 1st use `get_fake_tuple` (`init_integrity_data`) before 1st call to this
+def get_device_data(user_id, device_id, device_name, owner, token):
     """
     Queries server for data of :param device_id device and then verifies the received data using
     integrity information from device (received using MQTT Broker) and correctness hash attribute

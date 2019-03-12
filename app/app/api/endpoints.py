@@ -332,7 +332,6 @@ def exchange_session_keys():
     if not User.can_use_device(user_access_token, device_id):
         return http_json_response(False, 400, **{"error": UNAUTHORIZED_USER_ERROR_MSG})
 
-    # TODO save `user_public_key_bytes` to User Device Association Object?
     payload_bytes = bytes(Payload(
         user_public_key=user_public_key_bytes,
         user_id=user.id
