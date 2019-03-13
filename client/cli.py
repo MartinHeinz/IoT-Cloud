@@ -1,4 +1,5 @@
 #!/usr/bin/env python
+import sys
 
 import click
 
@@ -15,7 +16,19 @@ MQTT_BROKER = "172.21.0.3"
 MQTT_PORT = 8883
 
 
-@click.group()
+class CatchAllExceptions(click.Group):
+
+    def __call__(self, *args, **kwargs):
+        try:
+            return self.main(*args, **kwargs)
+        except Exception as e:  # pragma: no exc cover
+            _, _, exc_tb = sys.exc_info()
+            line = exc_tb.tb_lineno
+            click.echo(f"\nSomething went wrong at line {line} in respective commands.py file: \n")
+            click.echo(f"{repr(e)}\n")
+
+
+@click.group(cls=CatchAllExceptions)
 @click.option('--debug/--no-debug', default=True)
 @click.option('--broker', '-b', default=MQTT_BROKER)
 @click.option('--port', '-p', default=MQTT_PORT)
