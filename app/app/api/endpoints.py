@@ -20,7 +20,7 @@ from app.consts import DEVICE_TYPE_ID_MISSING_ERROR_MSG, DEVICE_TYPE_ID_INCORREC
     UNAUTHORIZED_USER_SCENE_ERROR_MSG, ACTION_ALREADY_PRESENT_ERROR_MSG, INVALID_SCENE_BI_ERROR_MSG, \
     AUTH_USER_ID_MISSING_ERROR_MSG, AUTH_USER_ID_INVALID_ERROR_MSG, AUTH_USER_ALREADY_AUTHORIZED_ERROR_MSG, \
     REVOKE_USER_ID_MISSING_ERROR_MSG, REVOKE_USER_ID_INVALID_ERROR_MSG, REVOKE_USER_NOT_AUTHORIZED_ERROR_MSG, \
-    DEVICE_NAME_BI_INVALID_ERROR_MSG
+    DEVICE_NAME_BI_INVALID_ERROR_MSG, ADDITIONAL_DATA_MISSING_ERROR_MSG
 from app.models.models import DeviceType, Device, DeviceData, UserDevice, User, Scene, Action, ACL
 from app.mqtt.utils import Payload
 from app.utils import http_json_response, check_missing_request_argument, is_valid_uuid, format_topic, validate_broker_password, is_number, create_payload
@@ -374,11 +374,13 @@ def retrieve_public_key():
 def trigger_action():
     device_id = request.args.get("device_id", None)  # TODO: Do I needs this ID?
     name_bi = request.args.get("name_bi", None)
+    additional_data = request.args.get("additional_data", None)
     access_token = token_to_hash(request.args.get("access_token", ""))
     user = User.get_by_access_token(access_token)
 
     arg_check = check_missing_request_argument(
         (device_id, DEVICE_ID_MISSING_ERROR_MSG),
+        (additional_data, ADDITIONAL_DATA_MISSING_ERROR_MSG),
         (name_bi, ACTION_NAME_BI_MISSING_ERROR_MSG))
     if arg_check is not True:
         return arg_check
@@ -391,8 +393,11 @@ def trigger_action():
     ac = Device.get_action_by_bi(device_id, name_bi)
     if ac is None:
         return http_json_response(False, 400, **{"error": ACTION_BI_INVALID_ERROR_MSG})
-    payload = create_payload(user.mqtt_creds.username, {"action": ac.name.decode("utf-8")})
-    client.publish(topic, payload)  # TODO encrypt with `shared key`
+    payload = create_payload(user.mqtt_creds.username, {
+        "action": ac.name.decode("utf-8"),
+        "additional_data": additional_data
+    })
+    client.publish(topic, payload)
     return http_json_response()
 
 

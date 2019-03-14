@@ -1,13 +1,16 @@
 import copy
 import json
 import os
+import random
 import re
 import ssl
 import sys
+from datetime import datetime
 from json import JSONDecodeError
 
 import click
 import requests
+from apscheduler.schedulers.blocking import BlockingScheduler
 from cryptography.hazmat.backends import default_backend
 from cryptography.hazmat.primitives import serialization
 from cryptography.hazmat.primitives.asymmetric import ec
@@ -248,14 +251,45 @@ def set_action(device_id, name, token):
 @click.argument('device_id')
 @click.argument('name')
 @click.option('--token', envvar='ACCESS_TOKEN')
-def trigger_action(device_id, name, token):
+@click.option('--real/--fake', default=True)
+def trigger_action(device_id, name, token, real):
+    r = _trigger_action(device_id, name, token, real)
+    click.echo(r.content.decode('unicode-escape'))
+
+
+def _trigger_action(device_id, name, token, real):
     data = {
         "device_id": device_id,
         "name_bi": blind_index(get_device_bi_key(device_id), name),
         "access_token": token
     }
-    r = requests.get(URL_TRIGGER_ACTION, params=data, verify=VERIFY_CERTS)
-    click.echo(r.content.decode('unicode-escape'))
+    if real:
+        data["additional_data"] = "real"
+    else:
+        data["additional_data"] = "fake"
+
+    data["additional_data"] = encrypt_using_fernet_hex(get_shared_key_by_device_id(path, device_id), data["additional_data"]).decode()
+    return requests.get(URL_TRIGGER_ACTION, params=data, verify=VERIFY_CERTS)
+
+
+@user.command()
+@click.argument('device_id')
+@click.argument('start', type=click.DateTime())
+@click.argument('end', type=click.DateTime())
+@click.argument('number', type=int)
+@click.argument('action_names', nargs=-1)
+@click.option('--token', envvar='ACCESS_TOKEN')
+def schedule_fake_actions(device_id, start, end, number, action_names, token):
+    if (start < datetime.now() or end < datetime.now()) or start > end:
+        click.echo("Invalid start or end time supplied.")
+        return
+    td = end - start
+    times = sorted([random.random() * td for _ in range(number)])
+    actions = random.choices(action_names, k=number)
+    sched = BlockingScheduler()
+    for t, a in zip(times, actions):
+        sched.add_job(_trigger_action, 'date', [device_id, a, token, "fake"],  run_date=start+t)
+    sched.start()
 
 
 @user.command()

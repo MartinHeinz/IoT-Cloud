@@ -10,6 +10,7 @@ from unittest import mock
 from unittest.mock import Mock
 
 import pytest
+from apscheduler.schedulers.blocking import BlockingScheduler
 from cryptography.fernet import Fernet
 from paho.mqtt.client import MQTTMessage
 from pyope.ope import OPE
@@ -740,6 +741,34 @@ def test_trigger_action(runner, access_token, col_keys, bi_key, reset_tiny_db):
     result = runner.invoke(cmd.trigger_action, [str(device_id), name, '--token', access_token])
     assert "\"success\": true" in result.output
 
+    runner.invoke(cmd.trigger_action, [str(device_id), name, "--fake", '--token', access_token])
+    assert "\"success\": true" in result.output
+
+
+@mock.patch.object(BlockingScheduler, "start")
+@mock.patch.object(BlockingScheduler, "add_job")
+def test_schedule_fake_actions(m_add_job, m_start, runner, access_token):
+        result = runner.invoke(cmd.schedule_fake_actions, [
+            "23",
+            '2010-01-01 10:12:40',
+            '2019-03-03 10:12:40',
+            "10",
+            "On", "Off"
+            '--token', access_token])
+
+        assert "Invalid start or end time supplied." in result.output
+
+        runner.invoke(cmd.schedule_fake_actions, [
+            "23",
+            '2020-01-01 10:12:40',
+            '2020-03-03 10:12:40',
+            "10",
+            "On", "Off",
+            '--token', access_token])
+
+        assert m_add_job.call_count == 10
+        m_start.assert_called_once()
+
 
 @pytest.mark.parametrize('reset_tiny_db', [cmd.path], indirect=True)
 def test_trigger_scene(runner, access_token_two, col_keys, bi_key, reset_tiny_db):
@@ -1236,11 +1265,21 @@ def test_get_fake_tuple_info(runner, reset_tiny_db):
 
 @pytest.mark.parametrize('reset_tiny_db', [device_cmd.path], indirect=True)
 def test_process_action(runner, reset_tiny_db, col_keys):
-    payload = '{"user_id": "u:1", "action": "gAAAAABcXcF9yNe9emKXALJImsb7v4meic8cR6YnEulQSi8xOxF8d33scDotxPKQBTC80r-QolW2mRroUZOfLuqAqr20Z5333A=="}'  # b'On' encrypted with col_keys["action:name"]
-    insert_into_tinydb(device_cmd.path, 'users', {"id": 1, "action:name": "a70c6a23f6b0ef9163040f4cc02819c22d7e35de6469672d250519077b36fe4d"})
+    payload = '{"user_id": "u:1", "action": "gAAAAABcXcF9yNe9emKXALJImsb7v4meic8cR6YnEulQSi8xOxF8d33scDotxPKQBTC80r-QolW2mRroUZOfLuqAqr20Z5333A==", "additional_data": "gAAAAABcikpQSsh7iACV6pAFMaldncaSrA9rj3iUh-7ejFnvXw1Uzcodf5Gf7FtZTU39R3L65nd1RzExvF9kMU1t_YwG2FpdMA=="}'
+    # action: b'On' encrypted with col_keys["action:name"], additional_data: "real" encrypted with col_keys["shared_key"]
+    insert_into_tinydb(device_cmd.path, 'users', {
+        "id": 1,
+        "action:name": "a70c6a23f6b0ef9163040f4cc02819c22d7e35de6469672d250519077b36fe4d",
+        "shared_key": "d3e4a9c3aec8386eaa00442e040c21caf483c320f4ecf4a0a485fdcf47bd4251"
+    })
 
     result = runner.invoke(device_cmd.process_action, [payload])
     assert "On" in result.output
+
+    payload = '{"user_id": "u:1", "action": "gAAAAABcXcF9yNe9emKXALJImsb7v4meic8cR6YnEulQSi8xOxF8d33scDotxPKQBTC80r-QolW2mRroUZOfLuqAqr20Z5333A==", "additional_data": "gAAAAABcik1o1yO4mdQvRVzuYJE3-iP8BMDBbHDa4hwScX3YtlT0ts7AR_FIDfgGpmXv9L_bbteV9cb8SqmYIIcNRMOOK3gV6g=="}'
+    # action: b'On' encrypted with col_keys["action:name"], additional_data: "fake" encrypted with col_keys["shared_key"]
+    result = runner.invoke(device_cmd.process_action, [payload])
+    assert result.output == ""
 
 
 @pytest.mark.parametrize('reset_tiny_db', [device_cmd.path], indirect=True)

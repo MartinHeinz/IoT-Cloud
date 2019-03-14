@@ -32,6 +32,7 @@ AUTH_USER_ID_INVALID_ERROR_MSG = 'ID of user being authorized is invalid.'
 REVOKE_USER_ID_INVALID_ERROR_MSG = 'ID of user being revoked is invalid.'
 AUTH_USER_ALREADY_AUTHORIZED_ERROR_MSG = 'User being authorized, can already access this device.'
 REVOKE_USER_NOT_AUTHORIZED_ERROR_MSG = 'User being revoked, cannot be revoked.'
+ADDITIONAL_DATA_MISSING_ERROR_MSG = 'Missing additional_data attribute.'
 
 MASTER_KEY_MISSING_ERROR_MSG = 'Missing serialized master key argument.'
 ATTR_LIST_MISSING_ERROR_MSG = 'Missing attribute list argument.'

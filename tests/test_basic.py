@@ -22,7 +22,7 @@ from app.consts import DEVICE_TYPE_ID_MISSING_ERROR_MSG, DEVICE_TYPE_ID_INCORREC
     INVALID_SCENE_OR_ACTION_BI_ERROR_MSG, ACTION_ALREADY_PRESENT_ERROR_MSG, UNAUTHORIZED_USER_SCENE_ERROR_MSG, \
     INVALID_SCENE_BI_ERROR_MSG, AUTH_USER_ID_INVALID_ERROR_MSG, AUTH_USER_ID_MISSING_ERROR_MSG, \
     AUTH_USER_ALREADY_AUTHORIZED_ERROR_MSG, REVOKE_USER_ID_MISSING_ERROR_MSG, REVOKE_USER_ID_INVALID_ERROR_MSG, \
-    REVOKE_USER_NOT_AUTHORIZED_ERROR_MSG, DEVICE_NAME_BI_INVALID_ERROR_MSG
+    REVOKE_USER_NOT_AUTHORIZED_ERROR_MSG, DEVICE_NAME_BI_INVALID_ERROR_MSG, ADDITIONAL_DATA_MISSING_ERROR_MSG
 from app.models.models import DeviceType, Device, User, Action, Scene, UserDevice
 from app.app_setup import client as mqtt_client
 from app.utils import is_valid_uuid, bytes_to_json, format_topic, validate_broker_password
@@ -477,12 +477,21 @@ def test_api_trigger_action(client, app_and_ctx, access_token):
         "name_bi": '$2b$12$1xxxxxxxxxxxxxxxxxxxxuz5Jia.EInvalid6Nte',
         "access_token": access_token
     }
+    assert_got_error_from_get(client, '/api/device/action', data, 400, ADDITIONAL_DATA_MISSING_ERROR_MSG)
+
+    data = {
+        "device_id": device_id,
+        "name_bi": '$2b$12$1xxxxxxxxxxxxxxxxxxxxuz5Jia.EInvalid6Nte',
+        "access_token": access_token,
+        "additional_data": 'gAAAAABcikpQSsh7iACV6pAFMaldncaSrA9rj3iUh-7ejFnvXw1Uzcodf5Gf7FtZTU39R3L65nd1RzExvF9kMU1t_YwG2FpdMA=='
+    }
     assert_got_error_from_get(client, '/api/device/action', data, 400, ACTION_BI_INVALID_ERROR_MSG)
 
     data = {
         "device_id": device_id,
         "name_bi": '86a638eab77f45b9e0e2fb384471e517664df67cec75c33d724efa8649be357e',
-        "access_token": access_token
+        "access_token": access_token,
+        "additional_data": 'gAAAAABcikpQSsh7iACV6pAFMaldncaSrA9rj3iUh-7ejFnvXw1Uzcodf5Gf7FtZTU39R3L65nd1RzExvF9kMU1t_YwG2FpdMA=='
     }
 
     app, ctx = app_and_ctx
@@ -493,7 +502,7 @@ def test_api_trigger_action(client, app_and_ctx, access_token):
 
             publish.assert_called_once()
             args = publish.call_args
-            assert args == ((f"u:1/d:23/", f'"{{"\\"action\\"": "\\"{ac_name_string}\\"", "\\"user_id\\"": "\\"u:1\\""}}"'),)
+            assert args == ((f"u:1/d:23/", f'"{{"\\"action\\"": "\\"{ac_name_string}\\"", "\\"additional_data\\"": "\\"{data["additional_data"]}\\"", "\\"user_id\\"": "\\"u:1\\""}}"'),)
 
 
 def test_api_trigger_scene(client, app_and_ctx, access_token, access_token_two):
