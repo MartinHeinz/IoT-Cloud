@@ -620,6 +620,10 @@ def get_device_data(user_id, device_id, device_name, owner, token):
     content = r.content.decode('unicode-escape')
     json_content = json_string_with_bytes_to_dict(content)
 
+    if not json_content["success"]:
+        click.echo(json_content["error"])
+        return
+
     if owner:
         _get_fake_tuple_data(user_id, int(device_id))
         decrypted_fake_tuple_data = {
@@ -646,17 +650,16 @@ def get_foreign_device_data(device_id, data):
     if not doc:
         click.echo(f"Keys for device: {device_id} are missing. You are probably not authorized to use it.")
 
-    result = []
+    decrypted = []
     for row in data["device_data"]:
-        result.append(decrypt_using_abe_serialized_key(row["data"],
-                                                       doc["device_data:data"]["public_key"],
-                                                       doc["device_data:data"]["private_key"]))
-    for i, val in enumerate(result):
+        decrypted.append(decrypt_using_abe_serialized_key(row["data"],
+                                                          doc["device_data:data"]["public_key"],
+                                                          doc["device_data:data"]["private_key"]))
+    result = []
+    for val in decrypted:
         try:
             if val.endswith("0"):
-                result[i] = unpad_payload_attr(val)
-            else:
-                result.pop(i)
+                result.append(unpad_payload_attr(val))
         except Exception as e:
             click.echo(str(e))
     click.echo(result)

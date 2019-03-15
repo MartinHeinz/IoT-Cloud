@@ -1026,6 +1026,7 @@ def test_device_init(runner, reset_tiny_db):
 
     doc = get_tinydb_table(device_cmd.path, 'users').all()[0]
     assert "integrity" in doc
+    assert "id" in doc
 
 
 @pytest.mark.parametrize('reset_tiny_db', [device_cmd.path], indirect=True)

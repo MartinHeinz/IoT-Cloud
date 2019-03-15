@@ -1,7 +1,8 @@
 #!/usr/bin/env python
-import sys
+import traceback
 
 import click
+import urllib3
 
 try:  # for packaged CLI (setup.py)
     from client import user_cli
@@ -22,9 +23,8 @@ class CatchAllExceptions(click.Group):
         try:
             return self.main(*args, **kwargs)
         except Exception as e:  # pragma: no exc cover
-            _, _, exc_tb = sys.exc_info()
-            line = exc_tb.tb_lineno
-            click.echo(f"\nSomething went wrong at line {line} in respective commands.py file: \n")
+            formatted_lines = traceback.format_exc().splitlines()
+            click.echo(f"\nSomething went wrong at in {formatted_lines[-3]}: \n")
             click.echo(f"{repr(e)}\n")
 
 
@@ -38,6 +38,7 @@ def cli(ctx, debug, broker, port):
     ctx.obj['BROKER'] = broker
     ctx.obj['PORT'] = port
     if debug:
+        urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
         click.echo("YOU ARE RUNNING IN DEBUG MODE - CERTIFICATES ARE NOT BEING VERIFIED.")
 
 

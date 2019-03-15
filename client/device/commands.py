@@ -49,7 +49,7 @@ def init(device_id, password, owner_id, action_names):
     db = TinyDB(path)
     db.purge_table('users')
     table = get_tinydb_table(path, 'users')
-    table.insert({'integrity': init_integrity_data()})
+    table.insert({'integrity': init_integrity_data(), "id": int(owner_id)})
 
 
 @device.command()
