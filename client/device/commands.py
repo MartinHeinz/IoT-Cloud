@@ -149,7 +149,7 @@ def get_fake_tuple(bound):
         doc = get_user_data()
 
         fake_tuple = {**generate(doc["integrity"]["device_data"], bound=bound)}
-        fake_tuple["data"] = pad_payload_attr(str(fake_tuple["data"]))
+        fake_tuple["data"] = pad_payload_attr(str(fake_tuple["data"]), fake=True)
 
         keys = get_key_type_pair(doc)
 

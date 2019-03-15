@@ -653,7 +653,10 @@ def get_foreign_device_data(device_id, data):
                                                        doc["device_data:data"]["private_key"]))
     for i, val in enumerate(result):
         try:
-            result[i] = unpad_payload_attr(val)
+            if val.endswith("0"):
+                result[i] = unpad_payload_attr(val)
+            else:
+                result.pop(i)
         except Exception as e:
             click.echo(str(e))
     click.echo(result)
@@ -853,7 +856,7 @@ def generate_fake_tuples_in_range(fake_tuple_info):
     for no, i in enumerate(range(lb, ub)):
         fake_tuples.append({"added": fake_tuple_col_values["added"][no],
                             "num_data": fake_tuple_col_values["num_data"][no],
-                            "data": pad_payload_attr(str(fake_tuple_col_values["data"][no])),
+                            "data": pad_payload_attr(str(fake_tuple_col_values["data"][no]), fake=True),
                             "tid": str(fake_tuple_col_values["tid"][no])})
     return fake_tuples
 
