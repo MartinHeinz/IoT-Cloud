@@ -15,20 +15,18 @@ from tinydb.operations import decrement
 
 sys.stdout = open(os.devnull, 'w')
 sys.path.insert(0, '../app')
-from app.utils import is_number
-
 sys.stdout = sys.__stdout__
 
 try:  # for packaged CLI (setup.py)
     from client.crypto_utils import triangle_wave, sawtooth_wave, square_wave, sine_wave, generate, encrypt_row, index_function, \
         hex_to_key, key_to_hex, hex_to_fernet, decrypt_using_fernet_hex, get_random_seed, blind_index, encrypt_using_abe_serialized_key, hex_to_ope, \
         correctness_hash, pad_payload_attr, encrypt_using_fernet_hex
-    from client.utils import get_tinydb_table, search_tinydb_doc
+    from client.utils import get_tinydb_table, search_tinydb_doc, is_number
 except ImportError:  # pragma: no un-packaged CLI cover
     from crypto_utils import triangle_wave, sawtooth_wave, square_wave, sine_wave, generate, encrypt_row, index_function, \
         hex_to_key, key_to_hex, hex_to_fernet, decrypt_using_fernet_hex, get_random_seed, blind_index, \
         correctness_hash, pad_payload_attr, encrypt_using_fernet_hex
-    from utils import get_tinydb_table, search_tinydb_doc
+    from utils import get_tinydb_table, search_tinydb_doc, is_number
 
 dir_path = os.path.dirname(os.path.realpath(__file__))
 path = f'{dir_path}/data.json'

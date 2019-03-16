@@ -27,7 +27,15 @@ setup(
         'tinydb',
         'paho-mqtt',
         'passlib',
-        'scipy'
+        'scipy',
+        'APScheduler',
+        'mmh3',
+        'pyope',
+        'flask',
+        'Charm-Crypto',
+        'SQLAlchemy',
+        'Flask-SQLAlchemy',
+        'Authlib'
     ],
     entry_points='''
         [console_scripts]

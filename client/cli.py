@@ -54,8 +54,18 @@ Install package:
 1. create venv - `python3 -m venv <absolute-path>`
 2. activate venv - source <absolute-path>/bin/activate
     - `which python` should now show _<absolute-path>/bin/python_
-3. `cd` into _IoT-Cloud_
-`pip install --editable .`
+3. `cd` into venv
+4. `git clone https://github.com/JHUISI/charm.git`
+5. `cd charm`
+6. `./configure.sh`
+7. `sudo make install`
+8. `sudo ldconfig`
+9. `cd` into _IoT-Cloud_
+10. `pip install --editable .`
+
+When using with `node-RED`:
+11. `cd` into `./node-red`
+12. _To test_: ``iot-cloud-cli device --help`
 
 Usage:
 In console `iot-cloud-cli user ...`, `iot-cloud-cli device ...`

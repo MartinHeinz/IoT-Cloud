@@ -22,7 +22,7 @@ from scipy import signal
 import numpy as np
 
 sys.stdout = open(os.devnull, 'w')
-sys.path.insert(0, '../app')
+sys.path.insert(0, './app')
 from app.attribute_authority.utils import create_pairing_group, create_cp_abe, deserialize_charm_object, serialize_charm_object
 
 sys.stdout = sys.__stdout__

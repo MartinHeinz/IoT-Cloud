@@ -44,3 +44,19 @@ def get_shared_key_by_device_id(path, device_id):
     doc = search_tinydb_doc(path, "device_keys", Query().device_id == str(device_id))
     if doc and "shared_key" in doc:
         return doc["shared_key"]
+
+
+def is_number(s):
+    try:
+        int(s)
+        return True
+    except (ValueError, TypeError):
+        return False
+
+
+def bytes_to_json(value):
+    value = value.decode("utf8")
+    if value.startswith('"') and value.endswith('"'):
+        value = value[1:-1]
+    string_value = value.replace("'", '"').replace("\n", "\\n")
+    return json.loads(string_value)

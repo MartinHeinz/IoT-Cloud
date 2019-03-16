@@ -22,8 +22,6 @@ from tinydb.operations import set, delete
 
 sys.stdout = open(os.devnull, 'w')
 sys.path.insert(0, '../app')
-from app.utils import bytes_to_json, is_number
-
 sys.stdout = sys.__stdout__
 
 try:  # for packaged CLI (setup.py)
@@ -31,14 +29,14 @@ try:  # for packaged CLI (setup.py)
         key_to_hex, hex_to_fernet, hex_to_ope, decrypt_using_fernet_hex, decrypt_using_ope_hex, encrypt_using_fernet_hex, murmur_hash, \
         decrypt_using_abe_serialized_key, blind_index, unpad_row, pad_payload_attr, unpad_payload_attr
     from client.utils import json_string_with_bytes_to_dict, _create_payload, search_tinydb_doc, get_tinydb_table, insert_into_tinydb, \
-        get_shared_key_by_device_id
+        get_shared_key_by_device_id, bytes_to_json, is_number
     from client.password_hashing import pbkdf2_hash
 except ImportError:  # pragma: no un-packaged CLI cover
     from crypto_utils import correctness_hash, check_correctness_hash, instantiate_ope_cipher, int_from_bytes, hex_to_key, key_to_hex, \
         hex_to_fernet, hex_to_ope, decrypt_using_fernet_hex, decrypt_using_ope_hex, encrypt_using_fernet_hex, murmur_hash, \
         decrypt_using_abe_serialized_key, blind_index, unpad_row, pad_payload_attr, unpad_payload_attr
     from utils import json_string_with_bytes_to_dict, _create_payload, search_tinydb_doc, get_tinydb_table, insert_into_tinydb, \
-        get_shared_key_by_device_id
+        get_shared_key_by_device_id, bytes_to_json, is_number
     from password_hashing import pbkdf2_hash
 
 URL_BASE = "https://localhost/api/"
