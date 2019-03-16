@@ -12,24 +12,25 @@ class AttrAuthUserBehavior(TaskSet):
     @task()
     def key_setup(self):
         data = {"access_token": AA_ACCESS_TOKEN_USER_1}
-        with self.client.post("/attr_auth/setup",
-                              name="/attr_auth/setup",
-                              params=data,
-                              verify=False,
-                              catch_response=True) as response:
+        with self.client.get("/attr_auth/setup",
+                             name="/attr_auth/setup",
+                             params=data,
+                             verify=False,
+                             catch_response=True) as response:
             if response.status_code == 200:
                 response.success()
 
     @task()
     def keygen(self):
         data = {
-            "access_token": AA_ACCESS_TOKEN_USER_2,
-            "attr_list": "TODAY GUEST",
-            "receiver_id": "1"
+            "attr_list": "2 2-1 2-GUEST",
+            "receiver_id": "1",
+            "device_id": "1",
         }
-        with self.client.post("/attr_auth/keygen",
-                              name="/attr_auth/keygen",
-                              params=data,
+        with self.client.post("/attr_auth/user/keygen",
+                              name="/attr_auth/user/keygen",
+                              params={"access_token": AA_ACCESS_TOKEN_USER_2},
+                              data=data,
                               verify=False,
                               catch_response=True) as response:
             if response.status_code == 200:
@@ -46,14 +47,16 @@ class AttrAuthUserEncryptAndDecrypt(TaskSequence):
             "message": "any text",
             "policy_string": "(GUESTTODAY)"
         }
-        with self.client.post("/attr_auth/encrypt",
-                              name="/attr_auth/encrypt",
-                              params=data,
-                              verify=False,
-                              catch_response=True) as response:
+        with self.client.get("/attr_auth/encrypt",
+                             name="/attr_auth/encrypt",
+                             params=data,
+                             verify=False,
+                             catch_response=True) as response:
             if response.status_code == 200:
                 self.ciphertext = response.json()["ciphertext"]
                 response.success()
+            else:
+                print(response.json())
 
     @seq_task(2)
     def decrypt(self):
@@ -62,36 +65,38 @@ class AttrAuthUserEncryptAndDecrypt(TaskSequence):
             "api_username": "MartinHeinz",
             "ciphertext": self.ciphertext
         }
-        with self.client.post("/attr_auth/decrypt",
-                              name="/attr_auth/decrypt",
-                              params=data,
-                              verify=False,
-                              catch_response=True) as response:
+        with self.client.get("/attr_auth/decrypt",
+                             name="/attr_auth/decrypt",
+                             params=data,
+                             verify=False,
+                             catch_response=True) as response:
             if response.status_code == 200:
                 response.success()
+            else:
+                print(response.json())
 
 
 class UserBehavior(TaskSet):
 
     @task()
     def get_device_data(self):
-        data = {"device_id": DEVICE_ID, "access_token": ACCESS_TOKEN}
-        with self.client.post("/api/data/get_device_data",
-                              name="/api/data/get_device_data",
-                              params=data,
-                              verify=False,
-                              catch_response=True) as response:
+        data = {"device_name_bi": DEVICE_NAME_BI, "access_token": ACCESS_TOKEN}
+        with self.client.get("/api/data/get_device_data",
+                             name="/api/data/get_device_data",
+                             params=data,
+                             verify=False,
+                             catch_response=True) as response:
             if response.status_code == 200:
                 response.success()
 
     @task()
     def get_device_by_name(self):
         data = {"name_bi": DEVICE_NAME_BI, "access_token": ACCESS_TOKEN}
-        with self.client.post("/api/device/get",
-                              name="/api/device/get",
-                              params=data,
-                              verify=False,
-                              catch_response=True) as response:
+        with self.client.get("/api/device/get",
+                             name="/api/device/get",
+                             params=data,
+                             verify=False,
+                             catch_response=True) as response:
             if response.status_code == 200:
                 response.success()
 
@@ -100,12 +105,12 @@ class UserBehavior(TaskSet):
 
     @task()
     def get_data_by_num_range(self):
-        data = {"lower": "467297", "access_token": ACCESS_TOKEN, "device_id": DEVICE_ID}  # OPE - 2500
-        with self.client.post("/api/data/get_by_num_range",
-                              name="/api/data/get_by_num_range",
-                              params=data,
-                              verify=False,
-                              catch_response=True) as response:
+        data = {"lower": "467297", "access_token": ACCESS_TOKEN, "device_name_bi": DEVICE_NAME_BI}  # OPE - 2500
+        with self.client.get("/api/data/get_by_num_range",
+                             name="/api/data/get_by_num_range",
+                             params=data,
+                             verify=False,
+                             catch_response=True) as response:
             if response.status_code == 200:
                 response.success()
 
@@ -120,7 +125,7 @@ class UserBehavior(TaskSet):
 
 
 class WebsiteUser(HttpLocust):
-    task_set = UserBehavior  # Or AttrAuthUserBehavior or AttrAuthUserEncryptAndDecrypt
+    task_set = AttrAuthUserEncryptAndDecrypt  # Or AttrAuthUserBehavior or AttrAuthUserEncryptAndDecrypt
     min_wait = 2000
     max_wait = 5000
 
