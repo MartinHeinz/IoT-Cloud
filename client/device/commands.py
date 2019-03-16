@@ -1,5 +1,6 @@
 import json
 import os
+import re
 import sys
 import time
 
@@ -57,9 +58,9 @@ def init(device_id, password, owner_id, action_names):
 def parse_msg(data):
     """ Can be trigger by: `./cli.py -b "172.21.0.3" user send-message 23 "{\"action\": true}"` """
     try:  # TODO sanitize inputs; check for presence of shared key based on user
-        data = json.loads(data)
-
         if "ciphertext" in data:
+
+            data = json.loads(data)
             doc = get_user_data()
             plaintext = decrypt_using_fernet_hex(doc["shared_key"], data["ciphertext"])
             click.echo(plaintext)
@@ -75,9 +76,9 @@ def parse_msg(data):
 def save_column_keys(data):
     """ Can be trigger by: `./cli.py -b "172.26.0.8" user send-column-keys 1 23` """
     try:
-        data = json.loads(data)
+        if bool(re.search('\"\w+:\w+\"', data)):
 
-        if "ciphertext" not in data:
+            data = json.loads(data)
             if get_owner_id() != int(data["user_id"]):
                 click.echo("This command is only available for device owner.")
                 return
@@ -106,34 +107,35 @@ def save_column_keys(data):
 @click.argument('data')
 def receive_pk(data):
     try:
-        json_data = json.loads(data.replace("'", '"'), strict=False)
+        if "user_public_key" in data:
+            json_data = json.loads(data.replace("'", '"'), strict=False)
 
-        pk_user_pem = json.dumps(json_data['user_public_key'])
-        user_id = int(json.dumps(json_data['user_id'])[1:-1])
+            pk_user_pem = json.dumps(json_data['user_public_key'])
+            user_id = int(json.dumps(json_data['user_id'])[1:-1])
 
-        if get_owner_id() != user_id:
-            click.echo("This command is only available for device owner.")
-            return
+            if get_owner_id() != user_id:
+                click.echo("This command is only available for device owner.")
+                return
 
-        key = pk_user_pem[1:-1].encode('utf-8').replace(b"\\n", b"\n")
-        public_key = load_pem_public_key(key, backend=default_backend())
-        assert isinstance(public_key, EllipticCurvePublicKey)
+            key = pk_user_pem[1:-1].encode('utf-8').replace(b"\\n", b"\n")
+            public_key = load_pem_public_key(key, backend=default_backend())
+            assert isinstance(public_key, EllipticCurvePublicKey)
 
-        private_key = ec.generate_private_key(ec.SECP384R1(), default_backend())
-        shared_key = private_key.exchange(ec.ECDH(), public_key)
-        # derived_key = Fernet(base64.urlsafe_b64encode(shared_key[:32]))
+            private_key = ec.generate_private_key(ec.SECP384R1(), default_backend())
+            shared_key = private_key.exchange(ec.ECDH(), public_key)
+            # derived_key = Fernet(base64.urlsafe_b64encode(shared_key[:32]))
 
-        table = get_tinydb_table(path, 'users')
-        key = key_to_hex(shared_key[:32])  # NOTE: retrieve key as `key_to_hex(key)`
-        table.upsert({'id': user_id, 'shared_key': key, 'tid': -1}, Query().id == user_id)
+            table = get_tinydb_table(path, 'users')
+            key = key_to_hex(shared_key[:32])  # NOTE: retrieve key as `key_to_hex(key)`
+            table.upsert({'id': user_id, 'shared_key': key, 'tid': -1}, Query().id == user_id)
 
-        public_key = private_key.public_key()
-        public_pem = public_key.public_bytes(
-            encoding=serialization.Encoding.PEM,
-            format=serialization.PublicFormat.SubjectPublicKeyInfo
-        ).decode('utf-8').replace("\n", "\\n")
-        payload = f'{{"user_id": {int(user_id)}, "device_public_key": "{public_pem}"}}'
-        click.echo(payload)
+            public_key = private_key.public_key()
+            public_pem = public_key.public_bytes(
+                encoding=serialization.Encoding.PEM,
+                format=serialization.PublicFormat.SubjectPublicKeyInfo
+            ).decode('utf-8').replace("\n", "\\n")
+            payload = f'{{"user_id": {int(user_id)}, "device_public_key": "{public_pem}"}}'
+            click.echo(payload)
 
     except Exception as e:  # pragma: no exc cover
         _, _, exc_tb = sys.exc_info()
@@ -184,12 +186,13 @@ def get_self_id():
 @click.argument('data')
 def get_fake_tuple_info(data):
     try:
-        data = json.loads(data)
-        if "request" in data and data["request"] == "fake_tuple_info":
-            doc = get_user_data()
+        if "request" in data:
+            data = json.loads(data)
+            if data["request"] == "fake_tuple_info":
+                doc = get_user_data()
 
-            payload = encrypt_fake_tuple_info(doc, data["user_id"])
-            click.echo(payload)
+                payload = encrypt_fake_tuple_info(doc, data["user_id"])
+                click.echo(payload)
 
     except Exception as e:  # pragma: no exc cover
         _, _, exc_tb = sys.exc_info()
@@ -212,8 +215,8 @@ def encrypt_fake_tuple_info(doc, user_id):
 @click.argument('data')
 def process_action(data):
     try:
-        data = json.loads(data)
         if "action" in data:
+            data = json.loads(data)
             doc = get_user_data()
 
             additional_data = decrypt_using_fernet_hex(doc["shared_key"], data["additional_data"]).decode()
