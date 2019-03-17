@@ -5,6 +5,7 @@ from charm.adapters.abenc_adapt_hybrid import HybridABEnc
 from charm.schemes.abenc.abenc_bsw07 import CPabe_BSW07
 from charm.toolbox.pairinggroup import PairingGroup
 
+from app.app_setup import db
 from app.consts import INCORRECT_RECEIVER_ID_ERROR_MSG, INVALID_ATTR_LIST_ERROR_MSG, MESSAGE_MISSING_ERROR_MSG, POLICY_STRING_MISSING_ERROR_MSG, \
     CIPHERTEXT_MISSING_ERROR_MSG, COULD_NOT_DECRYPT_ERROR_MSG, INVALID_OWNER_API_USERNAME_ERROR_MSG, OWNER_API_USERNAME_MISSING_ERROR_MSG, \
     API_USERNAME_MISSING_ERROR_MSG, ATTR_LIST_MISSING_ERROR_MSG, DEVICE_ID_MISSING_ERROR_MSG
@@ -257,6 +258,39 @@ def test_keygen_already_has_key_from_owner(client, app_and_ctx, attr_auth_access
         ciphertext = cp_abe.encrypt(public_key, plaintext, policy_str)
         decrypted_msg = cp_abe.decrypt(public_key, new_private_key, ciphertext)
         assert plaintext == decrypted_msg.decode("utf-8")
+
+
+def test_keygen_replaces_old_key(client, app_and_ctx, attr_auth_access_token_one, attr_auth_access_token_two):
+    data = {
+        "access_token": attr_auth_access_token_one,
+        "attr_list": "1 1-2 1-GUEST",
+        "receiver_id": "2",
+        "device_id": "99"
+    }
+    app, ctx = app_and_ctx
+    with app.app_context():
+
+        assert_got_data_from_post(client, '/attr_auth/user/keygen', data)
+
+        receiver = AttrAuthUser.get_by_access_token(token_to_hash(attr_auth_access_token_two))
+        old_private_key = next(key for key in receiver.private_keys if key.challenger_id == 1 and key.device_id == 99)
+        old_private_key_data = old_private_key.data
+        old_private_key_key_update = old_private_key.key_update
+        old_private_keys_num = len(receiver.private_keys)
+
+        assert_got_data_from_post(client, '/attr_auth/user/keygen', data)  # This should replace old_private_key_data
+
+        receiver = AttrAuthUser.get_by_access_token(token_to_hash(attr_auth_access_token_two))
+        new_private_key = next(key for key in receiver.private_keys if key.challenger_id == 1 and key.device_id == 99)
+        new_private_key_data = new_private_key.data
+        new_private_key_key_update = new_private_key.key_update
+
+        assert old_private_key_data != new_private_key_data
+        assert old_private_key_key_update < new_private_key_key_update
+        assert old_private_keys_num == len(receiver.private_keys)
+
+        db.session.delete(new_private_key)
+        db.session.commit()
 
 
 def test_retrieve_private_keys(client, attr_auth_access_token_one, attr_auth_access_token_two):

@@ -55,7 +55,7 @@ def init(device_id, password, owner_id, action_names):
 @click.argument('data')
 def parse_msg(data):
     """ Can be trigger by: `./cli.py -b "172.21.0.3" user send-message 23 "{\"action\": true}"` """
-    try:  # TODO sanitize inputs; check for presence of shared key based on user
+    try:
         if "ciphertext" in data:
 
             data = json.loads(data)
@@ -229,7 +229,7 @@ def process_action(data):
         click.echo(f"{repr(e)} at line: {line}")
 
 
-def broker_username_to_id(username):  # TODO not needed
+def broker_username_to_id(username):
     try:
         return username.split(":")[1]
     except IndexError:

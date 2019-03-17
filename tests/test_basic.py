@@ -471,16 +471,16 @@ def test_api_get_device_data(client, app_and_ctx, access_token_two):
 
 
 def test_api_trigger_action(client, app_and_ctx, access_token):
-    device_id = "23"
+    device_name_bi = "a36758aa531feb3ef0ce632b7a5b993af3d8d59b8f2f8df8de854dce915d20df"
     data = {
-        "device_id": device_id,
+        "device_name_bi": device_name_bi,
         "name_bi": '$2b$12$1xxxxxxxxxxxxxxxxxxxxuz5Jia.EInvalid6Nte',
         "access_token": access_token
     }
     assert_got_error_from_get(client, '/api/device/action', data, 400, ADDITIONAL_DATA_MISSING_ERROR_MSG)
 
     data = {
-        "device_id": device_id,
+        "device_name_bi": device_name_bi,
         "name_bi": '$2b$12$1xxxxxxxxxxxxxxxxxxxxuz5Jia.EInvalid6Nte',
         "access_token": access_token,
         "additional_data": 'gAAAAABcikpQSsh7iACV6pAFMaldncaSrA9rj3iUh-7ejFnvXw1Uzcodf5Gf7FtZTU39R3L65nd1RzExvF9kMU1t_YwG2FpdMA=='
@@ -488,7 +488,7 @@ def test_api_trigger_action(client, app_and_ctx, access_token):
     assert_got_error_from_get(client, '/api/device/action', data, 400, ACTION_BI_INVALID_ERROR_MSG)
 
     data = {
-        "device_id": device_id,
+        "device_name_bi": device_name_bi,
         "name_bi": '86a638eab77f45b9e0e2fb384471e517664df67cec75c33d724efa8649be357e',
         "access_token": access_token,
         "additional_data": 'gAAAAABcikpQSsh7iACV6pAFMaldncaSrA9rj3iUh-7ejFnvXw1Uzcodf5Gf7FtZTU39R3L65nd1RzExvF9kMU1t_YwG2FpdMA=='

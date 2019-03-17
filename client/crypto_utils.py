@@ -249,7 +249,7 @@ def decrypt_using_ope_hex(h, ciphertext):
 
 
 def encrypt_using_abe_serialized_key(pk, plaintext, policy_string):
-    pairing_group = create_pairing_group()  # TODO This is being imported from server app - might break with `setup.py`
+    pairing_group = create_pairing_group()
     cp_abe = create_cp_abe()
     try:
         public_key = deserialize_charm_object(str.encode(pk), pairing_group)

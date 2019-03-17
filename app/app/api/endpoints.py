@@ -372,25 +372,25 @@ def retrieve_public_key():
 @api.route('/device/action', methods=['GET'])
 @require_api_token()
 def trigger_action():
-    device_id = request.args.get("device_id", None)  # TODO: Do I needs this ID?
+    device_name_bi = request.args.get("device_name_bi", None)
     name_bi = request.args.get("name_bi", None)
     additional_data = request.args.get("additional_data", None)
     access_token = token_to_hash(request.args.get("access_token", ""))
     user = User.get_by_access_token(access_token)
 
     arg_check = check_missing_request_argument(
-        (device_id, DEVICE_ID_MISSING_ERROR_MSG),
+        (device_name_bi, DEVICE_NAME_BI_MISSING_ERROR_MSG),
         (additional_data, ADDITIONAL_DATA_MISSING_ERROR_MSG),
         (name_bi, ACTION_NAME_BI_MISSING_ERROR_MSG))
     if arg_check is not True:
         return arg_check
 
-    if not User.can_use_device(access_token, device_id):
+    dv = Device.get_by_name_bi(device_name_bi)
+    if dv is None or not User.can_use_device(access_token, dv.id):
         return http_json_response(False, 400, **{"error": UNAUTHORIZED_USER_ERROR_MSG})
 
-    dv = Device.get_by_id(device_id)
     topic = format_topic(user.mqtt_creds.username, dv.mqtt_creds.username)
-    ac = Device.get_action_by_bi(device_id, name_bi)
+    ac = Device.get_action_by_bi(dv.id, name_bi)
     if ac is None:
         return http_json_response(False, 400, **{"error": ACTION_BI_INVALID_ERROR_MSG})
     payload = create_payload(user.mqtt_creds.username, {

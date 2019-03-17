@@ -101,7 +101,7 @@ def send_message(user_id, device_id, data):
     client = _setup_client(user_id)
 
     payload = f'"{json.dumps(_create_payload({"ciphertext": token.decode()}, user_id))}"'
-    ret = client.publish(f"u:{user_id}/d:{device_id}/", payload)  # TODO change payload to json and parse it as JSON on device end
+    ret = client.publish(f"u:{user_id}/d:{device_id}/", payload)
     click.echo(f"RC and MID = {ret}")
 
 
@@ -247,17 +247,18 @@ def set_action(device_id, name, token):
 
 @user.command()
 @click.argument('device_id')
+@click.argument('device_name')
 @click.argument('name')
 @click.option('--token', envvar='ACCESS_TOKEN')
 @click.option('--real/--fake', default=True)
-def trigger_action(device_id, name, token, real):
-    r = _trigger_action(device_id, name, token, real)
+def trigger_action(device_id, device_name, name, token, real):
+    r = _trigger_action(device_id, device_name, name, token, real)
     click.echo(r.content.decode('unicode-escape'))
 
 
-def _trigger_action(device_id, name, token, real):
+def _trigger_action(device_id, device_name, name, token, real):
     data = {
-        "device_id": device_id,
+        "device_name_bi": blind_index(get_device_bi_key(device_id), device_name),
         "name_bi": blind_index(get_device_bi_key(device_id), name),
         "access_token": token
     }
@@ -272,12 +273,13 @@ def _trigger_action(device_id, name, token, real):
 
 @user.command()
 @click.argument('device_id')
+@click.argument('device_name')
 @click.argument('start', type=click.DateTime())
 @click.argument('end', type=click.DateTime())
 @click.argument('number', type=int)
 @click.argument('action_names', nargs=-1)
 @click.option('--token', envvar='ACCESS_TOKEN')
-def schedule_fake_actions(device_id, start, end, number, action_names, token):
+def schedule_fake_actions(device_id, device_name, start, end, number, action_names, token):
     if (start < datetime.now() or end < datetime.now()) or start > end:
         click.echo("Invalid start or end time supplied.")
         return
@@ -286,7 +288,7 @@ def schedule_fake_actions(device_id, start, end, number, action_names, token):
     actions = random.choices(action_names, k=number)
     sched = BlockingScheduler()
     for t, a in zip(times, actions):
-        sched.add_job(_trigger_action, 'date', [device_id, a, token, "fake"],  run_date=start+t)
+        sched.add_job(_trigger_action, 'date', [device_id, device_name, a, token, False],  run_date=start+t)
     sched.start()
 
 
@@ -528,11 +530,11 @@ def send_column_keys(user_id, device_id):
 
 
 @user.command()
-@click.argument('attr_list')
 @click.argument('device_id')
+@click.argument('attr_list', nargs=-1)
 @click.option('--token', envvar='AA_ACCESS_TOKEN')
-def attr_auth_device_keygen(attr_list, device_id, token):
-    if device_id not in attr_list:
+def attr_auth_device_keygen(device_id, attr_list, token):
+    if device_id not in " ".join(attr_list):
         click.echo(f"attr_list argument should contain device_id ({device_id})")
         return
     doc = search_tinydb_doc(path, 'aa_keys', where('public_key').exists())
@@ -542,9 +544,8 @@ def attr_auth_device_keygen(attr_list, device_id, token):
             click.echo(get_attr_auth_keys.get_help(ctx))
             return
 
-    attr_list = re.sub('[\']', '', attr_list)
     data = {
-        "attr_list": attr_list
+        "attr_list": " ".join(attr_list)
     }
     r = requests.post(AA_URL_DEVICE_KEYGEN, params={"access_token": token}, data=data, verify=VERIFY_CERTS)
     content = r.content.decode('unicode-escape')
@@ -553,7 +554,7 @@ def attr_auth_device_keygen(attr_list, device_id, token):
     t = get_tinydb_table(path, "device_keys")
     device_data_doc = {
         "private_key": json_content["private_key"],
-        "attr_list": attr_list.split(),
+        "attr_list": attr_list,
     }
     t.update(set("device_data:data", device_data_doc), Query().device_id == device_id)
 
@@ -568,7 +569,7 @@ def attr_auth_retrieve_private_keys(token):
 
 @user.command()
 @click.argument('device_id')
-@click.argument('abe_pk')  # TODO get this from file or env var
+@click.argument('abe_pk', type=click.Path(exists=True))
 @click.argument('bi_key')
 @click.option('--token', envvar='ACCESS_TOKEN')
 def setup_authorized_device(device_id, abe_pk, bi_key, token):
@@ -590,7 +591,7 @@ def setup_authorized_device(device_id, abe_pk, bi_key, token):
     data = {
         "device_data:data": {
             **abe_sk,
-            "public_key": abe_pk
+            "public_key": open(abe_pk).read().strip()
         },
         "device_id": device_id,
         "bi_key": bi_key,
@@ -905,11 +906,11 @@ def get_attr_auth_keys(token):
 
 
 @user.command()
-@click.argument('attr_list')  # TODO make this last args with variable number of values
 @click.argument('receiver_id')
 @click.argument('device_id')
+@click.argument('attr_list', nargs=-1)
 @click.option('--token', envvar='AA_ACCESS_TOKEN')
-def attr_auth_keygen(attr_list, receiver_id, device_id, token):
+def attr_auth_keygen(receiver_id, device_id, attr_list, token):
     doc = search_tinydb_doc(path, 'aa_keys', where('public_key').exists())
     if not doc:
         with click.Context(get_attr_auth_keys) as ctx:
@@ -917,7 +918,7 @@ def attr_auth_keygen(attr_list, receiver_id, device_id, token):
             click.echo(get_attr_auth_keys.get_help(ctx))
             return
     data = {
-        "attr_list": re.sub('[\']', '', attr_list),
+        "attr_list": " ".join(attr_list),
         "receiver_id": receiver_id,
         "device_id": device_id
     }
@@ -941,7 +942,7 @@ def attr_auth_encrypt(message, policy_string, token):
 
 @user.command()
 @click.argument('owner_username')
-@click.argument('ciphertext')  # TODO allow specifying file path
+@click.argument('ciphertext')
 @click.option('--token', envvar='AA_ACCESS_TOKEN')
 def attr_auth_decrypt(owner_username, ciphertext, token):
     data = {

@@ -41,6 +41,7 @@ INCORRECT_RECEIVER_ID_ERROR_MSG = 'Incorrect receiver ID.'
 INVALID_ATTR_LIST_ERROR_MSG = 'Invalid attribute list (only alphanumeric values separated with whitespaces are allowed).'
 MESSAGE_MISSING_ERROR_MSG = 'Missing plaintext message to be encrypted.'
 POLICY_STRING_MISSING_ERROR_MSG = 'Missing Policy string in format `((four or three) and (two or one))`'
+INVALID_POLICY_STRING_ERROR_MSG = 'Provided Policy string is invalid.'
 CIPHERTEXT_MISSING_ERROR_MSG = 'Missing ciphertext to be decrypted.'
 COULD_NOT_DECRYPT_ERROR_MSG = "We could not decrypt your message (MAC might be invalid = Your data was tampered with or your key is wrong)."
 INVALID_OWNER_API_USERNAME_ERROR_MSG = 'Specified API username of data owner is invalid.'

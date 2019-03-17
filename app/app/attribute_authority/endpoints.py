@@ -12,30 +12,9 @@ from app.models.models import AttrAuthUser, MasterKeypair, PrivateKey
 from app.utils import http_json_response, check_missing_request_argument
 
 """
-NOTES:
-- To create revocation, we need to re-encrypt data with new policy_str,
-    which needs to remove attributes, that are no longer valid
-- Using ac17 - based on https://eprint.iacr.org/2017/807.pdf
-- This module will need a separate authentication.
-    - Therefore it will need own database or at least isolated tables in existing DB
-    - DB will store users and their PK(s?)
-- DB will store PKs, generated secret keys (from keygen)?, user info
-
-- (pk, msk) = cpabe.setup()
-    - ran for every user
-    - PK stored in DB
-    - msk is Master SECRET key -> it needs to be securely transfered to user and not stored on server
-
-- key = cpabe.keygen(pk, msk, attr_list)
-    - Owner (Challenger) needs to supply msk from previous step (stored locally)
-    - generated key is then send to user with attributes == attr_list
-
-- ctxt = cpabe.encrypt(pk, msg, policy_str)
-    - anybody with access to pk can encrypt (This can be public endpoint = no login required)
-
-- rec_msg = cpabe.decrypt(pk, ctxt, key)
-    - Authority is trusted, so if we assume a secure connection, then we can decrypt on server,
-        but can be done on client too - that will require a user to have ABE, pbc and Charm installed though
+    Lots of people working in cryptography have no deep concern with real application issues.
+    They are trying to discover things clever enough to write papers about.
+        -- Whitfield Diffie
 """
 
 
@@ -108,9 +87,12 @@ def keygen():
                                                 attr_list)
 
     # delegate to receiver of generated key
+    old_key = next((k for k in receiver.private_keys if k.challenger == data_owner and k.device_id == int(device_id)), None)
+    if old_key:
+        db.session.delete(old_key)
     receiver.private_keys.append(PrivateKey(data=serialized_private_key,
                                             challenger=data_owner,
-                                            device_id=device_id,  # TODO if key for this device exists and receiver exists, then it should overwrite
+                                            device_id=device_id,
                                             attributes=create_attributes(attr_list)))
     db.session.commit()
     return http_json_response()
@@ -162,7 +144,6 @@ def encrypt():
     token = token_to_hash(request.args.get("access_token", None))
     plaintext = request.args.get("message", None)
     policy_string = request.args.get("policy_string", None)
-    # TODO can't tell if `policy_string` is valid or not based on produced ciphertext, could use pyparsing... too complex
 
     arg_check = check_missing_request_argument(
         (plaintext, MESSAGE_MISSING_ERROR_MSG),

@@ -140,26 +140,30 @@ def test_aa_retrieve_private_keys(runner, attr_auth_access_token_two):
 
 @pytest.mark.parametrize('reset_tiny_db', [cmd.path], indirect=True)
 def test_setup_authorized_device(runner, attr_auth_access_token_two, reset_tiny_db, bi_key, aa_public_key):
-    device_id = "33"
-    result = runner.invoke(cmd.setup_authorized_device, [
-        "55",  # invalid
-        aa_public_key,
-        bi_key,
-        '--token', attr_auth_access_token_two
-    ])
-    assert "Key for device: 55 is not present." in result.output
+    with tempfile.NamedTemporaryFile(mode="w+", suffix=".txt") as tf:
+        tf.write(aa_public_key)
+        tf.flush()
 
-    result = runner.invoke(cmd.setup_authorized_device, [
-        device_id,
-        aa_public_key,
-        bi_key,
-        '--token', attr_auth_access_token_two
-    ])
-    assert result.exit_code == 0, "Something went wrong."
-    doc = search_tinydb_doc(cmd.path, 'device_keys', Query().device_id == device_id)
-    assert doc is not None, "Document was not inserted."
-    assert all(k in doc for k in ("device_data:data", "bi_key", "device_id"))
-    assert all(k in doc["device_data:data"] for k in ("public_key", "attr_list", "private_key"))
+        device_id = "33"
+        result = runner.invoke(cmd.setup_authorized_device, [
+            "55",  # invalid
+            tf.name,
+            bi_key,
+            '--token', attr_auth_access_token_two
+        ])
+        assert "Key for device: 55 is not present." in result.output
+
+        result = runner.invoke(cmd.setup_authorized_device, [
+            device_id,
+            tf.name,
+            bi_key,
+            '--token', attr_auth_access_token_two
+        ])
+        assert result.exit_code == 0, "Something went wrong."
+        doc = search_tinydb_doc(cmd.path, 'device_keys', Query().device_id == device_id)
+        assert doc is not None, "Document was not inserted."
+        assert all(k in doc for k in ("device_data:data", "bi_key", "device_id"))
+        assert all(k in doc["device_data:data"] for k in ("public_key", "attr_list", "private_key"))
 
 
 @pytest.mark.parametrize('reset_tiny_db', [cmd.path], indirect=True)
@@ -734,38 +738,41 @@ def test_set_action(runner, access_token, reset_tiny_db, change_to_dev_db, col_k
 def test_trigger_action(runner, access_token, col_keys, bi_key, reset_tiny_db):
     device_id = 23
     name = "On"
+    device_name = "my_raspberry"
     insert_into_tinydb(cmd.path, 'device_keys', col_keys)
     insert_into_tinydb(cmd.path, 'global', {"bi_key": bi_key})
-    result = runner.invoke(cmd.trigger_action, [str(device_id), name, '--token', access_token])
+    result = runner.invoke(cmd.trigger_action, [str(device_id), device_name, name, '--token', access_token])
     assert "\"success\": true" in result.output
 
-    runner.invoke(cmd.trigger_action, [str(device_id), name, "--fake", '--token', access_token])
+    runner.invoke(cmd.trigger_action, [str(device_id), device_name, name, "--fake", '--token', access_token])
     assert "\"success\": true" in result.output
 
 
 @mock.patch.object(BlockingScheduler, "start")
 @mock.patch.object(BlockingScheduler, "add_job")
 def test_schedule_fake_actions(m_add_job, m_start, runner, access_token):
-        result = runner.invoke(cmd.schedule_fake_actions, [
-            "23",
-            '2010-01-01 10:12:40',
-            '2019-03-03 10:12:40',
-            "10",
-            "On", "Off"
-            '--token', access_token])
+    result = runner.invoke(cmd.schedule_fake_actions, [
+        "23",
+        "my_raspberry",
+        '2010-01-01 10:12:40',
+        '2019-03-03 10:12:40',
+        "10",
+        "On", "Off"
+        '--token', access_token])
 
-        assert "Invalid start or end time supplied." in result.output
+    assert "Invalid start or end time supplied." in result.output
 
-        runner.invoke(cmd.schedule_fake_actions, [
-            "23",
-            '2020-01-01 10:12:40',
-            '2020-03-03 10:12:40',
-            "10",
-            "On", "Off",
-            '--token', access_token])
+    runner.invoke(cmd.schedule_fake_actions, [
+        "23",
+        "my_raspberry",
+        '2020-01-01 10:12:40',
+        '2020-03-03 10:12:40',
+        "10",
+        "On", "Off",
+        '--token', access_token])
 
-        assert m_add_job.call_count == 10
-        m_start.assert_called_once()
+    assert m_add_job.call_count == 10
+    m_start.assert_called_once()
 
 
 @pytest.mark.parametrize('reset_tiny_db', [cmd.path], indirect=True)
@@ -978,22 +985,23 @@ def test_aa_setup(runner, attr_auth_access_token_one, reset_tiny_db):
 
 @pytest.mark.parametrize('reset_tiny_db', [cmd.path], indirect=True)
 def test_aa_keygen(runner, attr_auth_access_token_one, reset_tiny_db):
-    result = runner.invoke(cmd.attr_auth_keygen, ["'1-TODAY 1-GUEST'", '1', '23', '--token', attr_auth_access_token_one])
+    attr_list = ["1-TODAY", "1-GUEST"]
+    result = runner.invoke(cmd.attr_auth_keygen, ['1', '23', *attr_list, '--token', attr_auth_access_token_one])
 
     assert "Public key not present, please use: get-attr-auth-keys" in result.output
     runner.invoke(cmd.get_attr_auth_keys, ['--token', attr_auth_access_token_one])
-    result = runner.invoke(cmd.attr_auth_keygen, ["'1-TODAY 1-GUEST'", '1', '23', '--token', attr_auth_access_token_one])
+    result = runner.invoke(cmd.attr_auth_keygen, ['1', '23', *attr_list, '--token', attr_auth_access_token_one])
     assert "\"success\": true" in result.output
 
 
 @pytest.mark.parametrize('reset_tiny_db', [cmd.path], indirect=True)
 def test_aa_device_keygen(runner, attr_auth_access_token_one, reset_tiny_db):
     device_id = "23"
-    result = runner.invoke(cmd.attr_auth_device_keygen, ["'1-55 1-GUEST 1'", device_id, '--token', attr_auth_access_token_one])
+    result = runner.invoke(cmd.attr_auth_device_keygen, [device_id, "1-55", "1-GUEST", "1", '--token', attr_auth_access_token_one])
     assert f"attr_list argument should contain device_id ({device_id})" in result.output
 
-    attr_list = "'1-23 1-GUEST 1'"
-    result = runner.invoke(cmd.attr_auth_device_keygen, [attr_list, device_id, '--token', attr_auth_access_token_one])
+    attr_list = ["1-23", "1-GUEST", "1"]
+    result = runner.invoke(cmd.attr_auth_device_keygen, [device_id, *attr_list, '--token', attr_auth_access_token_one])
 
     assert "Public key not present, please use: get-attr-auth-keys" in result.output
     aa_keys_doc = {
@@ -1001,7 +1009,7 @@ def test_aa_device_keygen(runner, attr_auth_access_token_one, reset_tiny_db):
     }
     insert_into_tinydb(cmd.path, "aa_keys", aa_keys_doc)
     insert_into_tinydb(cmd.path, "device_keys", {'device_id': device_id, 'shared_key': "dummy_value"})
-    runner.invoke(cmd.attr_auth_device_keygen, [attr_list, device_id, '--token', attr_auth_access_token_one])
+    runner.invoke(cmd.attr_auth_device_keygen, [device_id,  *attr_list, '--token', attr_auth_access_token_one])
     doc = search_tinydb_doc(cmd.path, 'device_keys', Query().device_id == device_id)
     assert "device_data:data" in doc and 'shared_key' in doc and "device_id" in doc
     assert "private_key" in doc["device_data:data"]
