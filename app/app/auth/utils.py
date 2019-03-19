@@ -58,7 +58,7 @@ def require_api_token(bind=None):
     def do_require_api_token(func):
         @wraps(func)
         def check_token(*args, **kwargs):
-            token = request.args.get("access_token", "")
+            token = request.headers.get("Authorization", "")
             if not validate_token(bind, token):
                 return http_json_response(False, 400, **{"error": INVALID_ACCESS_TOKEN_ERROR_MSG})
             return func(*args, **kwargs)

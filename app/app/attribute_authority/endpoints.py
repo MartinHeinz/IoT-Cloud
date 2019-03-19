@@ -21,7 +21,7 @@ from app.utils import http_json_response, check_missing_request_argument
 @attr_authority.route('/set_username', methods=['POST'])
 @require_api_token("attr_auth")
 def set_username():
-    token = token_to_hash(request.args.get("access_token", None))
+    token = token_to_hash(request.headers.get("Authorization", None))
     api_username = request.form.get("api_username", None)
 
     arg_check = check_missing_request_argument((api_username, API_USERNAME_MISSING_ERROR_MSG))
@@ -45,7 +45,7 @@ def key_setup():
     public_key, master_key = cp_abe.setup()
 
     # "store keypair in DB"
-    token = token_to_hash(request.args.get("access_token", None))
+    token = token_to_hash(request.headers.get("Authorization", None))
     user = AttrAuthUser.get_by_access_token(token)
     serialized_public_key = serialize_charm_object(public_key, pairing_group)
     serialized_master_key = serialize_charm_object(master_key, pairing_group)
@@ -61,7 +61,7 @@ def key_setup():
 @attr_authority.route('/user/keygen', methods=['POST'])
 @require_api_token("attr_auth")
 def keygen():
-    token = token_to_hash(request.args.get("access_token", None))
+    token = token_to_hash(request.headers.get("Authorization", None))
     attr_list = request.form.get("attr_list", None)
     receiver_id = request.form.get("receiver_id", None)
     device_id = request.form.get("device_id", None)
@@ -101,7 +101,7 @@ def keygen():
 @attr_authority.route('/device/keygen', methods=['POST'])
 @require_api_token("attr_auth")
 def device_keygen():
-    token = token_to_hash(request.args.get("access_token", None))
+    token = token_to_hash(request.headers.get("Authorization", None))
     attr_list = request.form.get("attr_list", None)
     data_owner = AttrAuthUser.get_by_access_token(token)
 
@@ -125,7 +125,7 @@ def device_keygen():
 @attr_authority.route('/user/retrieve_private_keys', methods=['POST'])
 @require_api_token("attr_auth")
 def retrieve_private_keys():
-    user_access_token = token_to_hash(request.args.get("access_token", ""))
+    user_access_token = token_to_hash(request.headers.get("Authorization", ""))
     user = AttrAuthUser.get_by_access_token(user_access_token)
     private_keys = [{
         "data": key.data.decode("utf-8"),
@@ -141,7 +141,7 @@ def retrieve_private_keys():
 @attr_authority.route('/encrypt', methods=['GET'])
 @require_api_token("attr_auth")
 def encrypt():
-    token = token_to_hash(request.args.get("access_token", None))
+    token = token_to_hash(request.headers.get("Authorization", None))
     plaintext = request.args.get("message", None)
     policy_string = request.args.get("policy_string", None)
 
@@ -164,7 +164,7 @@ def encrypt():
 @attr_authority.route('/decrypt', methods=['GET'])  # NOTE: ciphertext might be too long for url
 @require_api_token("attr_auth")
 def decrypt():
-    token = token_to_hash(request.args.get("access_token", None))
+    token = token_to_hash(request.headers.get("Authorization", None))
     owner_api_username = request.args.get("api_username", None)
     serialized_ciphertext = request.args.get("ciphertext", None)
 

@@ -108,10 +108,10 @@ def test_save_user_stackoverflow(app_and_ctx):
 def test_require_api_token_in_base_db(application):
     func = Mock()
     decorated_func = require_api_token(None)(func)
-    with application.test_request_context("/?access_token=Missing"):
+    with application.test_request_context("/", headers={"Authorization": "Missing"}):
         json_data = json.loads(decorated_func()[0].data.decode("utf-8"))
         assert INVALID_ACCESS_TOKEN_ERROR_MSG == json_data["error"]
-    with application.test_request_context("/?access_token=5c36ab84439c45a3719644c0d9bd7b31929afd9f"):
+    with application.test_request_context("/", headers={"Authorization": "5c36ab84439c45a3719644c0d9bd7b31929afd9f"}):
         decorated_func()
         assert func.call_count == 1
 
@@ -130,14 +130,14 @@ def test_require_api_token_in_attr_auth_db(application):
              'token_type': 'Bearer'}
     func = Mock()
     decorated_func = require_api_token("attr_auth")(func)
-    with application.test_request_context("/?access_token=Missing"):
+    with application.test_request_context("/", headers={"Authorization": "Missing"}):
         json_data = json.loads(decorated_func()[0].data.decode("utf-8"))
         assert INVALID_ACCESS_TOKEN_ERROR_MSG == json_data["error"]
-    with application.test_request_context("/?access_token=5BagPr4ZdV9PvyyBNkjFvA))"):
+    with application.test_request_context("/", headers={"Authorization": "5BagPr4ZdV9PvyyBNkjFvA))"}):
         decorated_func()
         assert func.call_count == 0
     save_user(remote, user_info, token)
-    with application.test_request_context("/?access_token=5BagPr4ZdV9PvyyBNkjFvA))"):
+    with application.test_request_context("/", headers={"Authorization": "5BagPr4ZdV9PvyyBNkjFvA))"}):
         decorated_func()
         assert func.call_count == 1
 

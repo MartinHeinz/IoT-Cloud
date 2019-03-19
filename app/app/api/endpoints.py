@@ -38,7 +38,7 @@ def publish_message():
 @require_api_token()
 def register_to_broker():
     password_hash = request.form.get("password", None)
-    user = User.get_by_access_token(token_to_hash(request.args.get("access_token", "")))
+    user = User.get_by_access_token(token_to_hash(request.headers.get('Authorization', "")))
     arg_check = check_missing_request_argument(
         (password_hash, USER_MISSING_PASSWORD_HASH))
     if arg_check is not True:
@@ -58,7 +58,7 @@ def register_to_broker():
 def create_device_type():
     description = request.form.get("description", None)
     correctness_hash = request.form.get("correctness_hash", None)
-    user = User.get_by_access_token(token_to_hash(request.args.get("access_token", "")))
+    user = User.get_by_access_token(token_to_hash(request.headers.get("Authorization", "")))
     arg_check = check_missing_request_argument(
         (description, DEVICE_TYPE_DESC_MISSING_ERROR_MSG),
         (correctness_hash, CORRECTNESS_HASH_MISSING_ERROR_MSG))
@@ -78,7 +78,7 @@ def create_device():
     name = request.form.get("name", None)
     name_bi = request.form.get("name_bi", None)
     password_hash = request.form.get("password", None)
-    user = User.get_by_access_token(token_to_hash(request.args.get("access_token", "")))
+    user = User.get_by_access_token(token_to_hash(request.headers.get("Authorization", "")))
     arg_check = check_missing_request_argument(
         (device_type_id, DEVICE_TYPE_ID_MISSING_ERROR_MSG),
         (correctness_hash, CORRECTNESS_HASH_MISSING_ERROR_MSG),
@@ -146,7 +146,7 @@ def create_scene():
 def add_scene_action():
     scene_name_bi = request.form.get("scene_name_bi", None)
     action_name_bi = request.form.get("action_name_bi", None)
-    access_token = token_to_hash(request.args.get("access_token", ""))
+    access_token = token_to_hash(request.headers.get("Authorization", ""))
     user = User.get_by_access_token(access_token)
 
     arg_check = check_missing_request_argument(
@@ -183,7 +183,7 @@ def set_device_action():
     correctness_hash = request.form.get("correctness_hash", None)
     name = request.form.get("name", None)
     name_bi = request.form.get("name_bi", None)
-    access_token = token_to_hash(request.args.get("access_token", ""))
+    access_token = token_to_hash(request.headers.get("Authorization", ""))
     user = User.get_by_access_token(access_token)
 
     arg_check = check_missing_request_argument(
@@ -212,7 +212,7 @@ def set_device_action():
 @require_api_token()
 def get_device_by_name():
     device_name_bi = request.args.get("name_bi", None)
-    user = User.get_by_access_token(token_to_hash(request.args.get("access_token", "")))
+    user = User.get_by_access_token(token_to_hash(request.headers.get("Authorization", "")))
     if device_name_bi is None:
         return http_json_response(False, 400, **{"error": DEVICE_NAME_BI_MISSING_ERROR_MSG})
     devices = db.session.query(Device).filter(and_(Device.name_bi == device_name_bi, Device.owner == user))
@@ -232,7 +232,7 @@ def get_data_by_num_range():
     lower_bound = request.args.get("lower", "")
     upper_bound = request.args.get("upper", "")
     device_name_bi = request.args.get("device_name_bi", None)
-    access_token = token_to_hash(request.args.get("access_token", ""))
+    access_token = token_to_hash(request.headers.get("Authorization", ""))
 
     arg_check = check_missing_request_argument((device_name_bi, DEVICE_NAME_BI_MISSING_ERROR_MSG))
     if arg_check is not True:
@@ -290,7 +290,7 @@ def get_data_by_num_range():
 @require_api_token()
 def get_device_data():
     device_name_bi = request.args.get("device_name_bi", None)
-    access_token = token_to_hash(request.args.get("access_token", ""))
+    access_token = token_to_hash(request.headers.get("Authorization", ""))
 
     arg_check = check_missing_request_argument((device_name_bi, DEVICE_NAME_BI_MISSING_ERROR_MSG))
     if arg_check is not True:
@@ -320,7 +320,7 @@ def get_device_data():
 def exchange_session_keys():
     user_public_key_bytes = request.form.get("public_key", None)
     device_id = request.form.get("device_id", None)
-    user_access_token = token_to_hash(request.args.get("access_token", ""))
+    user_access_token = token_to_hash(request.headers.get("Authorization", ""))
     user = User.get_by_access_token(user_access_token)
 
     arg_check = check_missing_request_argument(
@@ -344,7 +344,7 @@ def exchange_session_keys():
 @require_api_token()
 def retrieve_public_key():
     device_id = request.form.get("device_id", None)
-    user_access_token = token_to_hash(request.args.get("access_token", ""))
+    user_access_token = token_to_hash(request.headers.get("Authorization", ""))
     user = User.get_by_access_token(user_access_token)
 
     arg_check = check_missing_request_argument(
@@ -375,7 +375,7 @@ def trigger_action():
     device_name_bi = request.args.get("device_name_bi", None)
     name_bi = request.args.get("name_bi", None)
     additional_data = request.args.get("additional_data", None)
-    access_token = token_to_hash(request.args.get("access_token", ""))
+    access_token = token_to_hash(request.headers.get("Authorization", ""))
     user = User.get_by_access_token(access_token)
 
     arg_check = check_missing_request_argument(
@@ -405,7 +405,7 @@ def trigger_action():
 @require_api_token()
 def trigger_scene():
     name_bi = request.args.get("name_bi", None)
-    access_token = token_to_hash(request.args.get("access_token", ""))
+    access_token = token_to_hash(request.headers.get("Authorization", ""))
     user = User.get_by_access_token(access_token)
 
     arg_check = check_missing_request_argument(
@@ -436,7 +436,7 @@ def trigger_scene():
 def authorize_user():
     device_id = request.form.get("device_id", None)
     auth_user_id = request.form.get("auth_user_id", None)  # ID of user to be authorized
-    access_token = token_to_hash(request.args.get("access_token", ""))
+    access_token = token_to_hash(request.headers.get("Authorization", ""))
     auth_user = User.get_by_id(auth_user_id)
 
     arg_check = check_missing_request_argument(
@@ -476,7 +476,7 @@ def authorize_user():
 def revoke_user():
     device_id = request.form.get("device_id", None)
     revoke_user_id = request.form.get("revoke_user_id", None)  # ID of user to be revoked
-    access_token = token_to_hash(request.args.get("access_token", ""))
+    access_token = token_to_hash(request.headers.get("Authorization", ""))
     user_to_revoke = User.get_by_id(revoke_user_id)
 
     arg_check = check_missing_request_argument(
