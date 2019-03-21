@@ -11,9 +11,10 @@ import click
 import requests
 from apscheduler.schedulers.blocking import BlockingScheduler
 from cryptography.hazmat.backends import default_backend
-from cryptography.hazmat.primitives import serialization
+from cryptography.hazmat.primitives import serialization, hashes
 from cryptography.hazmat.primitives.asymmetric import ec
 from cryptography.hazmat.primitives.asymmetric.ec import EllipticCurvePublicKey, EllipticCurvePrivateKey
+from cryptography.hazmat.primitives.kdf.hkdf import HKDF
 from cryptography.hazmat.primitives.serialization import load_pem_private_key, load_pem_public_key
 from paho.mqtt import client as paho
 from tinydb import where, Query
@@ -470,7 +471,15 @@ def retrieve_device_public_key(device_id, token):
     assert isinstance(device_public_key, EllipticCurvePublicKey), "Loading public key failed! - private_key is not instance of EllipticCurvePublicKey"
     shared_key = private_key.exchange(ec.ECDH(), device_public_key)
 
-    key = key_to_hex(shared_key[:32])  # NOTE: retrieve key as `key_to_hex(key)`
+    derived_key = HKDF(
+        algorithm=hashes.SHA256(),
+        length=32,
+        salt=None,
+        info=b'handshake data',
+        backend=default_backend()
+    ).derive(shared_key)
+
+    key = key_to_hex(derived_key)  # NOTE: retrieve key as `key_to_hex(key)`
 
     table.update(delete("public_key"), Query().device_id == device_id)
     table.update(delete("private_key"), Query().device_id == device_id)

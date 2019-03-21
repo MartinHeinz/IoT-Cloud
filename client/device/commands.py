@@ -6,9 +6,10 @@ import time
 
 import click
 from cryptography.hazmat.backends import default_backend
-from cryptography.hazmat.primitives import serialization
+from cryptography.hazmat.primitives import serialization, hashes
 from cryptography.hazmat.primitives.asymmetric import ec
 from cryptography.hazmat.primitives.asymmetric.ec import EllipticCurvePublicKey
+from cryptography.hazmat.primitives.kdf.hkdf import HKDF
 from cryptography.hazmat.primitives.serialization import load_pem_public_key
 from tinydb import Query, TinyDB
 from tinydb.operations import decrement
@@ -121,10 +122,16 @@ def receive_pk(data):
 
             private_key = ec.generate_private_key(ec.SECP384R1(), default_backend())
             shared_key = private_key.exchange(ec.ECDH(), public_key)
-            # derived_key = Fernet(base64.urlsafe_b64encode(shared_key[:32]))
+            derived_key = HKDF(
+                algorithm=hashes.SHA256(),
+                length=32,
+                salt=None,
+                info=b'handshake data',
+                backend=default_backend()
+            ).derive(shared_key)
 
             table = get_tinydb_table(path, 'users')
-            key = key_to_hex(shared_key[:32])  # NOTE: retrieve key as `key_to_hex(key)`
+            key = key_to_hex(derived_key)  # NOTE: retrieve key as `key_to_hex(key)`
             table.upsert({'id': user_id, 'shared_key': key, 'tid': -1}, Query().id == user_id)
 
             public_key = private_key.public_key()
