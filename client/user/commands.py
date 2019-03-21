@@ -56,9 +56,11 @@ URL_GET_DEVICE_DATA = URL_BASE + "data/get_device_data"
 URL_START_KEY_EXCHANGE = URL_BASE + "exchange_session_keys"
 URL_RECEIVE_PUBLIC_KEY = URL_BASE + "retrieve_public_key"
 URL_REGISTER_TO_BROKER = URL_BASE + "user/broker_register"
+URL_DELETE_ACCOUNT = "https://localhost/delete_account"
 
 AA_URL_BASE = "https://localhost/attr_auth/"
 AA_URL_SET_USERNAME = AA_URL_BASE + "set_username"
+AA_URL_DELETE_ACCOUNT = AA_URL_BASE + "delete_account"
 AA_URL_SETUP = AA_URL_BASE + "setup"
 AA_URL_KEYGEN = AA_URL_BASE + "user/keygen"
 AA_URL_DEVICE_KEYGEN = AA_URL_BASE + "device/keygen"
@@ -118,6 +120,19 @@ def register_to_broker(password, token):
         "broker_id": content["broker_id"],
         "broker_password": password
     }, Query().broker_id == content["broker_id"])
+
+
+@user.command()
+@click.option('--token', envvar='ACCESS_TOKEN')
+@click.option('--aa/--server')
+def delete_account(token, aa):
+    if aa:
+        url = AA_URL_DELETE_ACCOUNT
+    else:
+        url = URL_DELETE_ACCOUNT
+    r = requests.post(url, headers={"Authorization": token}, verify=VERIFY_CERTS)
+    content = json.loads(r.content.decode('unicode-escape'))
+    click.echo(content)
 
 
 @user.command()

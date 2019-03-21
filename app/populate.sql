@@ -82,7 +82,7 @@ SELECT pg_catalog.setval('public.device_id_seq', 46, false);
 SELECT pg_catalog.setval('public.device_type_id_seq', 1, false);
 SELECT pg_catalog.setval('public.mqtt_user_id_seq', 8, true);
 SELECT pg_catalog.setval('public.scene_id_seq', 3, true);
-SELECT pg_catalog.setval('public.user_id_seq', 3, false);
+SELECT pg_catalog.setval('public.user_id_seq', 5, false);
 
 
 -- public.device_data.added was converted as `int(time.mktime(parser.parse('2018-12-11 00:00:00+00').timetuple()))`

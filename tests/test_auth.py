@@ -1,12 +1,13 @@
 import json
+from datetime import datetime
 from unittest import mock
 from unittest.mock import Mock
 
 import pytest
 
 from app.auth.utils import parse_email, validate_token, save_user, require_api_token, INVALID_ACCESS_TOKEN_ERROR_MSG, token_to_hash
-from app.models.models import User, AttrAuthUser
-from .conftest import db
+from app.models.models import User, AttrAuthUser, Device
+from .conftest import db, assert_got_data_from_post
 
 
 def test_parse_email_valid():
@@ -140,6 +141,35 @@ def test_require_api_token_in_attr_auth_db(application):
     with application.test_request_context("/", headers={"Authorization": "5BagPr4ZdV9PvyyBNkjFvA))"}):
         decorated_func()
         assert func.call_count == 1
+
+
+# noinspection PyArgumentList
+def test_delete_account(client):
+    server_data = {"access_token": "test_server"}
+    aa_data = {"access_token": "test_aa"}
+    device_id = 99999
+    db.session.add(User(
+        access_token=token_to_hash(server_data['access_token']),
+        access_token_update=datetime.now(),
+        owned_devices=[Device(id=device_id, name=b"test", correctness_hash="")]
+        )
+    )
+    db.session.add(AttrAuthUser(
+        access_token=token_to_hash(aa_data['access_token']),
+        access_token_update=datetime.now())
+    )
+    db.session.commit()
+
+    assert db.session.query(User).filter(User.access_token == token_to_hash(server_data["access_token"])).first() is not None
+    assert db.session.query(Device).filter(Device.id == device_id).first() is not None
+    assert db.session.query(AttrAuthUser).filter(AttrAuthUser.access_token == token_to_hash(aa_data["access_token"])).first() is not None
+
+    assert_got_data_from_post(client, '/delete_account', server_data)
+    assert_got_data_from_post(client, '/attr_auth/delete_account', aa_data)
+
+    assert db.session.query(User).filter(User.access_token == token_to_hash(server_data["access_token"])).first() is None
+    assert db.session.query(Device).filter(Device.id == device_id).first() is None
+    assert db.session.query(AttrAuthUser).filter(AttrAuthUser.access_token == token_to_hash(aa_data["access_token"])).first() is None
 
 
 def test_redirect_to_provider(client):

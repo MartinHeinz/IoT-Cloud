@@ -42,9 +42,9 @@ class User(MixinGetByAccessToken, MixinGetById, db.Model):
     access_token = db.Column(db.String(200), unique=True, nullable=False)  # TODO Give the token expiration date/time and force user to generate new token through `/login` endpoint
     access_token_update = db.Column(db.DateTime, nullable=False)
     device_types = relationship("DeviceType", back_populates="owner")
-    devices = relationship("UserDevice", back_populates="user")
-    owned_devices = relationship("Device", back_populates="owner")
-    mqtt_creds = relationship("MQTTUser", uselist=False, cascade='all,delete-orphan', back_populates="user", passive_deletes=True)
+    devices = relationship("UserDevice", back_populates="user", cascade="all,delete")
+    owned_devices = relationship("Device", back_populates="owner", cascade="all,delete")
+    mqtt_creds = relationship("MQTTUser", uselist=False, cascade='all,delete', back_populates="user", passive_deletes=True)
 
     @classmethod
     def can_use_device(cls, user_access_token, device_id):
@@ -115,11 +115,11 @@ class Device(MixinGetById, MixinAsDict, db.Model):
     device_type_id = db.Column(db.Integer, db.ForeignKey('device_type.id'))
     users = relationship("UserDevice", back_populates="device", cascade='all,delete-orphan')
     data = relationship("DeviceData", back_populates="device", cascade='all,delete-orphan')
-    actions = relationship("Action", back_populates="device")
+    actions = relationship("Action", back_populates="device", cascade="all,delete")
 
     owner_id = db.Column(db.Integer, db.ForeignKey('user.id'))
     owner = relationship("User", back_populates="owned_devices")
-    mqtt_creds = relationship("MQTTUser", uselist=False, back_populates="device", cascade='all,delete-orphan')
+    mqtt_creds = relationship("MQTTUser", uselist=False, back_populates="device", cascade='all,delete')
 
     name = db.Column(db.LargeBinary, nullable=False)
     name_bi = db.Column(db.String(200), unique=False, nullable=True, index=True)  # Blind index for .name
@@ -242,7 +242,7 @@ class Action(MixinGetById, db.Model):
     scenes = relationship(
         "Scene",
         secondary=scene_action_table,
-        back_populates="actions")
+        back_populates="actions", cascade="all,delete")
 
     @classmethod
     def get_by_name_bi(cls, bi):
@@ -259,7 +259,8 @@ class Scene(db.Model):
     actions = relationship(
         "Action",
         secondary=scene_action_table,
-        back_populates="scenes")
+        back_populates="scenes",
+        cascade="all,delete")
 
     correctness_hash = db.Column(db.String(200), nullable=False)  # correctness_hash("name", "description")
 
@@ -288,9 +289,9 @@ class AttrAuthUser(MixinGetByAccessToken, MixinGetById, db.Model):
     api_username = db.Column(db.String(200), unique=True, nullable=True)
     access_token = db.Column(db.String(200), unique=True, nullable=False)  # TODO Give the token expiration date/time and force user to generate new token through `/login` endpoint
     access_token_update = db.Column(db.DateTime, nullable=False)
-    master_keypair = relationship("MasterKeypair", back_populates="attr_auth_user", uselist=False)
+    master_keypair = relationship("MasterKeypair", back_populates="attr_auth_user", uselist=False, cascade="all,delete")
 
-    private_keys = relationship("PrivateKey", backref="user", foreign_keys=lambda: PrivateKey.user_id)
+    private_keys = relationship("PrivateKey", backref="user", foreign_keys=lambda: PrivateKey.user_id, cascade="all,delete")
 
 
 class PrivateKey(db.Model):
@@ -300,7 +301,7 @@ class PrivateKey(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     data = db.Column(db.LargeBinary, nullable=False)
     key_update = db.Column(db.DateTime(timezone=True), server_default=func.now())
-    attributes = relationship("Attribute", backref="private_key")
+    attributes = relationship("Attribute", backref="private_key", cascade="all,delete")
 
     user_id = db.Column(db.Integer, db.ForeignKey('attr_auth_user.id'))
 

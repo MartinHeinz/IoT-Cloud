@@ -1,9 +1,30 @@
 from authlib.common.security import generate_token
 from flask import request, url_for, current_app, session
 
+from app.app_setup import db
 from app.auth import login, login_aa, remote_aa, nonce_key_aa, backend_aa
 from app.auth import remote as remote_app, nonce_key as nonce_key_app, backend as backend_app
-from app.auth.utils import handle_authorize
+from app.auth.utils import handle_authorize, token_to_hash
+from app.models.models import AttrAuthUser, User
+from app.utils import http_json_response
+
+
+@login_aa.route('/delete_account', methods=['POST'])
+def delete_account_aa():  # TODO Check if user exists
+    user = AttrAuthUser.get_by_access_token(token_to_hash(request.headers.get('Authorization', "")))
+    db.session.delete(user)
+    db.session.commit()
+
+    return http_json_response()
+
+
+@login.route('/delete_account', methods=['POST'])
+def delete_account():  # TODO Check if user exists
+    user = User.get_by_access_token(token_to_hash(request.headers.get('Authorization', "")))
+    db.session.delete(user)
+    db.session.commit()
+
+    return http_json_response()
 
 
 @login.route('/auth')

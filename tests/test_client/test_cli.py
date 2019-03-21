@@ -6,8 +6,9 @@ import subprocess
 import tempfile
 import warnings
 from contextlib import redirect_stdout
+from datetime import datetime
 from unittest import mock
-from unittest.mock import Mock
+from unittest.mock import Mock, call
 
 import pytest
 from apscheduler.schedulers.blocking import BlockingScheduler
@@ -548,6 +549,37 @@ def test_register_to_broker(change_to_dev_db, runner, access_token_three, reset_
         to_delete = db.session.query(MQTTUser).filter(MQTTUser.username == creds_new.username).first()
         db.session.delete(to_delete)
         db.session.commit()
+
+
+# noinspection PyArgumentList
+def test_delete_account(change_to_dev_db, runner):
+    server_data = {"access_token": "test_server"}
+    aa_data = {"access_token": "test_aa"}
+    device_id = 99999
+    app, ctx = change_to_dev_db
+    r = Mock()
+    r.content = b'{"success": true}'
+    with app.app_context():
+        db.session.add(User(
+            access_token=token_to_hash(server_data['access_token']),
+            access_token_update=datetime.now(),
+            owned_devices=[Device(id=device_id, name=b"test", correctness_hash="")]
+            )
+        )
+        db.session.commit()
+
+        assert db.session.query(User).filter(User.access_token == token_to_hash(server_data["access_token"])).first() is not None
+        assert db.session.query(Device).filter(Device.id == device_id).first() is not None
+
+        result = runner.invoke(cmd.delete_account, ['--token', server_data["access_token"], "--server"])
+        assert "'success': True" in result.output
+        with mock.patch('requests.post', return_value=r) as g:
+            result = runner.invoke(cmd.delete_account, ['--token', aa_data["access_token"], "--aa"])
+            assert "'success': True" in result.output
+            assert call('https://localhost/attr_auth/delete_account', headers={'Authorization': 'test_aa'}, verify=False) == g.call_args
+
+        assert db.session.query(User).filter(User.access_token == token_to_hash(server_data["access_token"])).first() is None
+        assert db.session.query(Device).filter(Device.id == device_id).first() is None
 
 
 @pytest.mark.parametrize('reset_tiny_db', [cmd.path], indirect=True)
