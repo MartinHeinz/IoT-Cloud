@@ -18,8 +18,6 @@ from cryptography.hazmat.primitives.ciphers import (
 from cryptography.hazmat.primitives.kdf.hkdf import HKDF
 from passlib.hash import bcrypt
 from pyope.ope import OPE, ValueRange
-from scipy import signal
-import numpy as np
 
 sys.stdout = open(os.devnull, 'w')
 sys.path.insert(0, './app')
@@ -92,51 +90,6 @@ def derive_key(key):
         info=b'',
         backend=default_backend()
     ).derive(key)
-
-
-"""
-To see the lists of values:
-print(list(triangle_wave()))
-print(list(sawtooth_wave()))
-print(list(square_wave()))
-print(list(sine_wave()))
-
-To plot:
-import matplotlib.pyplot as plt
-
-t = np.linspace(0, 100, 500)
-triangle = signal.sawtooth(10 * np.pi * 5 * t, 0.5)
-plt.plot(t, triangle)
-plt.show()
-"""
-
-
-def triangle_wave():
-    t = np.linspace(0, 100, 500)
-    triangle = signal.sawtooth(10 * np.pi * 5 * t, 0.5)
-    yield from (int(round(x, 4)*1000) for x in triangle.tolist())
-
-
-def sawtooth_wave():
-    t = np.linspace(0, 100, 500)
-    sawtooth = signal.sawtooth(10 * np.pi * 5 * t)
-    yield from (int(round(x, 4)*1000) for x in sawtooth.tolist())
-
-
-def square_wave():
-    t = np.linspace(0, 100, 500)
-    square = signal.square(8 * np.pi * 5 * t)
-    yield from (int(round(x, 4)*1000) for x in square.tolist())
-
-
-def sine_wave():
-    t = np.linspace(0, 32 * np.pi, 500)
-    sine = np.sin(t)
-    yield from (int(round(x, 4)*1000) for x in sine.tolist())
-
-
-def index_function():
-    yield from range(1, 500)
 
 
 def generate(columns, bound="upper_bound"):

@@ -18,8 +18,8 @@ scene_action_table = db.Table('scene_action',
 
 class UserDevice(db.Model):
     __tablename__ = 'user_device'
-    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), primary_key=True)
-    device_id = db.Column(db.Integer, db.ForeignKey('device.id'), primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('user.id', ondelete='CASCADE'), primary_key=True)
+    device_id = db.Column(db.Integer, db.ForeignKey('device.id', ondelete='CASCADE'), primary_key=True)
     device_public_session_key = db.Column(db.String(250))
     added = db.Column(db.DateTime(timezone=True), onupdate=datetime.datetime.now)
     device = relationship("Device", back_populates="users")
@@ -122,7 +122,7 @@ class Device(MixinGetById, MixinAsDict, db.Model):
     mqtt_creds = relationship("MQTTUser", uselist=False, back_populates="device", cascade='all,delete')
 
     name = db.Column(db.LargeBinary, nullable=False)
-    name_bi = db.Column(db.String(200), unique=False, nullable=True, index=True)  # Blind index for .name
+    name_bi = db.Column(db.String(200), unique=True, nullable=True, index=True)  # Blind index for .name
 
     correctness_hash = db.Column(db.String(200), nullable=False)  # correctness_hash("name")
 
@@ -194,7 +194,7 @@ class ACL(db.Model):
     __table_args__ = {'extend_existing': True}
 
     id = db.Column(db.Integer, primary_key=True)
-    mqtt_user_id = db.Column(db.Integer, db.ForeignKey('mqtt_user.id'))
+    mqtt_user_id = db.Column(db.Integer, db.ForeignKey('mqtt_user.id', ondelete='CASCADE'))
     mqtt_user = relationship("MQTTUser", back_populates="acls")
     username = db.Column(db.String(200), nullable=False)  # TODO make this primary key (as pair with id or remove it)
     topic = db.Column(db.String(200), unique=False, nullable=True)
@@ -210,10 +210,10 @@ class DeviceData(MixinAsDict, db.Model):
     added = db.Column(db.BigInteger)
     num_data = db.Column(db.BigInteger)
     data = db.Column(db.LargeBinary)
-    device_id = db.Column(db.Integer, db.ForeignKey('device.id'))
+    device_id = db.Column(db.Integer, db.ForeignKey('device.id', ondelete='CASCADE'))
     device = relationship("Device", back_populates="data")
 
-    tid_bi = db.Column(db.String(200), unique=False, nullable=True, index=True)  # Blind index for .tid
+    tid_bi = db.Column(db.String(200), unique=True, nullable=True, index=True)  # Blind index for .tid
 
     correctness_hash = db.Column(db.String(200), nullable=False)  # correctness_hash(str(985734000), b'\\001'.decode("utf-8"), str(66988873), str(tid))
 
@@ -232,10 +232,10 @@ class Action(MixinGetById, db.Model):
 
     id = db.Column(db.Integer, primary_key=True)
     name = db.Column(db.LargeBinary, nullable=False)
-    device_id = db.Column(db.Integer, db.ForeignKey('device.id'))
+    device_id = db.Column(db.Integer, db.ForeignKey('device.id', ondelete='CASCADE'))
     device = relationship("Device", back_populates="actions")
 
-    name_bi = db.Column(db.String(200), unique=False, nullable=True, index=True)  # Blind index for .name
+    name_bi = db.Column(db.String(200), unique=True, nullable=True, index=True)  # Blind index for .name
 
     correctness_hash = db.Column(db.String(200), nullable=False)  # correctness_hash("name")
 
@@ -264,7 +264,7 @@ class Scene(db.Model):
 
     correctness_hash = db.Column(db.String(200), nullable=False)  # correctness_hash("name", "description")
 
-    name_bi = db.Column(db.String(200), unique=False, nullable=True, index=True)  # Blind index for .name
+    name_bi = db.Column(db.String(200), unique=True, nullable=True, index=True)  # Blind index for .name
 
     @hybrid_property
     def owner(self):

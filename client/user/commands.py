@@ -126,6 +126,10 @@ def register_to_broker(password, token):
 @click.option('--token', envvar='ACCESS_TOKEN')
 @click.option('--aa/--server')
 def delete_account(token, aa):
+    """Triggered by:
+    ./cli.py -b "172.26.0.8" user delete-account --token "7jagPr4edVdghcsBNkjd23))" --aa
+    ./cli.py -b "172.26.0.8" user delete-account --token 5c36ab84439c55a3c196f4csd9bd7b3d9291f39g --server
+    """
     if aa:
         url = AA_URL_DELETE_ACCOUNT
     else:
@@ -185,7 +189,7 @@ def create_device(device_type_id, device_name, password, token):
 def create_scene(name, description, token):
     if not is_global_bi_key_missing(init_global_keys, "Blind index key for scene name is missing"):
         if len(get_tinydb_table(path, 'scene_keys')) == 0:
-            init_scene_keys()  # TODO Test with flow (run this command 2 in row and make sure keys don't change)
+            init_scene_keys()
         table = get_tinydb_table(path, 'scene_keys')
         doc = table.all()[0]
         name_ciphertext = encrypt_using_fernet_hex(doc["name"], name)
@@ -348,6 +352,7 @@ def revoke_user(device_id, revoke_user_id, token):
 @click.argument('device_id')
 @click.option('--token', envvar='ACCESS_TOKEN')
 def get_devices(device_name, device_id, token):
+    """Triggered using: ./cli.py -b "172.26.0.8" user get-devices test_device 46 --token 5c36ab84439c55a3c196f4csd9bd7b3d9291f39g"""
     device_name_bi = blind_index(get_device_bi_key(device_id), device_name)
     data = {"name_bi": device_name_bi}
     r = requests.get(URL_GET_DEVICE, headers={"Authorization": token}, params=data, verify=VERIFY_CERTS)
@@ -582,6 +587,7 @@ def attr_auth_device_keygen(device_id, attr_list, token):
 @user.command()
 @click.option('--token', envvar='AA_ACCESS_TOKEN')
 def attr_auth_retrieve_private_keys(token):
+    """Triggered by: ./cli.py -b "172.26.0.8" user attr-auth-retrieve-private-keys --token '7jagPr4edVdgvyyBNkjdaQ))'"""
     r = requests.post(AA_URL_SK_RETRIEVE, headers={"Authorization": token}, verify=VERIFY_CERTS)
     click.echo(r.content.decode('unicode-escape'))
 

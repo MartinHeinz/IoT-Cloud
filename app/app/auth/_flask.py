@@ -4,13 +4,14 @@ from flask import request, url_for, current_app, session
 from app.app_setup import db
 from app.auth import login, login_aa, remote_aa, nonce_key_aa, backend_aa
 from app.auth import remote as remote_app, nonce_key as nonce_key_app, backend as backend_app
-from app.auth.utils import handle_authorize, token_to_hash
+from app.auth.utils import handle_authorize, token_to_hash, require_api_token
 from app.models.models import AttrAuthUser, User
 from app.utils import http_json_response
 
 
 @login_aa.route('/delete_account', methods=['POST'])
-def delete_account_aa():  # TODO Check if user exists
+@require_api_token("attr_auth")
+def delete_account_aa():
     user = AttrAuthUser.get_by_access_token(token_to_hash(request.headers.get('Authorization', "")))
     db.session.delete(user)
     db.session.commit()
@@ -19,7 +20,8 @@ def delete_account_aa():  # TODO Check if user exists
 
 
 @login.route('/delete_account', methods=['POST'])
-def delete_account():  # TODO Check if user exists
+@require_api_token()
+def delete_account():
     user = User.get_by_access_token(token_to_hash(request.headers.get('Authorization', "")))
     db.session.delete(user)
     db.session.commit()

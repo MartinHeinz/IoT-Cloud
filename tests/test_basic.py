@@ -1,7 +1,6 @@
 # -*- coding: utf-8 -*-
 import base64
 import json
-import types
 from unittest import mock
 from unittest.mock import call
 from uuid import UUID
@@ -26,7 +25,7 @@ from app.consts import DEVICE_TYPE_ID_MISSING_ERROR_MSG, DEVICE_TYPE_ID_INCORREC
 from app.models.models import DeviceType, Device, User, Action, Scene, UserDevice
 from app.app_setup import client as mqtt_client
 from app.utils import is_valid_uuid, bytes_to_json, format_topic, validate_broker_password
-from client.crypto_utils import encrypt, correctness_hash, triangle_wave, sawtooth_wave, square_wave, sine_wave, generate, \
+from client.crypto_utils import encrypt, correctness_hash, generate, \
     encrypt_row, instantiate_ope_cipher, decrypt_using_fernet_hex, decrypt_using_ope_hex, decrypt_using_abe_serialized_key
 
 from .conftest import db, assert_got_error_from_post, assert_got_data_from_post, get_data_from_post, \
@@ -667,14 +666,6 @@ def test_api_revoke_user(client, app_and_ctx, access_token, access_token_two):
 def test_correctness_hash():
     assert bcrypt.verify("ergh" + "esrge", correctness_hash("ergh", "esrge"))
     assert not bcrypt.verify("ergh" + "esrge" + "wes", correctness_hash("ergh", "esrge"))
-
-
-def test_wave_func():
-    funcs = [triangle_wave, sawtooth_wave, square_wave, sine_wave]
-    for f in funcs:
-        gen = f()
-        assert isinstance(gen, types.GeneratorType)
-        assert len(list(gen)) == 500
 
 
 def test_generate_fake_tuple_and_hash():
