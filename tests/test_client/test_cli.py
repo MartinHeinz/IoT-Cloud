@@ -178,10 +178,10 @@ def test_get_device_data(runner, access_token, app_and_ctx, reset_tiny_db, col_k
         "shared_key": "aefe715635c3f35f7c58da3eb410453712aaf1f8fd635571aa5180236bb21acc",
         "integrity": {
                 'device_data': {
-                    'added': {'seed': 1, 'lower_bound': 1, 'upper_bound': 2, "type": "OPE"},
-                    'num_data': {'seed': 2, 'lower_bound': 1, 'upper_bound': 2, "type": "OPE"},
-                    'data': {'seed': 3, 'lower_bound': 1, 'upper_bound': 2, "type": "ABE"},
-                    'tid': {'lower_bound': 1, 'upper_bound': 2, "type": "Fernet"}
+                    'added': {'seed': 1, 'lower_bound': 2, 'upper_bound': 3, "type": "OPE"},
+                    'num_data': {'seed': 2, 'lower_bound': 2, 'upper_bound': 3, "type": "OPE"},
+                    'data': {'seed': 3, 'lower_bound': 2, 'upper_bound': 3, "type": "ABE"},
+                    'tid': {'lower_bound': 2, 'upper_bound': 3, "type": "Fernet"}
                 }
             }
         }
@@ -487,7 +487,7 @@ def test_generate_fake_tuples_in_range():
 
     assert len(fake_tuples) == 4
     assert "added" in fake_tuples[0] and "num_data" in fake_tuples[0] and "data" in fake_tuples[0] and "tid" in fake_tuples[0]
-    assert fake_tuples[0] == {'added': -497233321, 'num_data': -623552190, 'data': pad_payload_attr("-303927213", fake=True), "tid": "2"}
+    assert fake_tuples[0] == {'added': -1570063170, 'num_data': 875522973, 'data': pad_payload_attr("-126235597", fake=True), "tid": "1"}
 
 
 @pytest.mark.parametrize('reset_tiny_db', [device_cmd.path], indirect=True)

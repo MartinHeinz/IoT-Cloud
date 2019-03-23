@@ -111,7 +111,7 @@ def device_keygen():
         return arg_check
 
     attr_list = parse_attr_list(attr_list)
-    if not attr_list or not is_valid(attr_list, data_owner.id):
+    if not attr_list:
         return http_json_response(False, 400, **{"error": INVALID_ATTR_LIST_ERROR_MSG})
 
     serialized_private_key = create_private_key(data_owner.master_keypair.data_master,

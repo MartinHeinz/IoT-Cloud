@@ -39,7 +39,7 @@ class User(MixinGetByAccessToken, MixinGetById, db.Model):
     id = db.Column(db.Integer, primary_key=True)
     name = db.Column(db.String(200), unique=False, nullable=True)
     email = db.Column(db.String(200), unique=False, nullable=True)
-    access_token = db.Column(db.String(200), unique=True, nullable=False)  # TODO Give the token expiration date/time and force user to generate new token through `/login` endpoint
+    access_token = db.Column(db.String(200), unique=True, nullable=False)
     access_token_update = db.Column(db.DateTime, nullable=False)
     device_types = relationship("DeviceType", back_populates="owner")
     devices = relationship("UserDevice", back_populates="user", cascade="all,delete")
@@ -196,7 +196,7 @@ class ACL(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     mqtt_user_id = db.Column(db.Integer, db.ForeignKey('mqtt_user.id', ondelete='CASCADE'))
     mqtt_user = relationship("MQTTUser", back_populates="acls")
-    username = db.Column(db.String(200), nullable=False)  # TODO make this primary key (as pair with id or remove it)
+    username = db.Column(db.String(200), nullable=False)
     topic = db.Column(db.String(200), unique=False, nullable=True)
     acc = db.Column(db.Integer)  # Access 1 = read-only; 2 = write-only; 3 = both
 
@@ -287,7 +287,7 @@ class AttrAuthUser(MixinGetByAccessToken, MixinGetById, db.Model):
     id = db.Column(db.Integer, primary_key=True)
     name = db.Column(db.String(200), unique=False, nullable=True)
     api_username = db.Column(db.String(200), unique=True, nullable=True)
-    access_token = db.Column(db.String(200), unique=True, nullable=False)  # TODO Give the token expiration date/time and force user to generate new token through `/login` endpoint
+    access_token = db.Column(db.String(200), unique=True, nullable=False)
     access_token_update = db.Column(db.DateTime, nullable=False)
     master_keypair = relationship("MasterKeypair", back_populates="attr_auth_user", uselist=False, cascade="all,delete")
 

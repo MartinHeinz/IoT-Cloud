@@ -348,7 +348,7 @@ def test_device_keygen(client, app_and_ctx, attr_auth_access_token_one, attr_aut
 
     data = {
         "access_token": attr_auth_access_token_one,
-        "attr_list": "sedrgd 1 1-23 1-GUEST",  # invalid
+        "attr_list": "sedr_gd 1 1-23 1-GUEST",  # invalid
     }
     assert_got_error_from_post(client, '/attr_auth/device/keygen', data, 400, INVALID_ATTR_LIST_ERROR_MSG)
 

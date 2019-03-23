@@ -833,7 +833,7 @@ def is_fake(row_values):
     :param row_values: dict with keys as column names and values as values from server DB (decrypted using `decrypt_row`)
     :return: bool
     """
-    return int(row_values["tid"]) > 0  # Positive numbers are fake
+    return int(row_values["tid"]) >= 0  # Positive numbers are fake
 
 
 def verify_integrity_data(expected_tuples, present_rows):
@@ -871,8 +871,8 @@ def generate_fake_tuples_in_range(fake_tuple_info):
     fake_tuples = []
     lb, ub = 0, 0
     for col, val in fake_tuple_info.items():
-        lb = fake_tuple_info[col]["lower_bound"] + 1
-        ub = fake_tuple_info[col]["upper_bound"] + 1
+        lb = fake_tuple_info[col]["lower_bound"]
+        ub = fake_tuple_info[col]["upper_bound"]
         if "seed" in fake_tuple_info[col]:
             fake_tuple_col_values[col] = [murmur_hash(str(i), fake_tuple_info[col]["seed"]) for i in range(lb, ub)]
         else:

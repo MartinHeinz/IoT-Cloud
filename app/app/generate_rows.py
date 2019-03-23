@@ -14,6 +14,7 @@ from cryptography.fernet import Fernet
 from app.app_setup import create_app, db
 from app.attribute_authority.utils import create_pairing_group, create_cp_abe, serialize_charm_object, \
     create_private_key
+from app.auth.utils import token_to_hash
 from app.config import DB_SETUP_CONFIG_NAME
 from app.models.models import User, MQTTUser, DeviceType, Device, Scene, DeviceData, AttrAuthUser, MasterKeypair, \
     PrivateKey, Attribute, UserDevice
@@ -64,21 +65,25 @@ devices = []
 mqtt_user_creds = []
 keypairs = []
 
-keys = {}
-
+keys = {"users": {}}
 
 for i in range(user_no):
     username = random_string()
+    access_token = secrets.token_hex(40)
     # noinspection PyArgumentList
     user = User(id=i,
                 name=username,
                 email=f'{username}@gmail.com',
-                access_token=secrets.token_hex(40),
+                access_token=token_to_hash(access_token),
                 access_token_update=random_date(d1, d2))
 
     mqtt_user = MQTTUser(username=f'u:{user.id}',
                          password_hash=pbkdf2_hash(username),
                          user=user)
+
+    keys["users"][i] = {}
+    keys["users"][i]["access_token"] = access_token
+
     users.append(user)
     db.session.add(user)
     db.session.add(mqtt_user)
@@ -101,11 +106,9 @@ for i in range(device_no):
 
     keys["dt_desc_keys"][i] = key_to_hex(dt_desc_key)
 
-keys["users"] = {}
 for uid, user in enumerate(users):
     user.create_mqtt_creds_for_user(user.mqtt_creds.password_hash, db.session)
 
-    keys["users"][uid] = {}
     keys["users"][uid]["devices"] = {}
     keys["users"][uid]["actions"] = {}
     keys["users"][uid]["aa_secret_keys"] = {}
@@ -227,14 +230,17 @@ db.session.commit()
 aa_users = []
 
 for i, user in enumerate(users):
+    access_token = random_string()
     # noinspection PyArgumentList
     aa_user = AttrAuthUser(name=user.name,
-                           access_token=random_string(),
+                           access_token=token_to_hash(access_token),
                            access_token_update=random_date(d1, d2),
                            api_username=user.name)
     keypair = MasterKeypair(data_public=keypairs[i][0],
                             data_master=keypairs[i][1],
                             attr_auth_user=aa_user)
+
+    keys["users"][i]["aa_access_token"] = access_token
 
     db.session.add(aa_user)
     db.session.add(keypair)
@@ -247,6 +253,7 @@ for i, user in enumerate(users):
     private_key_obj = PrivateKey(data=private_key,
                                  challenger_id=aa_user.id,
                                  user_id=i+1,
+                                 device_id=user.owned_devices[0].id,
                                  attributes=[Attribute(value=attr) for attr in attr_list])
 
     db.session.add(private_key_obj)
@@ -265,5 +272,12 @@ aa_users.append(mqtt_admin_user)
 
 with open('keys.json', 'w') as outfile:
     json.dump(keys, outfile, indent=4)
+
+
+seqs = db.engine.execute("SELECT sequence_name FROM information_schema.sequences").fetchall()
+seq_names = [row[0] for row in seqs]
+
+for s in seq_names:
+    db.engine.execute(f"ALTER SEQUENCE {s} RESTART WITH 5000;")
 
 db.session.commit()
