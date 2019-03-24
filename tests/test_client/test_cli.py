@@ -117,6 +117,7 @@ def test_send_column_keys(runner, access_token, reset_tiny_db, bi_key, aa_public
     })
     insert_into_tinydb(cmd.path, "credentials", {"broker_id": "4", "broker_password": 'test_pass'})
     insert_into_tinydb(cmd.path, "aa_keys", {"public_key": aa_public_key})
+    runner.invoke(cmd.init_global_keys)
 
     result = runner.invoke(cmd.send_column_keys, [user_id, device_id])
     assert "Data published" in result.output
@@ -509,17 +510,18 @@ def test_save_column_keys(runner, reset_tiny_db, col_keys):
     table.update(set('shared_key', "aefe715635c3f35f7c58da3eb410453712aaf1f8fd635571aa5180236bb21acc"), where('integrity').exists())
     table.update(set('id', 1), where('integrity').exists())
 
-    data_wrong_user = f'{{"device_data:data": "{plaintext_abe_data}", "device_data:num_data": "gAAAAABcRHibuWXtMvF7XgSN7FR-cHyNl2eDb_HHPCuTjqtdMN2VxxZnSxGCjkoJxRNIGMcpBW-z4n1wynPoCCb1VanmH3EukMPwpf7Vwk9WytkNR9h51ApyGt1QEkaj_JF2A5jKu-vw", "action:name": "gAAAAABcRHibSiR3cHtaSUSk1ipKP_7csl3xTCd4J-JesU8GPlC2iwfblksE3kvuV3U2mAYqiYe3UuYw04JPbYDYaFePY-YTUAzie3OCRzwuMTE6tE9UBJtJ8wUNJSctZnrvSi0rcPzQ", "device:name": "gAAAAABcRHib0mxfmRE3mg4ALX3XPjP7ZuVQ69NiRdebiNCE-40wZuzzNV1krKcnZeRZVWXwYf4xjYLNNygY-kbbgxltBWNJ5rLanpBIqTeoq8uI9up1bZ_vFFCiGPIjHTpYkMnF5XIN", "device:status": "gAAAAABcRHiboBSiAuKLxvSqS1yu4vOR8FlqGBOnzJSQ85e5UShmQ9avtLAXx_w9fKad2xILHWbi_uFywJML8ukoDGB7iiHkLT39iOnrUCAQHFyOdFERixgl-iFHMji-S1YfGKGwxRIU", "device_data:added": "gAAAAABcRHibuWXtMvF7XgSN7FR-cHyNl2eDb_HHPCuTjqtdMN2VxxZnSxGCjkoJxRNIGMcpBW-z4n1wynPoCCb1VanmH3EukMPwpf7Vwk9WytkNR9h51ApyGt1QEkaj_JF2A5jKu-vw", "scene:name": "gAAAAABcRHibVgsVHRls8IGj95TdFKraKbGfyf_TvDzjg0KV_vu-HawiISBzRaxwrFV_QHI5jA73CTM2dF4ePENaMe0QtIJljtqCBUSRhoQideCy0JL4hDAIJUzpGXFK5RMC2fJHUJ17", "scene:description": "gAAAAABcRHib1iH0Bs9sHff-dt7FY9XOUDzARN-mwaq7eI7iLYYwtmBcMkB3T5ChNnoNWhIRLnh_lQLmvCT_itBvjoIHydBVdIcTjzsyHcTMBUdlxPmohokOjunxdMSCY0B48-pYqzsn", "user_id": 2}}'
+    data_wrong_user = f'{{"device_data:data": "{plaintext_abe_data}", "scene_key": "gAAAAABclmLFdWPbbYJQx0cySvGNwVIMng-Ku-HXVg_030HpHXbVyBSKboJjujjLEEb6rt57eN4C16t0bP5_5PiiUBeSYJ4giYKy2JLY4dDx2Yl7ME0QICHvuffEM3JVQpdsjJZFsWLl", "device_data:num_data": "gAAAAABcRHibuWXtMvF7XgSN7FR-cHyNl2eDb_HHPCuTjqtdMN2VxxZnSxGCjkoJxRNIGMcpBW-z4n1wynPoCCb1VanmH3EukMPwpf7Vwk9WytkNR9h51ApyGt1QEkaj_JF2A5jKu-vw", "action:name": "gAAAAABcRHibSiR3cHtaSUSk1ipKP_7csl3xTCd4J-JesU8GPlC2iwfblksE3kvuV3U2mAYqiYe3UuYw04JPbYDYaFePY-YTUAzie3OCRzwuMTE6tE9UBJtJ8wUNJSctZnrvSi0rcPzQ", "device:name": "gAAAAABcRHib0mxfmRE3mg4ALX3XPjP7ZuVQ69NiRdebiNCE-40wZuzzNV1krKcnZeRZVWXwYf4xjYLNNygY-kbbgxltBWNJ5rLanpBIqTeoq8uI9up1bZ_vFFCiGPIjHTpYkMnF5XIN", "device:status": "gAAAAABcRHiboBSiAuKLxvSqS1yu4vOR8FlqGBOnzJSQ85e5UShmQ9avtLAXx_w9fKad2xILHWbi_uFywJML8ukoDGB7iiHkLT39iOnrUCAQHFyOdFERixgl-iFHMji-S1YfGKGwxRIU", "device_data:added": "gAAAAABcRHibuWXtMvF7XgSN7FR-cHyNl2eDb_HHPCuTjqtdMN2VxxZnSxGCjkoJxRNIGMcpBW-z4n1wynPoCCb1VanmH3EukMPwpf7Vwk9WytkNR9h51ApyGt1QEkaj_JF2A5jKu-vw", "scene:name": "gAAAAABcRHibVgsVHRls8IGj95TdFKraKbGfyf_TvDzjg0KV_vu-HawiISBzRaxwrFV_QHI5jA73CTM2dF4ePENaMe0QtIJljtqCBUSRhoQideCy0JL4hDAIJUzpGXFK5RMC2fJHUJ17", "scene:description": "gAAAAABcRHib1iH0Bs9sHff-dt7FY9XOUDzARN-mwaq7eI7iLYYwtmBcMkB3T5ChNnoNWhIRLnh_lQLmvCT_itBvjoIHydBVdIcTjzsyHcTMBUdlxPmohokOjunxdMSCY0B48-pYqzsn", "user_id": 2}}'
     result = runner.invoke(device_cmd.save_column_keys, [data_wrong_user])
     assert "This command is only available for device owner." in result.output
 
-    data = f'{{"device_data:data": "{plaintext_abe_data}", "device_data:num_data": "gAAAAABcRHibuWXtMvF7XgSN7FR-cHyNl2eDb_HHPCuTjqtdMN2VxxZnSxGCjkoJxRNIGMcpBW-z4n1wynPoCCb1VanmH3EukMPwpf7Vwk9WytkNR9h51ApyGt1QEkaj_JF2A5jKu-vw", "action:name": "gAAAAABcRHibSiR3cHtaSUSk1ipKP_7csl3xTCd4J-JesU8GPlC2iwfblksE3kvuV3U2mAYqiYe3UuYw04JPbYDYaFePY-YTUAzie3OCRzwuMTE6tE9UBJtJ8wUNJSctZnrvSi0rcPzQ", "device:name": "gAAAAABcRHib0mxfmRE3mg4ALX3XPjP7ZuVQ69NiRdebiNCE-40wZuzzNV1krKcnZeRZVWXwYf4xjYLNNygY-kbbgxltBWNJ5rLanpBIqTeoq8uI9up1bZ_vFFCiGPIjHTpYkMnF5XIN", "device:status": "gAAAAABcRHiboBSiAuKLxvSqS1yu4vOR8FlqGBOnzJSQ85e5UShmQ9avtLAXx_w9fKad2xILHWbi_uFywJML8ukoDGB7iiHkLT39iOnrUCAQHFyOdFERixgl-iFHMji-S1YfGKGwxRIU", "device_data:added": "gAAAAABcRHibuWXtMvF7XgSN7FR-cHyNl2eDb_HHPCuTjqtdMN2VxxZnSxGCjkoJxRNIGMcpBW-z4n1wynPoCCb1VanmH3EukMPwpf7Vwk9WytkNR9h51ApyGt1QEkaj_JF2A5jKu-vw", "scene:name": "gAAAAABcRHibVgsVHRls8IGj95TdFKraKbGfyf_TvDzjg0KV_vu-HawiISBzRaxwrFV_QHI5jA73CTM2dF4ePENaMe0QtIJljtqCBUSRhoQideCy0JL4hDAIJUzpGXFK5RMC2fJHUJ17", "scene:description": "gAAAAABcRHib1iH0Bs9sHff-dt7FY9XOUDzARN-mwaq7eI7iLYYwtmBcMkB3T5ChNnoNWhIRLnh_lQLmvCT_itBvjoIHydBVdIcTjzsyHcTMBUdlxPmohokOjunxdMSCY0B48-pYqzsn", "user_id": 1}}'
+    data = f'{{"device_data:data": "{plaintext_abe_data}", "scene_key": "gAAAAABclmLFdWPbbYJQx0cySvGNwVIMng-Ku-HXVg_030HpHXbVyBSKboJjujjLEEb6rt57eN4C16t0bP5_5PiiUBeSYJ4giYKy2JLY4dDx2Yl7ME0QICHvuffEM3JVQpdsjJZFsWLl", "device_data:num_data": "gAAAAABcRHibuWXtMvF7XgSN7FR-cHyNl2eDb_HHPCuTjqtdMN2VxxZnSxGCjkoJxRNIGMcpBW-z4n1wynPoCCb1VanmH3EukMPwpf7Vwk9WytkNR9h51ApyGt1QEkaj_JF2A5jKu-vw", "action:name": "gAAAAABcRHibSiR3cHtaSUSk1ipKP_7csl3xTCd4J-JesU8GPlC2iwfblksE3kvuV3U2mAYqiYe3UuYw04JPbYDYaFePY-YTUAzie3OCRzwuMTE6tE9UBJtJ8wUNJSctZnrvSi0rcPzQ", "device:name": "gAAAAABcRHib0mxfmRE3mg4ALX3XPjP7ZuVQ69NiRdebiNCE-40wZuzzNV1krKcnZeRZVWXwYf4xjYLNNygY-kbbgxltBWNJ5rLanpBIqTeoq8uI9up1bZ_vFFCiGPIjHTpYkMnF5XIN", "device:status": "gAAAAABcRHiboBSiAuKLxvSqS1yu4vOR8FlqGBOnzJSQ85e5UShmQ9avtLAXx_w9fKad2xILHWbi_uFywJML8ukoDGB7iiHkLT39iOnrUCAQHFyOdFERixgl-iFHMji-S1YfGKGwxRIU", "device_data:added": "gAAAAABcRHibuWXtMvF7XgSN7FR-cHyNl2eDb_HHPCuTjqtdMN2VxxZnSxGCjkoJxRNIGMcpBW-z4n1wynPoCCb1VanmH3EukMPwpf7Vwk9WytkNR9h51ApyGt1QEkaj_JF2A5jKu-vw", "scene:name": "gAAAAABcRHibVgsVHRls8IGj95TdFKraKbGfyf_TvDzjg0KV_vu-HawiISBzRaxwrFV_QHI5jA73CTM2dF4ePENaMe0QtIJljtqCBUSRhoQideCy0JL4hDAIJUzpGXFK5RMC2fJHUJ17", "scene:description": "gAAAAABcRHib1iH0Bs9sHff-dt7FY9XOUDzARN-mwaq7eI7iLYYwtmBcMkB3T5ChNnoNWhIRLnh_lQLmvCT_itBvjoIHydBVdIcTjzsyHcTMBUdlxPmohokOjunxdMSCY0B48-pYqzsn", "user_id": 1}}'
     runner.invoke(device_cmd.save_column_keys, [data])
 
     table = get_tinydb_table(device_cmd.path, 'users')
     doc = table.get(Query().id == 1)
     assert "action:name" in doc
-    assert len(doc) == 11
+    assert "scene_key" in doc
+    assert len(doc) == 12
     fernet_key = hex_to_fernet(doc["device:status"])
     assert isinstance(fernet_key, Fernet)
     cipher = hex_to_ope(doc["device_data:added"])
@@ -651,12 +653,14 @@ def test_create_scene(runner, access_token, reset_tiny_db):
 def test_init_global_keys(runner, reset_tiny_db):
     runner.invoke(cmd.init_global_keys)
     table = get_tinydb_table(cmd.path, 'global')
-    doc = table.search(where('bi_key').exists())
+    doc = table.search(where('bi_key').exists() & where('scene_key').exists())
     assert "bi_key" in doc[0]
+    assert "scene_key" in doc[0]
 
     runner.invoke(cmd.init_global_keys)  # Insert again
-    doc = table.search(where('bi_key').exists())
+    doc = table.search(where('bi_key').exists() & where('scene_key').exists())
     assert "bi_key" in doc[0]
+    assert "scene_key" in doc[0]
 
 
 @pytest.mark.parametrize('reset_tiny_db', [cmd.path], indirect=True)
@@ -811,8 +815,13 @@ def test_schedule_fake_actions(m_add_job, m_start, runner, access_token):
 def test_trigger_scene(runner, access_token_two, col_keys, bi_key, reset_tiny_db):
     name = "Home"
     insert_into_tinydb(cmd.path, 'device_keys', col_keys)
-    insert_into_tinydb(cmd.path, 'global', {"bi_key": bi_key})
+    insert_into_tinydb(cmd.path, 'global', {
+        "bi_key": bi_key,
+        "scene_key": "999d1785bab02131da22f440016c9568a059c73266dbac8964f27fbd0af6bee8"
+    })
     result = runner.invoke(cmd.trigger_scene, [name, '--token', access_token_two])
+    assert "\"success\": true" in result.output
+    result = runner.invoke(cmd.trigger_scene, [name, '--token', access_token_two, "--fake"])
     assert "\"success\": true" in result.output
 
 
@@ -1309,7 +1318,8 @@ def test_process_action(runner, reset_tiny_db, col_keys):
     insert_into_tinydb(device_cmd.path, 'users', {
         "id": 1,
         "action:name": "a70c6a23f6b0ef9163040f4cc02819c22d7e35de6469672d250519077b36fe4d",
-        "shared_key": "d3e4a9c3aec8386eaa00442e040c21caf483c320f4ecf4a0a485fdcf47bd4251"
+        "shared_key": "d3e4a9c3aec8386eaa00442e040c21caf483c320f4ecf4a0a485fdcf47bd4251",
+        "scene_key": "999d1785bab02131da22f440016c9568a059c73266dbac8964f27fbd0af6bee8"
     })
 
     result = runner.invoke(device_cmd.process_action, [payload])
@@ -1319,6 +1329,11 @@ def test_process_action(runner, reset_tiny_db, col_keys):
     # action: b'On' encrypted with col_keys["action:name"], additional_data: "fake" encrypted with col_keys["shared_key"]
     result = runner.invoke(device_cmd.process_action, [payload])
     assert result.output == ""
+
+    payload = '{"user_id": "u:1", "action": "gAAAAABcXcF9yNe9emKXALJImsb7v4meic8cR6YnEulQSi8xOxF8d33scDotxPKQBTC80r-QolW2mRroUZOfLuqAqr20Z5333A==", "additional_data": "gAAAAABclm-Ca81Wrd0d4LcL9ZysHvlQzor923iDwDiO8hnMdQJw9M3buS4xlv3lLEVqesESfdxOHtrUkjLgP0V6f4KYpdK6SQ=="}'
+    # action: b'On' encrypted with col_keys["action:name"], additional_data: "real" encrypted with device_col_keys["scene_key"]
+    result = runner.invoke(device_cmd.process_action, [payload])
+    assert "On" in result.output
 
 
 @pytest.mark.parametrize('reset_tiny_db', [device_cmd.path], indirect=True)

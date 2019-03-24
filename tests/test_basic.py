@@ -505,20 +505,30 @@ def test_api_trigger_action(client, app_and_ctx, access_token):
 
 
 def test_api_trigger_scene(client, app_and_ctx, access_token, access_token_two):
+
+    data = {
+        "access_token": access_token_two,
+        "name_bi": '0b0a367318926df75879294f1520905ba72d8f1bebe64865645a7e108bfaf3e4'
+    }
+    assert_got_error_from_get(client, '/api/scene/trigger', data, 400, ADDITIONAL_DATA_MISSING_ERROR_MSG)
+
     data = {
         "access_token": access_token,
+        "additional_data": 'gAAAAABcikpQSsh7iACV6pAFMaldncaSrA9rj3iUh-7ejFnvXw1Uzcodf5Gf7FtZTU39R3L65nd1RzExvF9kMU1t_YwG2FpdMA==',
         "name_bi": "something"
     }
     assert_got_error_from_get(client, '/api/scene/trigger', data, 400, INVALID_SCENE_BI_ERROR_MSG)
 
     data = {
         "access_token": access_token,
+        "additional_data": 'gAAAAABcikpQSsh7iACV6pAFMaldncaSrA9rj3iUh-7ejFnvXw1Uzcodf5Gf7FtZTU39R3L65nd1RzExvF9kMU1t_YwG2FpdMA==',
         "name_bi": '0b0a367318926df75879294f1520905ba72d8f1bebe64865645a7e108bfaf3e4',  # other user
     }
     assert_got_error_from_get(client, '/api/scene/trigger', data, 400, UNAUTHORIZED_USER_SCENE_ERROR_MSG)
 
     data = {
         "access_token": access_token_two,
+        "additional_data": 'gAAAAABcikpQSsh7iACV6pAFMaldncaSrA9rj3iUh-7ejFnvXw1Uzcodf5Gf7FtZTU39R3L65nd1RzExvF9kMU1t_YwG2FpdMA==',
         "name_bi": '0b0a367318926df75879294f1520905ba72d8f1bebe64865645a7e108bfaf3e4',
     }
 
@@ -528,9 +538,9 @@ def test_api_trigger_scene(client, app_and_ctx, access_token, access_token_two):
             assert_got_data_from_get(client, '/api/scene/trigger', data)
 
             expected_calls = [
-                call('u:2/d:45/', '"{"\\"action\\"": "\\"gAAAAABcYAJr_P_8E4S0nWTFU-uyGk8t3MDexB5LzNGHKB6rd_pwKwY41bTMYYqAvuxcrCp3BBYwh7FI4F6fkswMM5JAFMcmqQ==\\"", "\\"user_id\\"": "\\"u:2\\""}"'),
-                call('u:2/d:34/', '"{"\\"action\\"": "\\"gAAAAABcYAJs8wCzyfEdHGO3TUjK-EeSxD-wFEgCGY8XF_kExmttrzUjM-YFKUaySrc8yLJG8UXe2zLtGr7LPAl5xyW756XscA==\\"", "\\"user_id\\"": "\\"u:2\\""}"'),
-                call('u:2/d:37/', '"{"\\"action\\"": "\\"gAAAAABcYAJsJHci8zzKE232PYIX-Hw74lYNEt_f7EceuroDqp0pWHGD96_baLE2tlQeFlFRenmpmFwtBZQbLIyBfAPaBXnl-A==\\"", "\\"user_id\\"": "\\"u:2\\""}"')
+                call('u:2/d:45/', '"{"\\"action\\"": "\\"gAAAAABcYAJr_P_8E4S0nWTFU-uyGk8t3MDexB5LzNGHKB6rd_pwKwY41bTMYYqAvuxcrCp3BBYwh7FI4F6fkswMM5JAFMcmqQ==\\"", "\\"additional_data\\"": "\\"gAAAAABcikpQSsh7iACV6pAFMaldncaSrA9rj3iUh-7ejFnvXw1Uzcodf5Gf7FtZTU39R3L65nd1RzExvF9kMU1t_YwG2FpdMA==\\"", "\\"user_id\\"": "\\"u:2\\""}"'),
+                call('u:2/d:34/', '"{"\\"action\\"": "\\"gAAAAABcYAJs8wCzyfEdHGO3TUjK-EeSxD-wFEgCGY8XF_kExmttrzUjM-YFKUaySrc8yLJG8UXe2zLtGr7LPAl5xyW756XscA==\\"", "\\"additional_data\\"": "\\"gAAAAABcikpQSsh7iACV6pAFMaldncaSrA9rj3iUh-7ejFnvXw1Uzcodf5Gf7FtZTU39R3L65nd1RzExvF9kMU1t_YwG2FpdMA==\\"", "\\"user_id\\"": "\\"u:2\\""}"'),
+                call('u:2/d:37/', '"{"\\"action\\"": "\\"gAAAAABcYAJsJHci8zzKE232PYIX-Hw74lYNEt_f7EceuroDqp0pWHGD96_baLE2tlQeFlFRenmpmFwtBZQbLIyBfAPaBXnl-A==\\"", "\\"additional_data\\"": "\\"gAAAAABcikpQSsh7iACV6pAFMaldncaSrA9rj3iUh-7ejFnvXw1Uzcodf5Gf7FtZTU39R3L65nd1RzExvF9kMU1t_YwG2FpdMA==\\"", "\\"user_id\\"": "\\"u:2\\""}"')
             ]
 
             assert all(v in expected_calls for v in publish.mock_calls)

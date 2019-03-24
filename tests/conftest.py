@@ -212,6 +212,7 @@ def device_col_keys():
         },
         "device_data:tid": "9692e6525c19e6fa37978626606534015cd120816a28b501bebec142d86002b2",
         "device:name": "ae89ebdb00d48b6e2aca3218213888aff3af9915831b9cdde8f82b709fd8802e",
+        "scene_key": "999d1785bab02131da22f440016c9568a059c73266dbac8964f27fbd0af6bee8",
     }
     return data
 

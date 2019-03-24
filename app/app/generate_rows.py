@@ -233,6 +233,7 @@ for i, user in enumerate(users):
     access_token = random_string()
     # noinspection PyArgumentList
     aa_user = AttrAuthUser(name=user.name,
+                           id=i,
                            access_token=token_to_hash(access_token),
                            access_token_update=random_date(d1, d2),
                            api_username=user.name)
@@ -252,7 +253,7 @@ for i, user in enumerate(users):
     private_key = create_private_key(keypairs[i][1], keypairs[i][0], attr_list)
     private_key_obj = PrivateKey(data=private_key,
                                  challenger_id=aa_user.id,
-                                 user_id=i+1,
+                                 user_id=i+1 if i+1 < len(users) else 0,
                                  device_id=user.owned_devices[0].id,
                                  attributes=[Attribute(value=attr) for attr in attr_list])
 

@@ -224,7 +224,10 @@ def process_action(data):
             data = json.loads(data)
             doc = get_user_data()
 
-            additional_data = decrypt_using_fernet_hex(doc["shared_key"], data["additional_data"]).decode()
+            try:
+                additional_data = decrypt_using_fernet_hex(doc["shared_key"], data["additional_data"]).decode()
+            except Exception:
+                additional_data = decrypt_using_fernet_hex(doc["scene_key"], data["additional_data"]).decode()
             if additional_data != "real":
                 return
             action_name = decrypt_using_fernet_hex(doc["action:name"], data["action"])

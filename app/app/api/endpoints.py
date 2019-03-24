@@ -405,11 +405,13 @@ def trigger_action():
 @require_api_token()
 def trigger_scene():
     name_bi = request.args.get("name_bi", None)
+    additional_data = request.args.get("additional_data", None)
     access_token = token_to_hash(request.headers.get("Authorization", ""))
     user = User.get_by_access_token(access_token)
 
     arg_check = check_missing_request_argument(
-        (name_bi, ACTION_NAME_BI_MISSING_ERROR_MSG))
+        (name_bi, ACTION_NAME_BI_MISSING_ERROR_MSG),
+        (additional_data, ADDITIONAL_DATA_MISSING_ERROR_MSG))
     if arg_check is not True:
         return arg_check
 
@@ -424,7 +426,10 @@ def trigger_scene():
         return http_json_response(False, 400, **{"error": UNAUTHORIZED_USER_SCENE_ERROR_MSG})
 
     for ac in sc.actions:
-        payload = create_payload(user.mqtt_creds.username, {"action": ac.name.decode("utf-8")})
+        payload = create_payload(user.mqtt_creds.username, {
+            "action": ac.name.decode("utf-8"),
+            "additional_data": additional_data
+        })
         topic = format_topic(user.mqtt_creds.username, ac.device.mqtt_creds.username)
         client.publish(topic, payload)
 

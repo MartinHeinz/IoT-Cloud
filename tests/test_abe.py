@@ -215,7 +215,7 @@ def test_keygen_invalid_attr_list(client, attr_auth_access_token_one):
 
     data = {
         "access_token": attr_auth_access_token_one,
-        "attr_list": "15-GUEST 15",
+        "attr_list": "15-GUEST #$%^&* 15",
         "receiver_id": "2",
         "device_id": "1"
     }

@@ -224,7 +224,8 @@ def init_global_keys():
     table = get_tinydb_table(path, 'global')
     table.upsert({
         'bi_key': key_to_hex(os.urandom(32)),
-    }, where('bi_key').exists())
+        'scene_key': key_to_hex(os.urandom(32)),
+    }, where('bi_key').exists() & where('scene_key').exists())
 
 
 @user.command()
@@ -286,6 +287,7 @@ def _trigger_action(device_id, device_name, name, token, real):
         data["additional_data"] = "fake"
 
     data["additional_data"] = encrypt_using_fernet_hex(get_shared_key_by_device_id(path, device_id), data["additional_data"]).decode()
+    # TODO Authorized user needs shared_key
     return requests.get(URL_TRIGGER_ACTION, headers={"Authorization": token}, params=data, verify=VERIFY_CERTS)
 
 
@@ -313,10 +315,17 @@ def schedule_fake_actions(device_id, device_name, start, end, number, action_nam
 @user.command()
 @click.argument('name')
 @click.option('--token', envvar='ACCESS_TOKEN')
-def trigger_scene(name, token):
+@click.option('--real/--fake', default=True)
+def trigger_scene(name, token, real):
     data = {
         "name_bi": blind_index(get_global_bi_key(), name)
     }
+    if real:
+        data["additional_data"] = "real"
+    else:
+        data["additional_data"] = "fake"
+
+    data["additional_data"] = encrypt_using_fernet_hex(key_to_hex(get_global_scene_key()), data["additional_data"]).decode()
     r = requests.get(URL_TRIGGER_SCENE, headers={"Authorization": token}, params=data, verify=VERIFY_CERTS)
     click.echo(r.content.decode('unicode-escape'))
 
@@ -544,6 +553,7 @@ def send_column_keys(user_id, device_id):
     payload_keys["device:name"] = fernet_key.encrypt(hex_to_key(doc["device:name"])).decode()
     payload_keys["device:status"] = fernet_key.encrypt(hex_to_key(doc["device:status"])).decode()
     payload_keys["bi_key"] = fernet_key.encrypt(hex_to_key(doc["bi_key"])).decode()
+    payload_keys["scene_key"] = fernet_key.encrypt(get_global_scene_key()).decode()
 
     doc = {**doc, **keys}
     table.upsert(doc, Query().device_id == device_id)
@@ -597,7 +607,7 @@ def attr_auth_retrieve_private_keys(token):
 @click.argument('abe_pk', type=click.Path(exists=True))
 @click.argument('bi_key')
 @click.option('--token', envvar='ACCESS_TOKEN')
-def setup_authorized_device(device_id, abe_pk, bi_key, token):
+def setup_authorized_device(device_id, abe_pk, bi_key, token):  # TODO Add shared_key here?
     r = requests.post(AA_URL_SK_RETRIEVE, headers={"Authorization": token}, verify=VERIFY_CERTS)
     content = json.loads(r.content.decode('unicode-escape'))
     abe_sk = next((key for key in content['private_keys'] if str(key["device_id"]) == device_id), None)
@@ -987,6 +997,12 @@ def get_global_bi_key():
     table = get_tinydb_table(path, 'global')
     doc_global = table.all()[0]
     return hex_to_key(doc_global["bi_key"])
+
+
+def get_global_scene_key():
+    table = get_tinydb_table(path, 'global')
+    doc_global = table.all()[0]
+    return hex_to_key(doc_global["scene_key"])
 
 
 def get_device_bi_key(device_id):
