@@ -1191,6 +1191,38 @@ def test_get_bi_key(reset_tiny_db, col_keys):
     assert device_cmd.get_bi_key() == bi_key
 
 
+def test_can_remove_fake_row(integrity_data):
+    valid_integrity_data = {
+        "device_data": {
+            "added": {
+                "seed": 1,
+                "lower_bound": 0,
+                "upper_bound": 1,
+                "type": "OPE"
+            },
+            "num_data": {
+                "seed": 2,
+                "lower_bound": 0,
+                "upper_bound": 1,
+                "type": "OPE"
+            },
+            "data": {
+                "seed": 3,
+                "lower_bound": 0,
+                "upper_bound": 1,
+                "type": "ABE"
+            },
+            "tid": {
+                "lower_bound": 0,
+                "upper_bound": 1,
+                "type": "Fernet"
+            },
+        }
+    }
+    assert not device_cmd.can_remove_fake_row(integrity_data["device_data"])
+    assert device_cmd.can_remove_fake_row(valid_integrity_data["device_data"])
+
+
 @pytest.mark.parametrize('reset_tiny_db', [device_cmd.path], indirect=True)
 def test_get_fake_tuple(runner, reset_tiny_db, integrity_data, col_keys):
     user_id = 1

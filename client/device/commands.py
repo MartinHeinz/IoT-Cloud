@@ -155,6 +155,9 @@ def get_fake_tuple(bound):
         table = get_tinydb_table(path, 'users')
         doc = get_user_data()
 
+        if bound == "lower_bound" and not can_remove_fake_row(doc["integrity"]["device_data"]):
+            return  # "Can't remove row that was not yet inserted (lower bound equals upper bound)"
+
         fake_tuple = {**generate(doc["integrity"]["device_data"], bound=bound)}
         fake_tuple["data"] = pad_payload_attr(str(fake_tuple["data"]), fake=True)
 
@@ -179,6 +182,18 @@ def get_fake_tuple(bound):
         _, _, exc_tb = sys.exc_info()
         line = exc_tb.tb_lineno
         click.echo(f"{repr(e)} at line: {line}")
+
+
+def get_bound(table, bound="upper_bound"):
+    k = next(iter(table.keys()))
+    return table[k][bound]
+
+
+def can_remove_fake_row(table):
+    for k, v in table.items():
+        if table[k]["lower_bound"] >= table[k]["upper_bound"]:
+            return False
+    return True
 
 
 def get_self_id():

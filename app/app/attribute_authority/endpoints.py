@@ -74,7 +74,7 @@ def keygen():
     if arg_check is not True:
         return arg_check
 
-    receiver = AttrAuthUser.get_by_id(receiver_id)
+    receiver = AttrAuthUser.get_by_id(receiver_id)  # TODO Use api_username?
     if receiver is None:
         return http_json_response(False, 400, **{"error": INCORRECT_RECEIVER_ID_ERROR_MSG})
 
