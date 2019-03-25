@@ -52,24 +52,6 @@ def pbkdf2_hash(password):
                              getattr(hashlib, HASH_FUNCTION))), 'utf-8'))
 
 
-def check_hash(password, hash_):
-    """Check a password against an existing hash."""
-    if isinstance(password, str):
-        password = password.encode('utf-8')
-    algorithm, hash_function, cost_factor, salt, hash_a = hash_.split('$')
-    assert algorithm == 'PBKDF2'
-    hash_a = b64decode(hash_a)
-    hash_b = pbkdf2_bin(password, salt, int(cost_factor), len(hash_a),
-                        getattr(hashlib, hash_function))
-    assert len(hash_a) == len(hash_b)  # we requested this from pbkdf2_bin()
-    # Same as "return hash_a == hash_b" but takes a constant time.
-    # See http://carlos.bueno.org/2011/10/timing.html
-    diff = 0
-    for char_a, char_b in zip(hash_a, hash_b):
-        diff |= ord(char_a) ^ ord(char_b)
-    return diff == 0
-
-
 def ord3(arg):
     return ord(chr(arg))
 
