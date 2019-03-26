@@ -2,6 +2,7 @@
 omit =
     */benchmark/*
     */test_utils/*
+    */venv/*
 
 [report]
 exclude_lines =
