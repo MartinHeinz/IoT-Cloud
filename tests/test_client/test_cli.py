@@ -783,6 +783,13 @@ def test_trigger_action(runner, access_token, col_keys, bi_key, reset_tiny_db):
     runner.invoke(cmd.trigger_action, [str(device_id), device_name, name, "--fake", '--token', access_token])
     assert "\"success\": true" in result.output
 
+    r = Mock()
+    r.content = b'{"success": true}'
+    with mock.patch('requests.get', return_value=r) as g:
+        runner.invoke(cmd.trigger_action, [str(device_id), device_name, name, "--no-owner", '--token', access_token])
+        g.assert_called_once()
+        assert "\"success\": true" in result.output
+
 
 @mock.patch.object(BlockingScheduler, "start")
 @mock.patch.object(BlockingScheduler, "add_job")
@@ -1364,6 +1371,11 @@ def test_process_action(runner, reset_tiny_db, col_keys):
 
     payload = '{"user_id": "u:1", "action": "gAAAAABcXcF9yNe9emKXALJImsb7v4meic8cR6YnEulQSi8xOxF8d33scDotxPKQBTC80r-QolW2mRroUZOfLuqAqr20Z5333A==", "additional_data": "gAAAAABclm-Ca81Wrd0d4LcL9ZysHvlQzor923iDwDiO8hnMdQJw9M3buS4xlv3lLEVqesESfdxOHtrUkjLgP0V6f4KYpdK6SQ=="}'
     # action: b'On' encrypted with col_keys["action:name"], additional_data: "real" encrypted with device_col_keys["scene_key"]
+    result = runner.invoke(device_cmd.process_action, [payload])
+    assert "On" in result.output
+
+    payload = '{"user_id": "u:5", "action": "gAAAAABcXcF9yNe9emKXALJImsb7v4meic8cR6YnEulQSi8xOxF8d33scDotxPKQBTC80r-QolW2mRroUZOfLuqAqr20Z5333A==", "additional_data": "bf635d8b1d884ecb6ad8cf186b3fd9bd57c41204a3126d1f4d4adcdbc755ad23"}'
+    # action: b'On' encrypted with col_keys["action:name"], additional_data: b2a_hex(os.urandom(32)).decode()
     result = runner.invoke(device_cmd.process_action, [payload])
     assert "On" in result.output
 

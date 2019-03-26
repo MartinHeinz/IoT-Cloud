@@ -4,6 +4,7 @@ import os
 import random
 import ssl
 import sys
+from binascii import b2a_hex
 from datetime import datetime
 from json import JSONDecodeError
 
@@ -271,12 +272,16 @@ def set_action(device_id, name, token):
 @click.argument('name')
 @click.option('--token', envvar='ACCESS_TOKEN')
 @click.option('--real/--fake', default=True)
-def trigger_action(device_id, device_name, name, token, real):
-    r = _trigger_action(device_id, device_name, name, token, real)
+@click.option('--owner/--no-owner', default=True)
+def trigger_action(device_id, device_name, name, token, real, owner):
+    if owner:
+        r = _trigger_action_by_owner(device_id, device_name, name, token, real)
+    else:
+        r = _trigger_action_by_nonowner(device_id, device_name, name, token)
     click.echo(r.content.decode('unicode-escape'))
 
 
-def _trigger_action(device_id, device_name, name, token, real):
+def _trigger_action_by_owner(device_id, device_name, name, token, real):
     data = {
         "device_name_bi": blind_index(get_device_bi_key(device_id), device_name),
         "name_bi": blind_index(get_device_bi_key(device_id), name),
@@ -287,7 +292,15 @@ def _trigger_action(device_id, device_name, name, token, real):
         data["additional_data"] = "fake"
 
     data["additional_data"] = encrypt_using_fernet_hex(get_shared_key_by_device_id(path, device_id), data["additional_data"]).decode()
-    # TODO Authorized user needs shared_key
+    return requests.get(URL_TRIGGER_ACTION, headers={"Authorization": token}, params=data, verify=VERIFY_CERTS)
+
+
+def _trigger_action_by_nonowner(device_id, device_name, name, token):
+    data = {
+        "device_name_bi": blind_index(get_device_bi_key(device_id), device_name),
+        "name_bi": blind_index(get_device_bi_key(device_id), name),
+        "additional_data": b2a_hex(os.urandom(32)).decode()
+    }
     return requests.get(URL_TRIGGER_ACTION, headers={"Authorization": token}, params=data, verify=VERIFY_CERTS)
 
 
@@ -308,7 +321,7 @@ def schedule_fake_actions(device_id, device_name, start, end, number, action_nam
     actions = random.choices(action_names, k=number)
     sched = BlockingScheduler()
     for t, a in zip(times, actions):
-        sched.add_job(_trigger_action, 'date', [device_id, device_name, a, token, False],  run_date=start+t)
+        sched.add_job(_trigger_action_by_owner, 'date', [device_id, device_name, a, token, False],  run_date=start+t)
     sched.start()
 
 
