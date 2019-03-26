@@ -56,12 +56,12 @@ pycparser==2.19
 pylint==2.3.1
 pyope==0.2.2
 pyparsing==2.3.1
-pytest==4.3.1
+pytest==3.8.0
 pytest-benchmark==3.2.2
-pytest-cov==2.6.1
+pytest-cov==2.6.0
 pytest-html==1.20.0
 pytest-metadata==1.8.0
-pytest-mock==1.10.2
+pytest-mock==1.10.0
 python-dateutil==2.8.0
 python3-openid==3.1.0
 pytz==2018.9
