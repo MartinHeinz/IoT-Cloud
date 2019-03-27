@@ -21,7 +21,7 @@ N = 10000
 SEED = 42
 
 # x = [bsd_rand(i)() for i in range(N)]
-# x = [hash_knuth(i) for i in range(N)]
+# x = [hash_knuth(i) for i in range(N)]  # TODO Remove?
 x = [mmh3.hash(str(i), SEED) for i in range(N)]
 y = list(range(N))
 

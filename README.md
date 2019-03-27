@@ -25,6 +25,8 @@ For running tests:
 - When running tests make sure you set environment variable `TESTING_ENV` to `host_testing`(defaults to `testing`), so the application uses `config.env` variables needed for running tests on host. If not set, tests will run as if they were inside docker container ( = with different URLs).
 - To run (from `./tests` directory) use <br> `pytest . --junitxml=./reports/test_report.xml --html=./reports/test_report.html --self-contained-html --cov=../ --cov-config=../.coveragerc --cov-report term`
 - To see _HTML_ or _XML_ test and coverage reports check `./tests/reports` directory
+- _NOTE: When running tests on Docker host it's necessary to have server application running, because CLI tests are ran against this instance_
+
 ## TLS
 It's necessary to provide certificates to use application. When using _Mosquitto_, please use steps at [Mosquitto website](https://mosquitto.org/man/mosquitto-tls-7.html "Mosquitto website")
 - Files created in previous steps should be placed in `certs` folder both for _Mosquitto_ and application, replacing `*.dummy` files
