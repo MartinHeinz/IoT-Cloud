@@ -14,8 +14,8 @@ def cipher():
 
 
 def test_ope_encrypt(benchmark, cipher):
-    benchmark.pedantic(cipher.encrypt, args=(randint(0, 100000),), iterations=10, rounds=100)
+    benchmark.pedantic(cipher.encrypt, args=(randint(0, 100000),), iterations=100, rounds=100)
 
 
 def test_ope_decrypt(benchmark, cipher):
-    benchmark.pedantic(cipher.decrypt, args=(randint(0, 100000),), iterations=10, rounds=100)
+    benchmark.pedantic(cipher.decrypt, args=(cipher.encrypt(randint(0, 100000)),), iterations=100, rounds=100)

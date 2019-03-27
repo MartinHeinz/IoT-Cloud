@@ -55,9 +55,9 @@ create_app(DB_SETUP_CONFIG_NAME).app_context().push()
 d1 = datetime.strptime('01/01/2000', '%m/%d/%Y')
 d2 = datetime.strptime('01/01/2019', '%m/%d/%Y')
 
-user_no = 10
+user_no = 100
 device_no = 3
-device_data_no = 5
+device_data_no = 10
 
 device_types = []
 users = []
@@ -279,6 +279,17 @@ seqs = db.engine.execute("SELECT sequence_name FROM information_schema.sequences
 seq_names = [row[0] for row in seqs]
 
 for s in seq_names:
-    db.engine.execute(f"ALTER SEQUENCE {s} RESTART WITH 5000;")
+    db.engine.execute(f"ALTER SEQUENCE {s} RESTART WITH 10000;")
 
 db.session.commit()
+
+# SELECT count(*) FROM acl;  -- 2600
+# SELECT count(*) FROM action;  -- 600
+# SELECT count(*) FROM device;  -- 300
+# SELECT count(*) FROM device_data;  -- 3000
+# SELECT count(*) FROM device_type;  -- 3
+# SELECT count(*) FROM mqtt_user;  -- 401
+# SELECT count(*) FROM scene;  -- 100
+# SELECT count(*) FROM scene_action;  -- 200
+# SELECT count(*) FROM public."user"; -- 100
+# SELECT count(*) FROM user_device;  -- 300

@@ -1,0 +1,44 @@
+[
+  {
+    "module": "files-secrets",
+    "level": "medium",
+    "offender": "attr_auth_populate.sql",
+    "description": "SQL dump file",
+    "mitigation": "Check contents of the file"
+  },
+  {
+    "module": "files-secrets",
+    "level": "medium",
+    "offender": "populate.sql",
+    "description": "SQL dump file",
+    "mitigation": "Check contents of the file"
+  },
+  {
+    "module": "python-bandit",
+    "level": "medium",
+    "offender": "./app/main.py lines 9",
+    "description": "hardcoded_bind_all_interfaces B104",
+    "mitigation": "Possible binding to all interfaces. Review the file and fix the issue."
+  },
+  {
+    "module": "python-bandit",
+    "level": "low",
+    "offender": "./app/cli.py lines 2",
+    "description": "blacklist B404",
+    "mitigation": "Consider possible security implications associated with subprocess module. Review the file and fix the issue."
+  },
+  {
+    "module": "python-bandit",
+    "level": "low",
+    "offender": "./app/cli.py lines 14",
+    "description": "subprocess_without_shell_equals_true B603",
+    "mitigation": "subprocess call - check for execution of untrusted input. Review the file and fix the issue."
+  },
+  {
+    "module": "python-bandit",
+    "level": "low",
+    "offender": "./app/cli.py lines 14",
+    "description": "start_process_with_partial_path B607",
+    "mitigation": "Starting a process with a partial executable path Review the file and fix the issue."
+  }
+]

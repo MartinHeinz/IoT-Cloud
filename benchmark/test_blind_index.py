@@ -46,7 +46,7 @@ class BlindIndex(Base):
 
 
 def setup():
-    dal = DataAccessLayer(user="postgres", password="postgres", host="192.168.0.103", port=5430, db="benchmark")
+    dal = DataAccessLayer(user="postgres", password="postgres", host="172.26.0.2", port=5430, db="benchmark")
     dal.connect()
     return dal
 
@@ -100,7 +100,7 @@ def setup_cursor():
 
 def test_blind_index_orm(benchmark):
     dal = setup()
-    result = benchmark.pedantic(query_orm, args=(dal.Session(), searched_name), iterations=5, rounds=5)
+    result = benchmark.pedantic(query_orm, args=(dal.Session(), searched_name), iterations=1000, rounds=1000)
 
     assert result.id == searched_row
 
@@ -111,7 +111,7 @@ def query_orm(session, name):
 
 def test_blind_index_cursor(benchmark):
     cursor, connection = setup_cursor()
-    result = benchmark.pedantic(query_cursor, args=(cursor, searched_name), iterations=5, rounds=5)
+    result = benchmark.pedantic(query_cursor, args=(cursor, searched_name), iterations=1000, rounds=1000)
     cursor.close()
     connection.close()
 

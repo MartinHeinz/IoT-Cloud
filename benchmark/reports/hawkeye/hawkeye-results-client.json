@@ -1,0 +1,30 @@
+[
+  {
+    "module": "files-contents",
+    "level": "low",
+    "offender": "device/commands.py",
+    "description": "Potential password in file",
+    "mitigation": "Check line number: 48"
+  },
+  {
+    "module": "files-contents",
+    "level": "low",
+    "offender": "password_hashing.py",
+    "description": "Potential password in file",
+    "mitigation": "Check line number: 45"
+  },
+  {
+    "module": "files-contents",
+    "level": "low",
+    "offender": "user/commands.py",
+    "description": "Potential password in file",
+    "mitigation": "Check line number: 115"
+  },
+  {
+    "module": "files-secrets",
+    "level": "low",
+    "offender": "password_hashing.py",
+    "description": "Contains word: password",
+    "mitigation": "Check contents of the file"
+  }
+]
