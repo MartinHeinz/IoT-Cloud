@@ -47,5 +47,6 @@ COULD_NOT_DECRYPT_ERROR_MSG = "We could not decrypt your message (MAC might be i
 INVALID_OWNER_API_USERNAME_ERROR_MSG = 'Specified API username of data owner is invalid.'
 OWNER_API_USERNAME_MISSING_ERROR_MSG = 'Specified API username of data owner is invalid is not present.'
 API_USERNAME_MISSING_ERROR_MSG = 'Missing API username argument.'
+INCORRECT_API_USERNAME_ERROR_MSG = 'Incorrect receiver API username provided.'
 
 SOMETHING_WENT_WRONG_MSG = "Something went wrong..."

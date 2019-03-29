@@ -7,7 +7,7 @@ from sqlalchemy.orm import relationship
 
 from app.utils import is_number
 from app.app_setup import db
-from app.models.mixins import MixinGetById, MixinAsDict, MixinGetByAccessToken
+from app.models.mixins import MixinGetById, MixinAsDict, MixinGetByAccessToken, MixinGetByUsername
 
 scene_action_table = db.Table('scene_action',
                               db.Column("scene_id", db.Integer, db.ForeignKey('scene.id')),
@@ -280,7 +280,7 @@ class Scene(db.Model):
         return action in self.actions
 
 
-class AttrAuthUser(MixinGetByAccessToken, MixinGetById, db.Model):
+class AttrAuthUser(MixinGetByUsername, MixinGetByAccessToken, MixinGetById, db.Model):
     __table_args__ = {'extend_existing': True}
     __bind_key__ = 'attr_auth'
 

@@ -1034,11 +1034,11 @@ def test_aa_setup(runner, attr_auth_access_token_one, reset_tiny_db):
 @pytest.mark.parametrize('reset_tiny_db', [cmd.path], indirect=True)
 def test_aa_keygen(runner, attr_auth_access_token_one, reset_tiny_db):
     attr_list = ["1-TODAY", "1-GUEST"]
-    result = runner.invoke(cmd.attr_auth_keygen, ['1', '23', *attr_list, '--token', attr_auth_access_token_one])
+    result = runner.invoke(cmd.attr_auth_keygen, ['MartinHeinz', '23', *attr_list, '--token', attr_auth_access_token_one])
 
     assert "Public key not present, please use: get-attr-auth-keys" in result.output
     runner.invoke(cmd.get_attr_auth_keys, ['--token', attr_auth_access_token_one])
-    result = runner.invoke(cmd.attr_auth_keygen, ['1', '23', *attr_list, '--token', attr_auth_access_token_one])
+    result = runner.invoke(cmd.attr_auth_keygen, ['MartinHeinz', '23', *attr_list, '--token', attr_auth_access_token_one])
     assert "\"success\": true" in result.output
 
 

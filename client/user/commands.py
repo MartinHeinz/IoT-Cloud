@@ -620,7 +620,7 @@ def attr_auth_retrieve_private_keys(token):
 @click.argument('abe_pk', type=click.Path(exists=True))
 @click.argument('bi_key')
 @click.option('--token', envvar='ACCESS_TOKEN')
-def setup_authorized_device(device_id, abe_pk, bi_key, token):  # TODO Add shared_key here?
+def setup_authorized_device(device_id, abe_pk, bi_key, token):
     r = requests.post(AA_URL_SK_RETRIEVE, headers={"Authorization": token}, verify=VERIFY_CERTS)
     content = json.loads(r.content.decode('unicode-escape'))
     abe_sk = next((key for key in content['private_keys'] if str(key["device_id"]) == device_id), None)
@@ -950,11 +950,11 @@ def get_attr_auth_keys(token):
 
 
 @user.command()
-@click.argument('receiver_id')
+@click.argument('api_username')
 @click.argument('device_id')
 @click.argument('attr_list', nargs=-1)
 @click.option('--token', envvar='AA_ACCESS_TOKEN')
-def attr_auth_keygen(receiver_id, device_id, attr_list, token):
+def attr_auth_keygen(api_username, device_id, attr_list, token):
     doc = search_tinydb_doc(path, 'aa_keys', where('public_key').exists())
     if not doc:
         with click.Context(get_attr_auth_keys) as ctx:
@@ -963,7 +963,7 @@ def attr_auth_keygen(receiver_id, device_id, attr_list, token):
             return
     data = {
         "attr_list": " ".join(attr_list),
-        "receiver_id": receiver_id,
+        "api_username": api_username,
         "device_id": device_id
     }
     r = requests.post(AA_URL_KEYGEN, headers={"Authorization": token}, data=data, verify=VERIFY_CERTS)

@@ -12,6 +12,14 @@ class MixinGetById:
         return None
 
 
+class MixinGetByUsername:
+    api_username = db.Column(db.String(200), unique=True, nullable=True)
+
+    @classmethod
+    def get_by_user_name(cls, user_name):
+        return db.session.query(cls).filter(cls.api_username == user_name).first()
+
+
 class MixinGetByAccessToken:
     access_token = db.Column(db.String(200), unique=True, nullable=False)
 

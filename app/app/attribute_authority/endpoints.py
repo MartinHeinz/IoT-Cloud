@@ -1,13 +1,14 @@
 from flask import request
 
-from app.attribute_authority.utils import create_attributes, parse_attr_list, get_private_key_based_on_owner, is_valid, create_private_key
+from app.attribute_authority.utils import create_attributes, parse_attr_list, get_private_key_based_on_owner, create_private_key
 from app.app_setup import db
 from app.attribute_authority import attr_authority
 from app.attribute_authority.utils import serialize_charm_object, create_cp_abe, create_pairing_group, deserialize_charm_object
 from app.auth.utils import require_api_token, token_to_hash
-from app.consts import ATTR_LIST_MISSING_ERROR_MSG, RECEIVER_ID_MISSING_ERROR_MSG, INCORRECT_RECEIVER_ID_ERROR_MSG, \
+from app.consts import ATTR_LIST_MISSING_ERROR_MSG, \
     INVALID_ATTR_LIST_ERROR_MSG, MESSAGE_MISSING_ERROR_MSG, POLICY_STRING_MISSING_ERROR_MSG, CIPHERTEXT_MISSING_ERROR_MSG, COULD_NOT_DECRYPT_ERROR_MSG, \
-    INVALID_OWNER_API_USERNAME_ERROR_MSG, OWNER_API_USERNAME_MISSING_ERROR_MSG, API_USERNAME_MISSING_ERROR_MSG, DEVICE_ID_MISSING_ERROR_MSG
+    INVALID_OWNER_API_USERNAME_ERROR_MSG, OWNER_API_USERNAME_MISSING_ERROR_MSG, API_USERNAME_MISSING_ERROR_MSG, DEVICE_ID_MISSING_ERROR_MSG, \
+    INCORRECT_API_USERNAME_ERROR_MSG
 from app.models.models import AttrAuthUser, MasterKeypair, PrivateKey
 from app.utils import http_json_response, check_missing_request_argument
 
@@ -63,20 +64,20 @@ def key_setup():
 def keygen():
     token = token_to_hash(request.headers.get("Authorization", None))
     attr_list = request.form.get("attr_list", None)
-    receiver_id = request.form.get("receiver_id", None)
+    api_username = request.form.get("api_username", None)
     device_id = request.form.get("device_id", None)
     data_owner = AttrAuthUser.get_by_access_token(token)
 
     arg_check = check_missing_request_argument(
         (attr_list, ATTR_LIST_MISSING_ERROR_MSG),
-        (receiver_id, RECEIVER_ID_MISSING_ERROR_MSG),
+        (api_username, API_USERNAME_MISSING_ERROR_MSG),
         (device_id, DEVICE_ID_MISSING_ERROR_MSG))
     if arg_check is not True:
         return arg_check
 
-    receiver = AttrAuthUser.get_by_id(receiver_id)  # TODO Use api_username?
+    receiver = AttrAuthUser.get_by_user_name(api_username)
     if receiver is None:
-        return http_json_response(False, 400, **{"error": INCORRECT_RECEIVER_ID_ERROR_MSG})
+        return http_json_response(False, 400, **{"error": INCORRECT_API_USERNAME_ERROR_MSG})
 
     attr_list = parse_attr_list(attr_list)
     if not attr_list:

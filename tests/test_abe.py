@@ -6,9 +6,9 @@ from charm.schemes.abenc.abenc_bsw07 import CPabe_BSW07
 from charm.toolbox.pairinggroup import PairingGroup
 
 from app.app_setup import db
-from app.consts import INCORRECT_RECEIVER_ID_ERROR_MSG, INVALID_ATTR_LIST_ERROR_MSG, MESSAGE_MISSING_ERROR_MSG, POLICY_STRING_MISSING_ERROR_MSG, \
+from app.consts import INVALID_ATTR_LIST_ERROR_MSG, MESSAGE_MISSING_ERROR_MSG, POLICY_STRING_MISSING_ERROR_MSG, \
     CIPHERTEXT_MISSING_ERROR_MSG, COULD_NOT_DECRYPT_ERROR_MSG, INVALID_OWNER_API_USERNAME_ERROR_MSG, OWNER_API_USERNAME_MISSING_ERROR_MSG, \
-    API_USERNAME_MISSING_ERROR_MSG, ATTR_LIST_MISSING_ERROR_MSG, DEVICE_ID_MISSING_ERROR_MSG
+    API_USERNAME_MISSING_ERROR_MSG, ATTR_LIST_MISSING_ERROR_MSG, DEVICE_ID_MISSING_ERROR_MSG, INCORRECT_API_USERNAME_ERROR_MSG
 from app.attribute_authority.utils import create_pairing_group, create_cp_abe, serialize_charm_object, deserialize_charm_object, already_has_key_from_owner, \
     create_attributes, \
     replace_existing_key, parse_attr_list, get_private_key_based_on_owner, is_valid, create_private_key
@@ -182,7 +182,7 @@ def test_keygen_missing_device_id(client, attr_auth_access_token_one):
     data = {
         "access_token": attr_auth_access_token_one,
         "attr_list": "1 1-2 1-GUEST",
-        "receiver_id": "2",
+        "api_username": "TestUser",
     }
     assert_got_error_from_post(client, '/attr_auth/user/keygen', data, 400, DEVICE_ID_MISSING_ERROR_MSG)
 
@@ -191,24 +191,17 @@ def test_keygen_invalid_receiver(client, attr_auth_access_token_one):
     data = {
         "access_token": attr_auth_access_token_one,
         "attr_list": "TODAY_GUEST, ANOTHER",
-        "receiver_id": "15",
+        "api_username": "invalid",
         "device_id": "1"
     }
-    assert_got_error_from_post(client, '/attr_auth/user/keygen', data, 400, INCORRECT_RECEIVER_ID_ERROR_MSG)
-    data = {
-        "access_token": attr_auth_access_token_one,
-        "attr_list": "TODAY_GUEST, ANOTHER",
-        "device_id": "1",
-        "receiver_id": "eth"
-    }
-    assert_got_error_from_post(client, '/attr_auth/user/keygen', data, 400, INCORRECT_RECEIVER_ID_ERROR_MSG)
+    assert_got_error_from_post(client, '/attr_auth/user/keygen', data, 400, INCORRECT_API_USERNAME_ERROR_MSG)
 
 
 def test_keygen_invalid_attr_list(client, attr_auth_access_token_one):
     data = {
         "access_token": attr_auth_access_token_one,
         "attr_list": "TODAY_GUEST, ANOTHER",
-        "receiver_id": "2",
+        "api_username": "TestUser",
         "device_id": "1"
     }
     assert_got_error_from_post(client, '/attr_auth/user/keygen', data, 400, INVALID_ATTR_LIST_ERROR_MSG)
@@ -216,7 +209,7 @@ def test_keygen_invalid_attr_list(client, attr_auth_access_token_one):
     data = {
         "access_token": attr_auth_access_token_one,
         "attr_list": "15-GUEST #$%^&* 15",
-        "receiver_id": "2",
+        "api_username": "TestUser",
         "device_id": "1"
     }
     assert_got_error_from_post(client, '/attr_auth/user/keygen', data, 400, INVALID_ATTR_LIST_ERROR_MSG)
@@ -226,7 +219,7 @@ def test_keygen_already_has_key_from_owner(client, app_and_ctx, attr_auth_access
     data = {
         "access_token": attr_auth_access_token_one,
         "attr_list": "1 1-2 1-GUEST",
-        "receiver_id": "2",
+        "api_username": "TestUser",
         "device_id": "1"
     }
     app, ctx = app_and_ctx
@@ -264,7 +257,7 @@ def test_keygen_replaces_old_key(client, app_and_ctx, attr_auth_access_token_one
     data = {
         "access_token": attr_auth_access_token_one,
         "attr_list": "1 1-2 1-GUEST",
-        "receiver_id": "2",
+        "api_username": "TestUser",
         "device_id": "99"
     }
     app, ctx = app_and_ctx
@@ -311,7 +304,7 @@ def test_keygen_doesnt_have_key_from_owner(client, app_and_ctx, attr_auth_access
     data = {
         "access_token": attr_auth_access_token_two,
         "attr_list": "2 2-1 2-GUEST",
-        "receiver_id": "1",
+        "api_username": "MartinHeinz",
         "device_id": "1"
     }
     app, ctx = app_and_ctx

@@ -30,7 +30,7 @@ class AttrAuthUserBehavior(TaskSet):
     def keygen(self):
         data = {
             "attr_list": "2 2-1 2-GUEST",
-            "receiver_id": "1",
+            "api_username": "MartinHeinz",
             "device_id": "1",
         }
         with self.client.post("/attr_auth/user/keygen",
