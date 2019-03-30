@@ -347,7 +347,7 @@ def trigger_scene(name, token, real):
 @click.argument('device_id')
 @click.argument('auth_user_id')
 @click.option('--token', envvar='ACCESS_TOKEN')
-def authorize_user(device_id, auth_user_id, token):
+def authorize_user(device_id, auth_user_id, token):  # TODO Use Blind Index instead of Device ID
     data = {
         "device_id": device_id,
         "auth_user_id": auth_user_id
