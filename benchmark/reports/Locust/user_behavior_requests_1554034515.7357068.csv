@@ -1,0 +1,7 @@
+"Method","Name","# requests","# failures","Median response time","Average response time","Min response time","Max response time","Average Content Size","Requests/s"
+"GET","/api/data/get_by_num_range",1484,0,3200,3391,59,19859,4227,6.05
+"GET","/api/data/get_device_data",1502,0,3200,3407,59,21968,8385,6.12
+"POST","/api/device/create",1570,0,3900,4047,75,24855,38,6.40
+"GET","/api/device/get",1558,0,3300,3517,56,20278,449,6.35
+"POST","/api/exchange_session_keys",1501,0,3400,3698,57,38174,22,6.12
+"None","Total",7615,0,3300,3616,56,38174,2581,31.03

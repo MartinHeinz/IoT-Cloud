@@ -84,6 +84,40 @@ class AttrAuthUserEncryptAndDecrypt(TaskSequence):
                 print(response.json())
 
 
+class MQTTUserBehavior(TaskSet):
+
+    @task()
+    def trigger_action(self):
+        data = {
+            "device_name_bi": DEVICE_NAME_BI,
+            "name_bi": ACTION_NAME_BI,
+            "additional_data": 'gAAAAABcikpQSsh7iACV6pAFMaldncaSrA9rj3iUh-7ejFnvXw1Uzcodf5Gf7FtZTU39R3L65nd1RzExvF9kMU1t_YwG2FpdMA=='
+        }
+        with self.client.get("/api/device/action",
+                             name="/api/device/action",
+                             params=data,
+                             headers={"Authorization": ACCESS_TOKEN_USER_1},
+                             verify=False,
+                             catch_response=True) as response:
+            if response.status_code == 200:
+                response.success()
+
+    @task()
+    def trigger_scene(self):
+        data = {
+            "name_bi": SCENE_NAME_BI,
+            "additional_data": 'gAAAAABcikpQSsh7iACV6pAFMaldncaSrA9rj3iUh-7ejFnvXw1Uzcodf5Gf7FtZTU39R3L65nd1RzExvF9kMU1t_YwG2FpdMA==',
+        }
+        with self.client.get("/api/scene/trigger",
+                             name="/api/scene/trigger",
+                             params=data,
+                             headers={"Authorization": ACCESS_TOKEN_USER_2},
+                             verify=False,
+                             catch_response=True) as response:
+            if response.status_code == 200:
+                response.success()
+
+
 class UserBehavior(TaskSet):
 
     @task()
@@ -143,37 +177,6 @@ class UserBehavior(TaskSet):
                 response.success()
 
     @task()
-    def trigger_action(self):
-        data = {
-            "device_name_bi": DEVICE_NAME_BI,
-            "name_bi": ACTION_NAME_BI,
-            "additional_data": 'gAAAAABcikpQSsh7iACV6pAFMaldncaSrA9rj3iUh-7ejFnvXw1Uzcodf5Gf7FtZTU39R3L65nd1RzExvF9kMU1t_YwG2FpdMA=='
-        }
-        with self.client.get("/api/device/action",
-                             name="/api/device/action",
-                             params=data,
-                             headers={"Authorization": ACCESS_TOKEN_USER_1},
-                             verify=False,
-                             catch_response=True) as response:
-            if response.status_code == 200:
-                response.success()
-
-    @task()
-    def trigger_scene(self):
-        data = {
-            "name_bi": SCENE_NAME_BI,
-            "additional_data": 'gAAAAABcikpQSsh7iACV6pAFMaldncaSrA9rj3iUh-7ejFnvXw1Uzcodf5Gf7FtZTU39R3L65nd1RzExvF9kMU1t_YwG2FpdMA==',
-        }
-        with self.client.get("/api/scene/trigger",
-                             name="/api/scene/trigger",
-                             params=data,
-                             headers={"Authorization": ACCESS_TOKEN_USER_2},
-                             verify=False,
-                             catch_response=True) as response:
-            if response.status_code == 200:
-                response.success()
-
-    @task()
     def exchange_session_keys(self):
         data = {
             "public_key": PUBLIC_KEY,
@@ -191,7 +194,7 @@ class UserBehavior(TaskSet):
 
 class WebsiteUser(HttpLocust):
     urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
-    task_set = UserBehavior  # Or AttrAuthUserBehavior or AttrAuthUserEncryptAndDecrypt
+    task_set = UserBehavior  # Or MQTTUserBehavior or AttrAuthUserBehavior or AttrAuthUserEncryptAndDecrypt
     min_wait = 2000
     max_wait = 5000
 
