@@ -38,7 +38,7 @@ MarkupSafe==1.1.1
 matplotlib==3.0.3
 mccabe==0.6.1
 mmh3==2.5.1
-more-itertools==6.0.0
+more-itertools==7.0.0
 msgpack==0.6.1
 numpy==1.16.2
 oauth2client==4.1.3
@@ -58,10 +58,10 @@ pyope==0.2.2
 pyparsing==2.3.1
 pytest==3.8.0
 pytest-benchmark==3.2.2
-pytest-cov==2.6.0
+pytest-cov==2.6.1
 pytest-html==1.20.0
 pytest-metadata==1.8.0
-pytest-mock==1.10.0
+pytest-mock==1.10.3
 python-dateutil==2.8.0
 python3-openid==3.1.0
 pytz==2018.9

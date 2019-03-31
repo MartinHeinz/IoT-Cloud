@@ -60,7 +60,7 @@ def create_data():
     Base.metadata.create_all(dal.engine)
 
     rows = []
-    rows_num = 10
+    rows_num = 10000
     global searched_row
     global searched_name
 
