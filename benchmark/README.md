@@ -8,9 +8,12 @@ This is directory that contains scripts and reports from system benchmarks
 * To run _OpenDoor_ scanner:
     * Install it using instructions at <https://github.com/stanislav-web/OpenDoor>
     * Run using: `python opendoor.py --host https://127.0.0.1 --reports html`
-* To run see hash function distribution plot run `tuple_generation.py` and optionally switch between hash functions by switching the `x` assignments in the file
+* To see hash function distribution plot run `tuple_generation.py` and optionally switch between hash functions by switching the `x` assignments in the file
  (`# x = [...]`)
-* TODO locust
+* To run _Locust.io_ benchmarks you will need to first start server application, then run `locust --host=https://localhost`,
+you can then open browser UI at `http://localhost:8089/`
+    * You can also choose which server endpoints to test by changing `task_set = UserBehavior` to one of the classes in the comment
+    
 
 ### Reports
 * All reports are inside `./reports` folder grouped by specific benchmark
@@ -20,5 +23,3 @@ This is directory that contains scripts and reports from system benchmarks
 * For MQTT broker benchmark, there are also 2 reports - one with authentication caching and one without, there is also a `query.sh`
  file with command that was used to run those benchmarks
 * For _OpenDoor_ scan there is one file showing all files the scanner looked for and whether they were found or not
-* TODO tuple_generation
-* TODO locust
