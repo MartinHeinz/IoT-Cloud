@@ -4,7 +4,7 @@ from app.attribute_authority.utils import create_attributes, parse_attr_list, ge
 from app.app_setup import db
 from app.attribute_authority import attr_authority
 from app.attribute_authority.utils import serialize_charm_object, create_cp_abe, create_pairing_group, deserialize_charm_object
-from app.auth.utils import require_api_token, token_to_hash
+from app.auth.utils import require_api_token
 from app.consts import ATTR_LIST_MISSING_ERROR_MSG, \
     INVALID_ATTR_LIST_ERROR_MSG, MESSAGE_MISSING_ERROR_MSG, POLICY_STRING_MISSING_ERROR_MSG, CIPHERTEXT_MISSING_ERROR_MSG, COULD_NOT_DECRYPT_ERROR_MSG, \
     INVALID_OWNER_API_USERNAME_ERROR_MSG, OWNER_API_USERNAME_MISSING_ERROR_MSG, API_USERNAME_MISSING_ERROR_MSG, DEVICE_ID_MISSING_ERROR_MSG, \
@@ -22,14 +22,13 @@ from app.utils import http_json_response, check_missing_request_argument
 @attr_authority.route('/set_username', methods=['POST'])
 @require_api_token("attr_auth")
 def set_username():
-    token = token_to_hash(request.headers.get("Authorization", None))
+    user = AttrAuthUser.get_using_jwt_token(request.headers.get("Authorization", None))
     api_username = request.form.get("api_username", None)
 
     arg_check = check_missing_request_argument((api_username, API_USERNAME_MISSING_ERROR_MSG))
     if arg_check is not True:
         return arg_check
 
-    user = AttrAuthUser.get_by_access_token(token)
     user.api_username = api_username
     db.session.add(user)
     db.session.commit()
@@ -46,8 +45,8 @@ def key_setup():
     public_key, master_key = cp_abe.setup()
 
     # "store keypair in DB"
-    token = token_to_hash(request.headers.get("Authorization", None))
-    user = AttrAuthUser.get_by_access_token(token)
+    user = AttrAuthUser.get_using_jwt_token(request.headers.get("Authorization", None))
+
     serialized_public_key = serialize_charm_object(public_key, pairing_group)
     serialized_master_key = serialize_charm_object(master_key, pairing_group)
     user.master_keypair = MasterKeypair(data_public=serialized_public_key,
@@ -62,11 +61,10 @@ def key_setup():
 @attr_authority.route('/user/keygen', methods=['POST'])
 @require_api_token("attr_auth")
 def keygen():
-    token = token_to_hash(request.headers.get("Authorization", None))
+    data_owner = AttrAuthUser.get_using_jwt_token(request.headers.get("Authorization", None))
     attr_list = request.form.get("attr_list", None)
     api_username = request.form.get("api_username", None)
     device_id = request.form.get("device_id", None)
-    data_owner = AttrAuthUser.get_by_access_token(token)
 
     arg_check = check_missing_request_argument(
         (attr_list, ATTR_LIST_MISSING_ERROR_MSG),
@@ -102,9 +100,8 @@ def keygen():
 @attr_authority.route('/device/keygen', methods=['POST'])
 @require_api_token("attr_auth")
 def device_keygen():
-    token = token_to_hash(request.headers.get("Authorization", None))
+    data_owner = AttrAuthUser.get_using_jwt_token(request.headers.get("Authorization", None))
     attr_list = request.form.get("attr_list", None)
-    data_owner = AttrAuthUser.get_by_access_token(token)
 
     arg_check = check_missing_request_argument(
         (attr_list, ATTR_LIST_MISSING_ERROR_MSG))
@@ -126,8 +123,8 @@ def device_keygen():
 @attr_authority.route('/user/retrieve_private_keys', methods=['POST'])
 @require_api_token("attr_auth")
 def retrieve_private_keys():
-    user_access_token = token_to_hash(request.headers.get("Authorization", ""))
-    user = AttrAuthUser.get_by_access_token(user_access_token)
+    user = AttrAuthUser.get_using_jwt_token(request.headers.get("Authorization", None))
+
     private_keys = [{
         "data": key.data.decode("utf-8"),
         "key_update": key.key_update,
@@ -142,7 +139,7 @@ def retrieve_private_keys():
 @attr_authority.route('/encrypt', methods=['GET'])
 @require_api_token("attr_auth")
 def encrypt():
-    token = token_to_hash(request.headers.get("Authorization", None))
+    data_owner = AttrAuthUser.get_using_jwt_token(request.headers.get("Authorization", None))
     plaintext = request.args.get("message", None)
     policy_string = request.args.get("policy_string", None)
 
@@ -154,7 +151,6 @@ def encrypt():
 
     pairing_group = create_pairing_group()
     cp_abe = create_cp_abe()
-    data_owner = AttrAuthUser.get_by_access_token(token)
     public_key = deserialize_charm_object(data_owner.master_keypair.data_public, pairing_group)
     ciphertext = cp_abe.encrypt(public_key, plaintext, policy_string)
 
@@ -165,7 +161,7 @@ def encrypt():
 @attr_authority.route('/decrypt', methods=['GET'])  # NOTE: ciphertext might be too long for url
 @require_api_token("attr_auth")
 def decrypt():
-    token = token_to_hash(request.headers.get("Authorization", None))
+    decryptor = AttrAuthUser.get_using_jwt_token(request.headers.get("Authorization", None))
     owner_api_username = request.args.get("api_username", None)
     serialized_ciphertext = request.args.get("ciphertext", None)
 
@@ -184,7 +180,6 @@ def decrypt():
     if data_owner is None:
         return http_json_response(False, 400, **{"error": INVALID_OWNER_API_USERNAME_ERROR_MSG})
 
-    decryptor = AttrAuthUser.get_by_access_token(token)
     public_key = deserialize_charm_object(data_owner.master_keypair.data_public, pairing_group)
     private_key = deserialize_charm_object(get_private_key_based_on_owner(decryptor, data_owner).data, pairing_group)
     ciphertext = deserialize_charm_object(str.encode(serialized_ciphertext), pairing_group)

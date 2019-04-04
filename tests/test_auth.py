@@ -4,8 +4,9 @@ from unittest import mock
 from unittest.mock import Mock
 
 import pytest
+from passlib.hash import bcrypt
 
-from app.auth.utils import parse_email, validate_token, save_user, require_api_token, INVALID_ACCESS_TOKEN_ERROR_MSG, token_to_hash
+from app.auth.utils import parse_email, validate_token, save_user, require_api_token, INVALID_ACCESS_TOKEN_ERROR_MSG, generate_auth_token
 from app.models.models import User, AttrAuthUser, Device
 from .conftest import db, assert_got_data_from_post
 
@@ -71,7 +72,7 @@ def test_save_user_github(app_and_ctx):
             save_user(remote, user_info, token)
             user = db.session.query(User).filter(User.id == user_info["sub"]).first()
             assert user is not None
-            assert user.access_token == token_to_hash(token["access_token"])
+            assert bcrypt.verify(token["access_token"], user.access_token)
             assert user.id == int(user_info["sub"])
             assert user.email is not None
 
@@ -102,17 +103,17 @@ def test_save_user_stackoverflow(app_and_ctx):
         user_github = db.session.query(User).filter(User.id == user_info["sub"]).first()
         assert user is not None
         assert user_github is None
-        assert user.access_token == token_to_hash(token["access_token"])
+        assert bcrypt.verify(token["access_token"], user.access_token)
         assert user.id == int(user_info["sub"])
 
 
-def test_require_api_token_in_base_db(application):
+def test_require_api_token_in_base_db(application, access_token):
     func = Mock()
     decorated_func = require_api_token(None)(func)
     with application.test_request_context("/", headers={"Authorization": "Missing"}):
         json_data = json.loads(decorated_func()[0].data.decode("utf-8"))
         assert INVALID_ACCESS_TOKEN_ERROR_MSG == json_data["error"]
-    with application.test_request_context("/", headers={"Authorization": "5c36ab84439c45a3719644c0d9bd7b31929afd9f"}):
+    with application.test_request_context("/", headers={"Authorization": access_token}):
         decorated_func()
         assert func.call_count == 1
 
@@ -134,42 +135,55 @@ def test_require_api_token_in_attr_auth_db(application):
     with application.test_request_context("/", headers={"Authorization": "Missing"}):
         json_data = json.loads(decorated_func()[0].data.decode("utf-8"))
         assert INVALID_ACCESS_TOKEN_ERROR_MSG == json_data["error"]
-    with application.test_request_context("/", headers={"Authorization": "5BagPr4ZdV9PvyyBNkjFvA))"}):
+    with application.test_request_context("/", headers={"Authorization": "nothing-yet"}):
         decorated_func()
         assert func.call_count == 0
-    save_user(remote, user_info, token)
-    with application.test_request_context("/", headers={"Authorization": "5BagPr4ZdV9PvyyBNkjFvA))"}):
+    token = save_user(remote, user_info, token)
+    with application.test_request_context("/", headers={"Authorization": token}):
         decorated_func()
         assert func.call_count == 1
 
 
 # noinspection PyArgumentList
-def test_delete_account(client):
-    server_data = {"access_token": "test_server"}
-    aa_data = {"access_token": "test_aa"}
+def test_delete_account(client, app_and_ctx):
+    server_data = {}
+    aa_data = {}
+    server_provider_token = "server_token"
+    aa_provider_token = "aa_token"
+
     device_id = 99999
-    db.session.add(User(
-        access_token=token_to_hash(server_data['access_token']),
+    token_hash = bcrypt.using(rounds=13).hash(server_provider_token)
+    aa_token_hash = bcrypt.using(rounds=13).hash(aa_provider_token)
+
+    user = User(
+        access_token=token_hash,
         access_token_update=datetime.now(),
         owned_devices=[Device(id=device_id, name=b"test", correctness_hash="")]
-        )
     )
-    db.session.add(AttrAuthUser(
-        access_token=token_to_hash(aa_data['access_token']),
+    aa_user = AttrAuthUser(
+        access_token=aa_token_hash,
         access_token_update=datetime.now())
-    )
+
+    db.session.add(aa_user)
+    db.session.add(user)
     db.session.commit()
 
-    assert db.session.query(User).filter(User.access_token == token_to_hash(server_data["access_token"])).first() is not None
+    app, ctx = app_and_ctx
+
+    with app.app_context():
+        server_data["access_token"] = generate_auth_token(user.id, server_provider_token)
+        aa_data["access_token"] = generate_auth_token(user.id, aa_provider_token)
+
+    assert db.session.query(User).filter(User.access_token == token_hash).first() is not None
     assert db.session.query(Device).filter(Device.id == device_id).first() is not None
-    assert db.session.query(AttrAuthUser).filter(AttrAuthUser.access_token == token_to_hash(aa_data["access_token"])).first() is not None
+    assert db.session.query(AttrAuthUser).filter(AttrAuthUser.access_token == aa_token_hash).first() is not None
 
     assert_got_data_from_post(client, '/delete_account', server_data)
     assert_got_data_from_post(client, '/attr_auth/delete_account', aa_data)
 
-    assert db.session.query(User).filter(User.access_token == token_to_hash(server_data["access_token"])).first() is None
+    assert db.session.query(User).filter(User.access_token == token_hash).first() is None
     assert db.session.query(Device).filter(Device.id == device_id).first() is None
-    assert db.session.query(AttrAuthUser).filter(AttrAuthUser.access_token == token_to_hash(aa_data["access_token"])).first() is None
+    assert db.session.query(AttrAuthUser).filter(AttrAuthUser.access_token == aa_token_hash).first() is None
 
 
 def test_redirect_to_provider(client):

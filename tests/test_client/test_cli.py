@@ -18,9 +18,10 @@ from pyope.ope import OPE
 from sqlalchemy.exc import SADeprecationWarning
 from tinydb import where, Query
 from tinydb.operations import set
+from passlib.hash import bcrypt
 
 from app.app_setup import db, create_app
-from app.auth.utils import token_to_hash
+from app.auth.utils import generate_auth_token
 from app.cli import populate
 import client.user.commands as cmd
 import client.device.commands as device_cmd
@@ -535,7 +536,7 @@ def test_register_to_broker(change_to_dev_db, runner, access_token_three, reset_
     password = "some_bad_pass"
     app, ctx = change_to_dev_db
     with app.app_context():
-        creds = db.session.query(User).filter(User.access_token == token_to_hash(access_token_three)).first().mqtt_creds
+        creds = db.session.query(User).filter(User.id == 3).first().mqtt_creds
 
     runner.invoke(cmd.register_to_broker, [password, '--token', access_token_three])
     table = get_tinydb_table(cmd.path, 'credentials')
@@ -545,7 +546,7 @@ def test_register_to_broker(change_to_dev_db, runner, access_token_three, reset_
     assert doc[0]["broker_password"] == password
 
     with app.app_context():
-        creds_new = db.session.query(User).filter(User.access_token == token_to_hash(access_token_three)).first().mqtt_creds
+        creds_new = db.session.query(User).filter(User.id == 3).first().mqtt_creds
         assert creds is None
         assert len(creds_new.acls) == 2
         to_delete = db.session.query(MQTTUser).filter(MQTTUser.username == creds_new.username).first()
@@ -555,22 +556,27 @@ def test_register_to_broker(change_to_dev_db, runner, access_token_three, reset_
 
 # noinspection PyArgumentList
 def test_delete_account(change_to_dev_db, runner):
-    server_data = {"access_token": "test_server"}
+    server_data = {}
     aa_data = {"access_token": "test_aa"}
+    server_provider_token = "server_token"
+
     device_id = 99999
+    token_hash = bcrypt.using(rounds=13).hash(server_provider_token)
+
     app, ctx = change_to_dev_db
     r = Mock()
     r.content = b'{"success": true}'
     with app.app_context():
-        db.session.add(User(
-            access_token=token_to_hash(server_data['access_token']),
+        user = User(
+            access_token=token_hash,
             access_token_update=datetime.now(),
             owned_devices=[Device(id=device_id, name=b"test", correctness_hash="")]
             )
-        )
+        db.session.add(user)
         db.session.commit()
+        server_data["access_token"] = generate_auth_token(user.id, server_provider_token)
 
-        assert db.session.query(User).filter(User.access_token == token_to_hash(server_data["access_token"])).first() is not None
+        assert db.session.query(User).filter(User.access_token == token_hash).first() is not None
         assert db.session.query(Device).filter(Device.id == device_id).first() is not None
 
         result = runner.invoke(cmd.delete_account, ['--token', server_data["access_token"], "--server"])
@@ -580,7 +586,7 @@ def test_delete_account(change_to_dev_db, runner):
             assert "'success': True" in result.output
             assert call('https://localhost/attr_auth/delete_account', headers={'Authorization': 'test_aa'}, verify=False) == g.call_args
 
-        assert db.session.query(User).filter(User.access_token == token_to_hash(server_data["access_token"])).first() is None
+        assert db.session.query(User).filter(User.access_token == token_hash).first() is None
         assert db.session.query(Device).filter(Device.id == device_id).first() is None
 
 

@@ -559,7 +559,7 @@ def send_column_keys(user_id, device_id):
     # payload_keys["device_data:data"] = fernet_key.encrypt(get_aa_public_key().encode()).decode()
     abe_key_and_policy = json.dumps({
         "public_key": get_aa_public_key(),
-        "policy": " ".join(doc["device_data:data"]["attr_list"])
+        "policy": " ".join(doc["device_data:data"]["attr_list"])  # TODO do not just join this, make it an input as a string
     }).encode()
 
     payload_keys["device_data:data"] = fernet_key.encrypt(abe_key_and_policy).decode()
@@ -674,6 +674,8 @@ def get_device_data(user_id, device_id, device_name, owner, token):
             "device_data": json.loads(decrypt_using_fernet_hex(get_shared_key_by_device_id(path, device_id), fake_tuple_data["device_data"]).decode())}
 
         fake_tuples, rows = _divide_fake_and_real_data(json_content["device_data"], device_id, decrypted_fake_tuple_data)
+        # NOTE:      ^ Not checking for ability of user to decrypt (having SK that satisfies Ciphertext) because owner should have keys setup
+        #              so that he can decrypt all data from his devices
 
         verify_integrity_data(generate_fake_tuples_in_range(decrypted_fake_tuple_data["device_data"]), fake_tuples)
         check_correctness_hash(rows, 'added', 'data', 'num_data', 'tid')
@@ -695,7 +697,7 @@ def get_foreign_device_data(device_id, data):
         click.echo(f"Keys for device: {device_id} are missing. You are probably not authorized to use it.")
 
     decrypted = []
-    for row in data["device_data"]:
+    for row in data["device_data"]:  # TODO Add try/except here + echo, for when attrs don't satisfy policy
         decrypted.append(decrypt_using_abe_serialized_key(row["data"],
                                                           doc["device_data:data"]["public_key"],
                                                           doc["device_data:data"]["private_key"]))

@@ -1,3 +1,6 @@
+from flask import current_app
+from itsdangerous import (TimedJSONWebSignatureSerializer as Serializer)
+
 from app.app_setup import db
 from app.utils import is_number
 
@@ -20,12 +23,14 @@ class MixinGetByUsername:
         return db.session.query(cls).filter(cls.api_username == user_name).first()
 
 
-class MixinGetByAccessToken:
-    access_token = db.Column(db.String(200), unique=True, nullable=False)
+class MixinGetUsingJWT:
+    id = db.Column(db.Integer, primary_key=True)
 
     @classmethod
-    def get_by_access_token(cls, token):
-        return db.session.query(cls).filter(cls.access_token == token).first()
+    def get_using_jwt_token(cls, token):
+        s = Serializer(current_app.config['SECRET_KEY'])
+        data = s.loads(token)
+        return db.session.query(cls).filter(cls.id == data['id']).first()
 
 
 class MixinAsDict:

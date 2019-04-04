@@ -4,7 +4,7 @@ from sqlalchemy import and_
 
 from app.api import api
 from app.app_setup import client, db
-from app.auth.utils import require_api_token, token_to_hash
+from app.auth.utils import require_api_token
 from app.consts import DEVICE_TYPE_ID_MISSING_ERROR_MSG, DEVICE_TYPE_ID_INCORRECT_ERROR_MSG, \
     DEVICE_TYPE_DESC_MISSING_ERROR_MSG, \
     DEVICE_NAME_BI_MISSING_ERROR_MSG, DEVICE_NAME_MISSING_ERROR_MSG, DATA_RANGE_MISSING_ERROR_MSG, \
@@ -21,7 +21,7 @@ from app.consts import DEVICE_TYPE_ID_MISSING_ERROR_MSG, DEVICE_TYPE_ID_INCORREC
     AUTH_USER_ID_MISSING_ERROR_MSG, AUTH_USER_ID_INVALID_ERROR_MSG, AUTH_USER_ALREADY_AUTHORIZED_ERROR_MSG, \
     REVOKE_USER_ID_MISSING_ERROR_MSG, REVOKE_USER_ID_INVALID_ERROR_MSG, REVOKE_USER_NOT_AUTHORIZED_ERROR_MSG, \
     DEVICE_NAME_BI_INVALID_ERROR_MSG, ADDITIONAL_DATA_MISSING_ERROR_MSG
-from app.models.models import DeviceType, Device, DeviceData, UserDevice, User, Scene, Action, ACL
+from app.models.models import DeviceType, Device, DeviceData, UserDevice, User, Scene, Action
 from app.mqtt.utils import Payload
 from app.utils import http_json_response, check_missing_request_argument, is_valid_uuid, format_topic, validate_broker_password, is_number, create_payload
 
@@ -38,7 +38,7 @@ def publish_message():
 @require_api_token()
 def register_to_broker():
     password_hash = request.form.get("password", None)
-    user = User.get_by_access_token(token_to_hash(request.headers.get('Authorization', "")))
+    user = User.get_using_jwt_token(request.headers.get('Authorization', ""))
     arg_check = check_missing_request_argument(
         (password_hash, USER_MISSING_PASSWORD_HASH))
     if arg_check is not True:
@@ -58,7 +58,7 @@ def register_to_broker():
 def create_device_type():
     description = request.form.get("description", None)
     correctness_hash = request.form.get("correctness_hash", None)
-    user = User.get_by_access_token(token_to_hash(request.headers.get("Authorization", "")))
+    user = User.get_using_jwt_token(request.headers.get("Authorization", ""))
     arg_check = check_missing_request_argument(
         (description, DEVICE_TYPE_DESC_MISSING_ERROR_MSG),
         (correctness_hash, CORRECTNESS_HASH_MISSING_ERROR_MSG))
@@ -78,7 +78,7 @@ def create_device():
     name = request.form.get("name", None)
     name_bi = request.form.get("name_bi", None)
     password_hash = request.form.get("password", None)
-    user = User.get_by_access_token(token_to_hash(request.headers.get("Authorization", "")))
+    user = User.get_using_jwt_token(request.headers.get("Authorization", ""))
     arg_check = check_missing_request_argument(
         (device_type_id, DEVICE_TYPE_ID_MISSING_ERROR_MSG),
         (correctness_hash, CORRECTNESS_HASH_MISSING_ERROR_MSG),
@@ -146,8 +146,7 @@ def create_scene():
 def add_scene_action():
     scene_name_bi = request.form.get("scene_name_bi", None)
     action_name_bi = request.form.get("action_name_bi", None)
-    access_token = token_to_hash(request.headers.get("Authorization", ""))
-    user = User.get_by_access_token(access_token)
+    user = User.get_using_jwt_token(request.headers.get("Authorization", ""))
 
     arg_check = check_missing_request_argument(
         (scene_name_bi, SCENE_NAME_BI_MISSING_ERROR_MSG),
@@ -161,7 +160,7 @@ def add_scene_action():
     if sc is None or ac is None:
         return http_json_response(False, 400, **{"error": INVALID_SCENE_OR_ACTION_BI_ERROR_MSG})
 
-    if not User.can_use_device(access_token, ac.device_id):
+    if not User.can_use_device(user, ac.device_id):
         return http_json_response(False, 400, **{"error": UNAUTHORIZED_USER_ERROR_MSG})
 
     if sc.owner is not None and sc.owner != user:
@@ -183,8 +182,7 @@ def set_device_action():
     correctness_hash = request.form.get("correctness_hash", None)
     name = request.form.get("name", None)
     name_bi = request.form.get("name_bi", None)
-    access_token = token_to_hash(request.headers.get("Authorization", ""))
-    user = User.get_by_access_token(access_token)
+    user = User.get_using_jwt_token(request.headers.get("Authorization", ""))
 
     arg_check = check_missing_request_argument(
         (device_id, DEVICE_ID_MISSING_ERROR_MSG),
@@ -196,7 +194,7 @@ def set_device_action():
 
     if not user.is_registered_with_broker:
         return http_json_response(False, 400, **{"error": NOT_REGISTERED_WITH_BROKER_ERROR_MSG})
-    if not User.can_use_device(access_token, device_id):
+    if not User.can_use_device(user, device_id):
         return http_json_response(False, 400, **{"error": UNAUTHORIZED_USER_ERROR_MSG})
 
     dv = Device.get_by_id(device_id)
@@ -212,7 +210,7 @@ def set_device_action():
 @require_api_token()
 def get_device_by_name():
     device_name_bi = request.args.get("name_bi", None)
-    user = User.get_by_access_token(token_to_hash(request.headers.get("Authorization", "")))
+    user = User.get_using_jwt_token(request.headers.get("Authorization", ""))
     if device_name_bi is None:
         return http_json_response(False, 400, **{"error": DEVICE_NAME_BI_MISSING_ERROR_MSG})
     devices = db.session.query(Device).filter(and_(Device.name_bi == device_name_bi, Device.owner == user))
@@ -232,7 +230,7 @@ def get_data_by_num_range():
     lower_bound = request.args.get("lower", "")
     upper_bound = request.args.get("upper", "")
     device_name_bi = request.args.get("device_name_bi", None)
-    access_token = token_to_hash(request.headers.get("Authorization", ""))
+    user = User.get_using_jwt_token(request.headers.get("Authorization", ""))
 
     arg_check = check_missing_request_argument((device_name_bi, DEVICE_NAME_BI_MISSING_ERROR_MSG))
     if arg_check is not True:
@@ -243,7 +241,7 @@ def get_data_by_num_range():
     if device is None:
         return http_json_response(False, 400, **{"error": DEVICE_NAME_BI_INVALID_ERROR_MSG})
 
-    if not User.can_use_device(access_token, device.id):
+    if not User.can_use_device(user, device.id):
         return http_json_response(False, 400, **{"error": UNAUTHORIZED_USER_ERROR_MSG})
 
     if not is_number(lower_bound) and not is_number(upper_bound):
@@ -290,7 +288,7 @@ def get_data_by_num_range():
 @require_api_token()
 def get_device_data():
     device_name_bi = request.args.get("device_name_bi", None)
-    access_token = token_to_hash(request.headers.get("Authorization", ""))
+    user = User.get_using_jwt_token(request.headers.get("Authorization", ""))
 
     arg_check = check_missing_request_argument((device_name_bi, DEVICE_NAME_BI_MISSING_ERROR_MSG))
     if arg_check is not True:
@@ -301,7 +299,7 @@ def get_device_data():
     if device is None:
         return http_json_response(False, 400, **{"error": DEVICE_NAME_BI_INVALID_ERROR_MSG})
 
-    if not User.can_use_device(access_token, device.id):
+    if not User.can_use_device(user, device.id):
         return http_json_response(False, 400, **{"error": UNAUTHORIZED_USER_ERROR_MSG})
 
     result = []
@@ -320,8 +318,7 @@ def get_device_data():
 def exchange_session_keys():
     user_public_key_bytes = request.form.get("public_key", None)
     device_id = request.form.get("device_id", None)
-    user_access_token = token_to_hash(request.headers.get("Authorization", ""))
-    user = User.get_by_access_token(user_access_token)
+    user = User.get_using_jwt_token(request.headers.get("Authorization", ""))
 
     arg_check = check_missing_request_argument(
         (user_public_key_bytes, PUBLIC_KEY_MISSING_ERROR_MSG),
@@ -329,7 +326,7 @@ def exchange_session_keys():
     if arg_check is not True:
         return arg_check
 
-    if not User.can_use_device(user_access_token, device_id):
+    if not User.can_use_device(user, device_id):
         return http_json_response(False, 400, **{"error": UNAUTHORIZED_USER_ERROR_MSG})
 
     payload_bytes = bytes(Payload(
@@ -344,15 +341,14 @@ def exchange_session_keys():
 @require_api_token()
 def retrieve_public_key():
     device_id = request.form.get("device_id", None)
-    user_access_token = token_to_hash(request.headers.get("Authorization", ""))
-    user = User.get_by_access_token(user_access_token)
+    user = User.get_using_jwt_token(request.headers.get("Authorization", ""))
 
     arg_check = check_missing_request_argument(
         (device_id, DEVICE_ID_MISSING_ERROR_MSG))
     if arg_check is not True:
         return arg_check
 
-    if not User.can_use_device(user_access_token, device_id):
+    if not User.can_use_device(user, device_id):
         return http_json_response(False, 400, **{"error": UNAUTHORIZED_USER_ERROR_MSG})
 
     user_device = db.session.query(UserDevice) \
@@ -375,8 +371,7 @@ def trigger_action():
     device_name_bi = request.args.get("device_name_bi", None)
     name_bi = request.args.get("name_bi", None)
     additional_data = request.args.get("additional_data", None)
-    access_token = token_to_hash(request.headers.get("Authorization", ""))
-    user = User.get_by_access_token(access_token)
+    user = User.get_using_jwt_token(request.headers.get("Authorization", ""))
 
     arg_check = check_missing_request_argument(
         (device_name_bi, DEVICE_NAME_BI_MISSING_ERROR_MSG),
@@ -386,7 +381,7 @@ def trigger_action():
         return arg_check
 
     dv = Device.get_by_name_bi(device_name_bi)
-    if dv is None or not User.can_use_device(access_token, dv.id):
+    if dv is None or not User.can_use_device(user, dv.id):
         return http_json_response(False, 400, **{"error": UNAUTHORIZED_USER_ERROR_MSG})
 
     topic = format_topic(user.mqtt_creds.username, dv.mqtt_creds.username)
@@ -406,8 +401,7 @@ def trigger_action():
 def trigger_scene():
     name_bi = request.args.get("name_bi", None)
     additional_data = request.args.get("additional_data", None)
-    access_token = token_to_hash(request.headers.get("Authorization", ""))
-    user = User.get_by_access_token(access_token)
+    user = User.get_using_jwt_token(request.headers.get("Authorization", ""))
 
     arg_check = check_missing_request_argument(
         (name_bi, ACTION_NAME_BI_MISSING_ERROR_MSG),
@@ -441,17 +435,17 @@ def trigger_scene():
 def authorize_user():
     device_id = request.form.get("device_id", None)
     auth_user_id = request.form.get("auth_user_id", None)  # ID of user to be authorized
-    access_token = token_to_hash(request.headers.get("Authorization", ""))
+    user = User.get_using_jwt_token(request.headers.get("Authorization", ""))
     auth_user = User.get_by_id(auth_user_id)
 
     arg_check = check_missing_request_argument(
         (device_id, DEVICE_ID_MISSING_ERROR_MSG),
         (auth_user_id, AUTH_USER_ID_MISSING_ERROR_MSG),
-        (None if auth_user is None or auth_user.access_token == access_token else auth_user, AUTH_USER_ID_INVALID_ERROR_MSG))
+        (None if auth_user is None or auth_user.id == user.id else auth_user, AUTH_USER_ID_INVALID_ERROR_MSG))
     if arg_check is not True:
         return arg_check
 
-    if not User.can_use_device(access_token, device_id):
+    if not User.can_use_device(user, device_id):
         return http_json_response(False, 400, **{"error": UNAUTHORIZED_USER_ERROR_MSG})
 
     device = Device.get_by_id(device_id)
@@ -481,17 +475,17 @@ def authorize_user():
 def revoke_user():
     device_id = request.form.get("device_id", None)
     revoke_user_id = request.form.get("revoke_user_id", None)  # ID of user to be revoked
-    access_token = token_to_hash(request.headers.get("Authorization", ""))
+    user = User.get_using_jwt_token(request.headers.get("Authorization", ""))
     user_to_revoke = User.get_by_id(revoke_user_id)
 
     arg_check = check_missing_request_argument(
         (device_id, DEVICE_ID_MISSING_ERROR_MSG),
         (revoke_user_id, REVOKE_USER_ID_MISSING_ERROR_MSG),
-        (None if user_to_revoke is None or user_to_revoke.access_token == access_token else user_to_revoke, REVOKE_USER_ID_INVALID_ERROR_MSG))
+        (None if user_to_revoke is None or user_to_revoke.id == user.id else user_to_revoke, REVOKE_USER_ID_INVALID_ERROR_MSG))
     if arg_check is not True:
         return arg_check
 
-    if not User.can_use_device(access_token, device_id):
+    if not User.can_use_device(user, device_id):
         return http_json_response(False, 400, **{"error": UNAUTHORIZED_USER_ERROR_MSG})
 
     device = Device.get_by_id(device_id)

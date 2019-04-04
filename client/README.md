@@ -32,4 +32,22 @@ Commands:
 ### Example Flows
 These are example sequences of commands to show how to perform various tasks using CLI
 
- TODO
+* Register to Server by accessing `https://localhost/login`
+* Set Server `access_token` returned by registration: `export ACCESS_TOKEN=<value>`
+
+
+* Register to AA by accessing `https://localhost/attr_auth/login`
+* Set AA `access_token` returned by registration: `export AA_ACCESS_TOKEN=<value>`
+
+
+* Set broker URL on `MQTT_BROKER` variable in `./client/cli.py` (or use `-b` option in following commands)
+
+* Register to broker
+    * `iot-cloud-cli user register-to-broker <your-password>`
+* Initialize per-user global hashing and encryption keys
+    * `iot-cloud-cli user init-global-keys`
+* Create new device type
+    * `iot-cloud-cli user create-device-type <some-description>`
+    * _Save the device type ID from response for future use_
+    
+TODO

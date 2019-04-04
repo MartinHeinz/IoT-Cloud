@@ -41,34 +41,41 @@ def application():
     db.drop_all()
 
 
+# Using SECRET_KEY = "4cb3d264709d34bab510e74bf70541b619a9f95cfcd597d960146a2d479dae27"
+
 @pytest.fixture(scope="session")
 def access_token():
-    return "5c36ab84439c45a3719644c0d9bd7b31929afd9f"
+    return 'eyJhbGciOiJIUzUxMiIsImlhdCI6MTU1NDM5OTg5NiwiZXhwIjo0NzEwMTU5ODk2fQ.eyJpZCI6MSwidG9rZW4iOiI1YzM2YWI4NDQzOWM0NWEzNzE5NjQ0YzBkOWJkN2IzMTkyOWFmZDlmIn0.PFAF21AJBto5MvHj2aTu-6ni-wWKaqMEUmL0LdPwwm_fzrPH-w7t4772836RD7zjO39vM6bOd29Zr6n2KOrFkQ'  # id_: 1, username: 'MartinHeinz', Provider token: "5c36ab84439c45a3719644c0d9bd7b31929afd9f", Token hash: '$2b$13$XN3Dvx/nQwgPhlAFtk75M.vPxy69SnkZf70t1WNbMAO8ULSR3L7xC'
 
 
 @pytest.fixture(scope="session")
 def access_token_two():
-    return "5c36ab84439c55a3c196f4csd9bd7b319291239f"
+    return 'eyJhbGciOiJIUzUxMiIsImlhdCI6MTU1NDQwNTY3NywiZXhwIjo0NzEwMTY1Njc3fQ.eyJpZCI6MiwidG9rZW4iOiI1YzM2YWI4NDQzOWM1NWEzYzE5NmY0Y3NkOWJkN2IzMTkyOTEyMzlmIn0.qnuO_V75V1WPS4WE-1_fm-Ovl8PxdfCk7m3kwbJazVCELJDm-OEEuGbVPbHDbSpYUzFC6tKGyK5s3v2WgcuJzQ'  # id_: 2, username: 'TestUser', Provider token: "5c36ab84439c55a3c196f4csd9bd7b319291239f", Token hash: '$2b$13$EEqzSBy2inOvO.TyybM3leP2y24ojQLbv7v/e35rLa5HU4j2PO0BC'
 
 
 @pytest.fixture(scope="session")
 def access_token_three():
-    return '5c36ab84439c55a3c196f4csd9bd7b3d9291f39g'
+    return 'eyJhbGciOiJIUzUxMiIsImlhdCI6MTU1NDQwNTYyNCwiZXhwIjo0NzEwMTY1NjI0fQ.eyJpZCI6MywidG9rZW4iOiI1YzM2YWI4NDQzOWM1NWEzYzE5NmY0Y3NkOWJkN2IzZDkyOTFmMzlnIn0.vAqdW4p0-ZTFSjRDRO7ymT4mplXRBh5avlhksjItgvqdH0hHKxa5W80yavu-ygGCOzWEGdbH4jyG_JHEwwtf-A'  # id_: 3, username: 'TestRunner', Provider token: '5c36ab84439c55a3c196f4csd9bd7b3d9291f39g', Token hash: '$2b$13$NALAuz.xCUgoGeZYK5BDK.0WqCKDKBtEWvemr1a4NL4f9rqPxBvkO'
 
 
 @pytest.fixture(scope="session")
 def access_token_four():
-    return '5c36ab84439gden3c196f4csd9bd7b3d9291f39g'
+    return 'eyJhbGciOiJIUzUxMiIsImlhdCI6MTU1NDQwMDAwMCwiZXhwIjo0NzEwMTYwMDAwfQ.eyJpZCI6NCwidG9rZW4iOiI1YzM2YWI4NDQzOWdkZW4zYzE5NmY0Y3NkOWJkN2IzZDkyOTFmMzlnIn0.y29prR7uJMCnpPQzFHPCL1mFjSfO-x7Wa1aeDRimAn6Qu4t55TTVtaKZcJd_sFh6Gga_HCIC9x4MSP0vyo_qBg'  # id_: 4, username: 'TestRunner2', Provider token: '5c36ab84439gden3c196f4csd9bd7b3d9291f39g', Token hash: '$2b$13$g2aEPfmW9XjDEXwS9wq4l.2m9z.b1B.212jtdn322ohvjge2h0lHK'
 
 
 @pytest.fixture(scope="session")
 def attr_auth_access_token_one():
-    return '54agPr4edV9PvyyBNkjFfA))'
+    return 'eyJhbGciOiJIUzUxMiIsImlhdCI6MTU1NDQwMDAyMywiZXhwIjo0NzEwMTYwMDIzfQ.eyJpZCI6MSwidG9rZW4iOiI1NGFnUHI0ZWRWOVB2eXlCTmtqRmZBKSkifQ.Ur7wcpbN20ATrE1DJFtvrYt3jwoqGbvdL9AJGN99uyzsqup0lywOzJW6HVruDkM3Y4UH0Sm3FA3PaV3y-sF8zQ'  # id_: 1, username: 'Test' Provider token: '54agPr4edV9PvyyBNkjFfA))', Token hash:  '$2b$13$ohFggPHd77552g8HBww1OONSvQTN9.RfwphZYY6eGaIARvzBoOCJy'
 
 
 @pytest.fixture(scope="session")
 def attr_auth_access_token_two():
-    return '7jagPr4edVdgvyyBNkjdaQ))'
+    return 'eyJhbGciOiJIUzUxMiIsImlhdCI6MTU1NDQwMDA2NiwiZXhwIjo0NzEwMTYwMDY2fQ.eyJpZCI6MiwidG9rZW4iOiI3amFnUHI0ZWRWZGd2eXlCTmtqZGFRKSkifQ.gLDc2mjFGjc8PrZDREi-0GQoRF59nwUIlgcU8POKTkT-X3y7ALr6kDwVOcm-a0JcdetwQBoUgd4sXLWQ3duFzg'  # id_: 2, username: 'TestUser' Provider token: '7jagPr4edVdgvyyBNkjdaQ))', Token hash:  '$2b$13$tBA98L8EtDCiyXrJ4Im0CeJEQ4SeLMD7IG2nH95n86RHmP1d12cVe'
+
+
+@pytest.fixture(scope="session")
+def attr_auth_access_token_three():
+    return 'eyJhbGciOiJIUzUxMiIsImlhdCI6MTU1NDQwMDA5NiwiZXhwIjo0NzEwMTYwMDk2fQ.eyJpZCI6MywidG9rZW4iOiI3amFnUHI0ZWRWZGdoY3NCTmtqZDIzKSkifQ.KtvFd6Bwp02-_ltIEoCjHRYTEHdMSVJxwgN5mONspojnVSNqMp6dfFgPl5hq-YsrhJ6Z5JCR4jth9fuuAws-BQ'  # id_: 3, username: 'TestRunner' Provider token: '7jagPr4edVdghcsBNkjd23))', Token hash:  '$2b$13$12bPjvAe8C7hDl4lf7mDPOP9y62o2CfD7OKxfkvn3uS7Le3maFpkq'
 
 
 @pytest.fixture(scope='function')

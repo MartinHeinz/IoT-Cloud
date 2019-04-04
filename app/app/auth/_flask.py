@@ -4,7 +4,7 @@ from flask import request, url_for, current_app, session
 from app.app_setup import db
 from app.auth import login, login_aa, remote_aa, nonce_key_aa, backend_aa
 from app.auth import remote as remote_app, nonce_key as nonce_key_app, backend as backend_app
-from app.auth.utils import handle_authorize, token_to_hash, require_api_token
+from app.auth.utils import handle_authorize, require_api_token
 from app.models.models import AttrAuthUser, User
 from app.utils import http_json_response
 
@@ -12,7 +12,7 @@ from app.utils import http_json_response
 @login_aa.route('/delete_account', methods=['POST'])
 @require_api_token("attr_auth")
 def delete_account_aa():
-    user = AttrAuthUser.get_by_access_token(token_to_hash(request.headers.get('Authorization', "")))
+    user = AttrAuthUser.get_using_jwt_token(request.headers.get('Authorization', ""))
     db.session.delete(user)
     db.session.commit()
 
@@ -22,7 +22,7 @@ def delete_account_aa():
 @login.route('/delete_account', methods=['POST'])
 @require_api_token()
 def delete_account():
-    user = User.get_by_access_token(token_to_hash(request.headers.get('Authorization', "")))
+    user = User.get_using_jwt_token(request.headers.get('Authorization', ""))
     db.session.delete(user)
     db.session.commit()
 
@@ -50,7 +50,13 @@ def login_aa():  # noqa pylint: disable=function-redefined
 
 
 def login_common(remote, url_for_auth, backend, nonce_key):
+
     redirect_uri = url_for(url_for_auth, _external=True, _scheme='https')
+    if "," in redirect_uri:  # if URI is malformed, e.g. "http://localhost,localhost/attr_auth/auth"
+        schema = "https://"
+        host = redirect_uri.split(",")[1]
+        redirect_uri = schema + host
+
     conf_key = '{}_AUTHORIZE_PARAMS'.format(backend.OAUTH_NAME.upper())
     params = current_app.config.get(conf_key, {})
     if 'oidc' in backend.OAUTH_TYPE:

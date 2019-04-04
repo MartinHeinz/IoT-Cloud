@@ -7,7 +7,6 @@ from uuid import UUID
 
 from passlib.hash import bcrypt
 
-from app.auth.utils import token_to_hash
 from app.consts import DEVICE_TYPE_ID_MISSING_ERROR_MSG, DEVICE_TYPE_ID_INCORRECT_ERROR_MSG, \
     DEVICE_NAME_BI_MISSING_ERROR_MSG, DEVICE_NAME_MISSING_ERROR_MSG, \
     DATA_RANGE_MISSING_ERROR_MSG, DATA_OUT_OF_OUTPUT_RANGE_ERROR_MSG, CORRECTNESS_HASH_MISSING_ERROR_MSG, \
@@ -121,7 +120,7 @@ def test_api_dt_create(client, app_and_ctx, access_token):
 
     with app.app_context():
         inserted_dt = db.session.query(DeviceType).filter(DeviceType.type_id == UUID(data_out["type_id"])).first()
-        assert inserted_dt.owner.access_token == "$pbkdf2-sha256$29000$RGVmYXVsdA$sNWluMfh07f0fPLerXr9jInGOAZk8Yo//lY9pOMv61o"
+        assert inserted_dt.owner.name == "MartinHeinz"
         assert inserted_dt.correctness_hash == '$2b$12$.Jk4ruyYVQuMcMxpDODfQuV/1NJiLHWDcF15CE9g2OKmCmuSMzU8q'
 
 
@@ -198,7 +197,7 @@ def test_api_dv_create(client, app_and_ctx, access_token, access_token_four):
 
     with app.app_context():
         inserted_dv = db.session.query(Device).filter(Device.id == data_out["id"]).first()
-        assert inserted_dv.owner.access_token == token_to_hash(data["access_token"])
+        assert inserted_dv.owner.id == 1
         assert inserted_dv.name_bi == data["name_bi"]
         assert inserted_dv.users is not None
 
@@ -207,7 +206,7 @@ def test_api_dv_create(client, app_and_ctx, access_token, access_token_four):
         assert inserted_dv.mqtt_creds.password_hash == data["password"]
         assert len(inserted_dv.mqtt_creds.acls) == 5
 
-        device_owner = User.get_by_access_token(token_to_hash(access_token))
+        device_owner = User.get_by_id(1)
         new_acl = next((acl for acl in device_owner.mqtt_creds.acls if acl.topic == f"u:1/d:{data_out['id']}/"), None)
         assert new_acl is not None, "New ACL for device was not inserted."
 
@@ -596,7 +595,7 @@ def test_api_authorize_user(client, app_and_ctx, access_token, access_token_two)
 
     app, ctx = app_and_ctx
     with app.app_context():
-        auth_user = User.get_by_access_token(token_to_hash(access_token_two))
+        auth_user = User.get_by_id(2)
         auth_device = Device.get_by_id(23)
 
         assert next((ud for ud in auth_device.users if ud.user_id == auth_user.id), None) is not None
@@ -657,7 +656,7 @@ def test_api_revoke_user(client, app_and_ctx, access_token, access_token_two):
 
     app, ctx = app_and_ctx
     with app.app_context():
-        auth_user = User.get_by_access_token(token_to_hash(access_token_two))
+        auth_user = User.get_by_id(2)
         auth_device = Device.get_by_id(23)
         assert UserDevice.get_by_ids(23, 2) is None
         removed_creds_user = [acl for acl in auth_user.mqtt_creds.acls if f"d:23" in acl.topic]

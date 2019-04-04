@@ -14,7 +14,7 @@ from cryptography.fernet import Fernet
 from app.app_setup import create_app, db
 from app.attribute_authority.utils import create_pairing_group, create_cp_abe, serialize_charm_object, \
     create_private_key
-from app.auth.utils import token_to_hash
+from app.auth.utils import generate_auth_token
 from app.config import DB_SETUP_CONFIG_NAME
 from app.models.models import User, MQTTUser, DeviceType, Device, Scene, DeviceData, AttrAuthUser, MasterKeypair, \
     PrivateKey, Attribute, UserDevice
@@ -74,7 +74,7 @@ for i in range(user_no):
     user = User(id=i,
                 name=username,
                 email=f'{username}@gmail.com',
-                access_token=token_to_hash(access_token),
+                access_token=generate_auth_token(access_token),  # TODO
                 access_token_update=random_date(d1, d2))
 
     mqtt_user = MQTTUser(username=f'u:{user.id}',
@@ -234,7 +234,7 @@ for i, user in enumerate(users):
     # noinspection PyArgumentList
     aa_user = AttrAuthUser(name=user.name,
                            id=i,
-                           access_token=token_to_hash(access_token),
+                           access_token=generate_auth_token(access_token),  # TODO
                            access_token_update=random_date(d1, d2),
                            api_username=user.name)
     keypair = MasterKeypair(data_public=keypairs[i][0],

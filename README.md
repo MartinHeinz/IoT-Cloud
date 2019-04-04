@@ -24,6 +24,9 @@ For running tests:
 ### Running tests
 - When running tests make sure you set environment variable `TESTING_ENV` to `host_testing`(defaults to `testing`), so the application uses `config.env` variables needed for running tests on host. If not set, tests will run as if they were inside docker container ( = with different URLs).
 - To run (from `./tests` directory) use <br> `pytest . --junitxml=./reports/test_report.xml --html=./reports/test_report.html --self-contained-html --cov=../ --cov-config=../.coveragerc --cov-report term`
+    * This generates XML and HTML test reports and prints simple coverage report to terminal
+    * To see full HTML coverage report use `--cov-report=html` instead of `--cov-report term`, which creates whole directory (`cov_report.html`) which contains
+    graphical coverage report for each file in project
 - To see _HTML_ or _XML_ test and coverage reports check `./tests/reports` directory
 - _NOTE: When running tests on Docker host it's necessary to have server application running, because CLI tests are ran against this instance_
 

@@ -7,7 +7,7 @@ from sqlalchemy.orm import relationship
 
 from app.utils import is_number
 from app.app_setup import db
-from app.models.mixins import MixinGetById, MixinAsDict, MixinGetByAccessToken, MixinGetByUsername
+from app.models.mixins import MixinGetById, MixinAsDict, MixinGetUsingJWT, MixinGetByUsername
 
 scene_action_table = db.Table('scene_action',
                               db.Column("scene_id", db.Integer, db.ForeignKey('scene.id')),
@@ -32,7 +32,7 @@ class UserDevice(db.Model):
                          UserDevice.user_id == user_id)).first()
 
 
-class User(MixinGetByAccessToken, MixinGetById, db.Model):
+class User(MixinGetUsingJWT, MixinGetById, db.Model):
     __tablename__ = 'user'
     __table_args__ = {'extend_existing': True}
 
@@ -47,13 +47,13 @@ class User(MixinGetByAccessToken, MixinGetById, db.Model):
     mqtt_creds = relationship("MQTTUser", uselist=False, cascade='all,delete', back_populates="user", passive_deletes=True)
 
     @classmethod
-    def can_use_device(cls, user_access_token, device_id):
+    def can_use_device(cls, user, device_id):
         if not is_number(device_id):
             return False
         q = db.session.query(
             db.session.query(User).
             join(UserDevice).
-            filter(User.access_token == user_access_token).
+            filter(User.id == user.id).
             filter(UserDevice.device_id == device_id).
             exists()
         )
@@ -280,7 +280,7 @@ class Scene(db.Model):
         return action in self.actions
 
 
-class AttrAuthUser(MixinGetByUsername, MixinGetByAccessToken, MixinGetById, db.Model):
+class AttrAuthUser(MixinGetByUsername, MixinGetUsingJWT, MixinGetById, db.Model):
     __table_args__ = {'extend_existing': True}
     __bind_key__ = 'attr_auth'
 
