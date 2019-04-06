@@ -21,7 +21,7 @@ def generate_auth_token(id_, token, expiration=600):
 
 
 def handle_authorize(remote, token, user_info):
-    token = save_user(remote, user_info, token)
+    token = save_user(remote, user_info, token).decode()
     return http_json_response(**{'access_token': token})
 
 

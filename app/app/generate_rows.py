@@ -10,6 +10,7 @@ import uuid
 from datetime import datetime, timedelta
 
 from cryptography.fernet import Fernet
+from passlib.hash import bcrypt
 
 from app.app_setup import create_app, db
 from app.attribute_authority.utils import create_pairing_group, create_cp_abe, serialize_charm_object, \
@@ -70,11 +71,12 @@ keys = {"users": {}}
 for i in range(user_no):
     username = random_string()
     access_token = secrets.token_hex(40)
+    token_hash = bcrypt.using(rounds=13).hash(access_token)
     # noinspection PyArgumentList
     user = User(id=i,
                 name=username,
                 email=f'{username}@gmail.com',
-                access_token=generate_auth_token(access_token),  # TODO
+                access_token=token_hash,
                 access_token_update=random_date(d1, d2))
 
     mqtt_user = MQTTUser(username=f'u:{user.id}',
@@ -82,7 +84,7 @@ for i in range(user_no):
                          user=user)
 
     keys["users"][i] = {}
-    keys["users"][i]["access_token"] = access_token
+    keys["users"][i]["access_token"] = generate_auth_token(i, access_token).decode()
 
     users.append(user)
     db.session.add(user)
@@ -118,8 +120,12 @@ for uid, user in enumerate(users):
         dv_name_key = os.urandom(32)
         cipher = Fernet(base64.urlsafe_b64encode(dv_name_key))
         dv_name = cipher.encrypt(int_to_bytes(device_no))
+
+        dv_status_key = os.urandom(32)
+        cipher = Fernet(base64.urlsafe_b64encode(dv_status_key))
+        dv_status = cipher.encrypt(int_to_bytes(0))
         # noinspection PyArgumentList
-        dv = Device(status=b'0',  # TODO Encrypt
+        dv = Device(status=dv_status,
                     device_type_id=random.choice(device_types).id,
                     name=dv_name,
                     name_bi=blind_index(dv_bi_key, str(i)),
@@ -137,6 +143,7 @@ for uid, user in enumerate(users):
         keys["users"][uid]["devices"][dv.id] = {}
         keys["users"][uid]["devices"][dv.id]["dv_bi_key"] = key_to_hex(dv_bi_key)
         keys["users"][uid]["devices"][dv.id]["dv_name_key"] = key_to_hex(dv_name_key)
+        keys["users"][uid]["devices"][dv.id]["dv_status_key"] = key_to_hex(dv_status_key)
 
         dv.create_mqtt_creds_for_device(pbkdf2_hash(str(i)), db.session)
         user.add_acls_for_device(dv.id)
@@ -165,8 +172,9 @@ for uid, user in enumerate(users):
         keys["users"][uid]["devices"][dv.id]["dd_tid_key"] = key_to_hex(dd_tid_key)
         keys["users"][uid]["devices"][dv.id]["abe_keypair"] = {
             "public_key": abe_keypair[0].decode("utf-8"),
-            "master_key": abe_keypair[1].decode("utf-8")
-        }  # TODO add attributes?
+            "master_key": abe_keypair[1].decode("utf-8"),
+            "policy": policy_string
+        }
 
         for j in range(device_data_no):
             dd_added = dd_added_cipher.encrypt(int(time.mktime(random_date(d1, d2).timetuple())))
@@ -231,17 +239,18 @@ aa_users = []
 
 for i, user in enumerate(users):
     access_token = random_string()
+    token_hash = bcrypt.using(rounds=13).hash(access_token)
     # noinspection PyArgumentList
     aa_user = AttrAuthUser(name=user.name,
                            id=i,
-                           access_token=generate_auth_token(access_token),  # TODO
+                           access_token=token_hash,
                            access_token_update=random_date(d1, d2),
                            api_username=user.name)
     keypair = MasterKeypair(data_public=keypairs[i][0],
                             data_master=keypairs[i][1],
                             attr_auth_user=aa_user)
 
-    keys["users"][i]["aa_access_token"] = access_token
+    keys["users"][i]["aa_access_token"] = generate_auth_token(i, access_token).decode()
 
     db.session.add(aa_user)
     db.session.add(keypair)

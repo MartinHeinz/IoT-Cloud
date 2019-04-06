@@ -531,7 +531,8 @@ def retrieve_device_public_key(device_id, token):
 @user.command()
 @click.argument('user_id')
 @click.argument('device_id')
-def send_column_keys(user_id, device_id):
+@click.argument('policy')
+def send_column_keys(user_id, device_id, policy):
     table = get_tinydb_table(path, 'device_keys')
     doc = table.get(Query().device_id == device_id)
 
@@ -559,7 +560,7 @@ def send_column_keys(user_id, device_id):
     # payload_keys["device_data:data"] = fernet_key.encrypt(get_aa_public_key().encode()).decode()
     abe_key_and_policy = json.dumps({
         "public_key": get_aa_public_key(),
-        "policy": " ".join(doc["device_data:data"]["attr_list"])  # TODO do not just join this, make it an input as a string
+        "policy": policy
     }).encode()
 
     payload_keys["device_data:data"] = fernet_key.encrypt(abe_key_and_policy).decode()
@@ -697,10 +698,14 @@ def get_foreign_device_data(device_id, data):
         click.echo(f"Keys for device: {device_id} are missing. You are probably not authorized to use it.")
 
     decrypted = []
-    for row in data["device_data"]:  # TODO Add try/except here + echo, for when attrs don't satisfy policy
-        decrypted.append(decrypt_using_abe_serialized_key(row["data"],
-                                                          doc["device_data:data"]["public_key"],
-                                                          doc["device_data:data"]["private_key"]))
+    for row in data["device_data"]:
+        try:
+            decrypted.append(decrypt_using_abe_serialized_key(row["data"],
+                                                              doc["device_data:data"]["public_key"],
+                                                              doc["device_data:data"]["private_key"]))
+        except:
+            click.echo("Cannot decrypt row.")
+
     result = []
     for val in decrypted:
         try:

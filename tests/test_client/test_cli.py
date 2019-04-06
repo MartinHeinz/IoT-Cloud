@@ -101,12 +101,12 @@ def test_send_column_keys(runner, access_token, reset_tiny_db, bi_key, aa_public
     device_id = "23"
     user_id = "1"
     key = "fcf064e7ea97ab828ba80578d255942e648c872d8d0c09a051bf5424640f2e68"
-    result = runner.invoke(cmd.send_column_keys, [user_id, device_id])
+    result = runner.invoke(cmd.send_column_keys, [user_id, device_id, f"(u:{user_id} OR d:{device_id} OR u:{user_id}-GUEST)"])
     assert f"Keys for device {device_id} not present, please use:" in result.output
 
     device_data_doc = {
         "private_key": "dummy-value",
-        "attr_list": ['1-23', '1-GUEST', '1'],
+        "attr_list": ['u:1-d:23', 'u:1-GUEST', 'u:1'],
     }
     insert_into_tinydb(cmd.path, 'device_keys', {
         'device_id': device_id,
@@ -120,7 +120,7 @@ def test_send_column_keys(runner, access_token, reset_tiny_db, bi_key, aa_public
     insert_into_tinydb(cmd.path, "aa_keys", {"public_key": aa_public_key})
     runner.invoke(cmd.init_global_keys)
 
-    result = runner.invoke(cmd.send_column_keys, [user_id, device_id])
+    result = runner.invoke(cmd.send_column_keys, [user_id, device_id, f"(u:{user_id} OR d:{device_id} OR u:{user_id}-GUEST)"])
     assert "Data published" in result.output
     assert "RC and MID = (0, 1)" in result.output
 

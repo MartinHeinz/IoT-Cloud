@@ -18,9 +18,10 @@ To start _node-RED_ with prepared `settings.js` file
     * double click on any of the _mqtt_ nodes (pink ones)
     * Click pencil Icon to the right of _Local MQTT Broker_
     * Set _Server_ field to IP address of MQTT broker you are trying to connect to (see _IoT-Cloud_ app `config.env`)
-    * Next Pencil Icon to the right of _TLS Configuration_ and provide _Certificate_ and _CA Certificate_.
+    * Next click Pencil Icon to the right of _TLS Configuration_ and provide _Certificate_ and _CA Certificate_.
         These should be the certs in `mosquitto/certs/server/server.crt` and `mosquitto/certs/ca/ca.crt` respectively
     * Next go to _Security_ tab in broker settings and provide credentials to your previously registered device
+    * Lastly click on each of the _mqtt_ nodes (pink ones) and change `d:<id>` to ID of your device
     * Click _Update_ and _Deploy_ (top right)
 
 * At this point you should see message like this in console from which you ran _node-RED_: <br/> `24 Mar 12:58:23 - [info] [mqtt-broker:Local MQTT Broker] Connected to broker: mqtts://172.26.0.8:8883`
