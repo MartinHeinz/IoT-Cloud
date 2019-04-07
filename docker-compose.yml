@@ -1,16 +1,19 @@
 version: '3'
 services:
   db_test:
-    image: postgres_db
+    image: martinheinz/iot_cloud_db:latest
   web:
+    image: martinheinz/iot_cloud_web:latest
     build: ./
   mqtt:
+    image: martinheinz/iot_cloud_mqtt:latest
     build:
       context: .
       dockerfile: ./mosquitto/Dockerfile
   nginx:
     image: nginx:latest
   web_test:
+    image: martinheinz/iot_cloud_web_test:latest
     build:
       context: .
       dockerfile: ./tests/Dockerfile

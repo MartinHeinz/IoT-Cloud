@@ -2,6 +2,7 @@ version: '3'
 services:
   db:
     build: ./
+    image: martinheinz/iot_cloud_db:latest
     container_name: iot_cloud_db
     volumes:
       - data:/var/lib/postgresql/data
