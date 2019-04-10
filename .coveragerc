@@ -2,6 +2,8 @@
 omit =
     */benchmark/*
     */test_utils/*
+    */test_client/*
+    */tests/*
     */venv/*
 
 [report]

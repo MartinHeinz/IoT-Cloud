@@ -65,7 +65,8 @@ def change_to_dev_db():
     yield app, ctx
     app.config["SQLALCHEMY_DATABASE_URI"] = re.sub(r"postgres$", 'testing', app.config["SQLALCHEMY_DATABASE_URI"])
 
-
+@pytest.mark.skipif(os.system("service postgres status") > 0,
+                    reason="PostgreSQL service is not running")
 def test_populate(runner):
     with tempfile.NamedTemporaryFile(mode="w+", suffix=".sql") as tf:
         tf.write('''CREATE TABLE public.action (
@@ -77,6 +78,7 @@ def test_populate(runner):
         tf.flush()
         ip = subprocess.Popen("hostname -I | cut -d' ' -f1", shell=True, stdout=subprocess.PIPE).stdout.read().strip().decode()
         result = runner.invoke(populate, ["--path", tf.name, "--db", "testing", "--host", ip], input="postgres")
+        print(f'RESULT OF FAILING TEST: {result.output}', flush=True)
     assert result.exit_code == 0
 
 
@@ -612,10 +614,10 @@ def test_create_device(runner, access_token, change_to_dev_db):
     type_id = re.search('type_id": "(.+)"', result.output, re.IGNORECASE).group(1)
     device_name = "CLITest"
     result = runner.invoke(cmd.create_device, [type_id, device_name, "test_pass", '--token', access_token])
-    assert "'success': True" in result.output
-    assert "'id': " in result.output
+    assert "\"success\": true" in result.output
+    assert "\"id\": " in result.output
 
-    device_id = re.search("id': (\d+)", result.output, re.IGNORECASE).group(1)
+    device_id = re.search("id\": (\d+)", result.output, re.IGNORECASE).group(1)
     doc = search_tinydb_doc(cmd.path, 'device_keys', Query().device_id == device_id)
 
     assert all(k in doc for k in ("device:name", "device:status", "bi_key"))

@@ -13,7 +13,7 @@ except ImportError:  # pragma: no un-packaged CLI cover
 
 VERIFY_CERTS = True
 
-MQTT_BROKER = "172.21.0.3"
+MQTT_BROKER = "172.26.0.8"
 MQTT_PORT = 8883
 
 

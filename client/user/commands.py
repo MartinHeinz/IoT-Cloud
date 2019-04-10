@@ -121,6 +121,7 @@ def register_to_broker(password, token):
         "broker_id": content["broker_id"],
         "broker_password": password
     }, Query().broker_id == content["broker_id"])
+    click.echo(r.content.decode('unicode-escape'))
 
 
 @user.command()
@@ -180,7 +181,7 @@ def create_device(device_type_id, device_name, password, token):
             'device:name': device_name_key,
             'device:status': device_status_key
         })
-    click.echo(content)
+    click.echo(r.content.decode('unicode-escape'))
 
 
 @user.command()
@@ -400,6 +401,9 @@ def get_devices(device_name, device_id, token):
 @click.option('--upper', required=False)
 @click.option('--token', envvar='ACCESS_TOKEN')
 def get_device_data_by_num_range(user_id, device_id, device_name, lower=None, upper=None, token=""):
+    if lower is not None and upper is not None and upper <= lower:
+        click.echo("Upper bound needs to be greater then lower bound.")
+        return
     device_name_bi = blind_index(get_device_bi_key(device_id), device_name)
     if lower is not None and upper is not None:
         data = {"lower": int(lower), "upper": int(upper), "device_name_bi": device_name_bi}
@@ -599,6 +603,9 @@ def attr_auth_device_keygen(device_id, attr_list, token):
     r = requests.post(AA_URL_DEVICE_KEYGEN, headers={"Authorization": token}, data=data, verify=VERIFY_CERTS)
     content = r.content.decode('unicode-escape')
     json_content = json_string_with_bytes_to_dict(content)
+    if not json_content["success"]:
+        click.echo(json_content)
+        return
 
     t = get_tinydb_table(path, "device_keys")
     device_data_doc = {
@@ -935,7 +942,7 @@ def _setup_client(user_id):
 @user.command()
 @click.argument('username')
 @click.option('--token', envvar='AA_ACCESS_TOKEN')
-def attr_auth_set_api_username(username, token):
+def attr_auth_set_api_username(username, token):  # TODO this causes error when there is user with Username already present in DB (api_username)=(username) already exists
     data = {"api_username": username}
     r = requests.post(AA_URL_SET_USERNAME, headers={"Authorization": token}, data=data, verify=VERIFY_CERTS)
     click.echo(r.content.decode('unicode-escape'))

@@ -5,9 +5,14 @@ This is directory that contains flow and settings used to create _node-RED_ devi
 ### Prerequisites
 * _npm_
 * _node-RED_ (to install follow steps at <https://nodered.org/docs/getting-started/installation>)
+- _Python 3.x_
+- _PBC_ (Please see [_Running tests section_ in main README](../README.md))
+- _Charm-Crypto_ (Please see [_Running tests section_ in main README](../README.md))
 
 ### Running
 To start _node-RED_ with prepared `settings.js` file
+* if you installed _PBC_ just now (or have not logged out since) please log out and log back in, to export `LD_LIBRARY_PATH`
+globally (exporting it in one terminal session is not enough for _node-RED_)
 * if _node-RED_ is installed in `node_modules`, then run: <br/> `./node_modules/node-red/bin/node-red-pi -s ./settings.js`
 * if installed globally use `node-red -s ./settings.js`
 
@@ -18,7 +23,7 @@ To start _node-RED_ with prepared `settings.js` file
     * double click on any of the _mqtt_ nodes (pink ones)
     * Click pencil Icon to the right of _Local MQTT Broker_
     * Set _Server_ field to IP address of MQTT broker you are trying to connect to (see _IoT-Cloud_ app `config.env`)
-    * Next click Pencil Icon to the right of _TLS Configuration_ and provide _Certificate_ and _CA Certificate_.
+    * _Optional step (Only if `require_certificate true` is set in `mosquitto.conf`):_ click Pencil Icon to the right of _TLS Configuration_ and provide _Certificate_ and _CA Certificate_.
         These should be the certs in `mosquitto/certs/server/server.crt` and `mosquitto/certs/ca/ca.crt` respectively
     * Next go to _Security_ tab in broker settings and provide credentials to your previously registered device
     * Lastly click on each of the _mqtt_ nodes (pink ones) and change `d:<id>` to ID of your device
