@@ -8,7 +8,7 @@ from app.auth.utils import require_api_token
 from app.consts import ATTR_LIST_MISSING_ERROR_MSG, \
     INVALID_ATTR_LIST_ERROR_MSG, MESSAGE_MISSING_ERROR_MSG, POLICY_STRING_MISSING_ERROR_MSG, CIPHERTEXT_MISSING_ERROR_MSG, COULD_NOT_DECRYPT_ERROR_MSG, \
     INVALID_OWNER_API_USERNAME_ERROR_MSG, OWNER_API_USERNAME_MISSING_ERROR_MSG, API_USERNAME_MISSING_ERROR_MSG, DEVICE_ID_MISSING_ERROR_MSG, \
-    INCORRECT_API_USERNAME_ERROR_MSG
+    INCORRECT_API_USERNAME_ERROR_MSG, API_USERNAME_ALREADY_PRESENT_MSG
 from app.models.models import AttrAuthUser, MasterKeypair, PrivateKey
 from app.utils import http_json_response, check_missing_request_argument
 
@@ -28,6 +28,9 @@ def set_username():
     arg_check = check_missing_request_argument((api_username, API_USERNAME_MISSING_ERROR_MSG))
     if arg_check is not True:
         return arg_check
+
+    if AttrAuthUser.get_by_user_name(api_username) is not None:
+        return http_json_response(False, 400, **{"error": API_USERNAME_ALREADY_PRESENT_MSG})
 
     user.api_username = api_username
     db.session.add(user)

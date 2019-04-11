@@ -160,10 +160,12 @@ These are example sequences of commands to show how to perform various tasks usi
 * _Note: to have multiple users on same device, you will have to copy project or temporarily remove existing `keystore.json`_
 when performing actions as other user
 * To authorize user 
-    * `iot-cloud-cli user authorize-user <device_id> <other_user_id>`
+    * `iot-cloud-cli user authorize-user <device_id> <device_name> <other_user_id>`
+    * user client generates _Blind Index_ for `device_name` and sends it to server together with `other_user_id`
     * server creates ACLs for user being authorized and for device, as well as association object and saves them
 * To revoke user
-    * `iot-cloud-cli user revoke-user <device_id> <other_user_id>`
+    * `iot-cloud-cli user revoke-user <device_id> <device_name> <other_user_id>`
+    * user client generates _Blind Index_ for `device_name` and sends it to server together with `other_user_id`
     * server removes ACLs and association object for user being revoked and for device
     
 ------------------------------------------------------------------------------------------------

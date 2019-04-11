@@ -550,45 +550,45 @@ def test_api_authorize_user(client, app_and_ctx, access_token, access_token_two)
     data = {
         "access_token": access_token,
     }
-    assert_got_error_from_post(client, '/api/device/authorize', data, 400, DEVICE_ID_MISSING_ERROR_MSG)
+    assert_got_error_from_post(client, '/api/device/authorize', data, 400, DEVICE_NAME_BI_MISSING_ERROR_MSG)
 
     data = {
         "access_token": access_token,
-        "device_id": "something",
+        "device_name_bi": "something",
     }
     assert_got_error_from_post(client, '/api/device/authorize', data, 400, AUTH_USER_ID_MISSING_ERROR_MSG)
 
     data = {
         "access_token": access_token,
-        "device_id": "something",
+        "device_name_bi": "something",
         "auth_user_id": "invalid",
     }
     assert_got_error_from_post(client, '/api/device/authorize', data, 400, AUTH_USER_ID_INVALID_ERROR_MSG)
 
     data = {
         "access_token": access_token,
-        "device_id": "something",
+        "device_name_bi": "something",
         "auth_user_id": 1,  # Can't authorize self
     }
     assert_got_error_from_post(client, '/api/device/authorize', data, 400, AUTH_USER_ID_INVALID_ERROR_MSG)
 
     data = {
         "access_token": access_token,
-        "device_id": 45,  # Belongs to other user
+        "device_name_bi": '6c0d409f3d4d630303ca1fea9d1d0b2aa9aef33e0480266e23eb24c6b26a3fde',  # Belongs to other user
         "auth_user_id": 2,
     }
     assert_got_error_from_post(client, '/api/device/authorize', data, 400, UNAUTHORIZED_USER_ERROR_MSG)
 
     data = {
         "access_token": access_token,
-        "device_id": 23,
+        "device_name_bi": 'a36758aa531feb3ef0ce632b7a5b993af3d8d59b8f2f8df8de854dce915d20df',
         "auth_user_id": 4,  # Not registered with MQTT broker
     }
     assert_got_error_from_post(client, '/api/device/authorize', data, 400, NOT_REGISTERED_WITH_BROKER_ERROR_MSG)
 
     data = {
         "access_token": access_token,
-        "device_id": 23,
+        "device_name_bi": 'a36758aa531feb3ef0ce632b7a5b993af3d8d59b8f2f8df8de854dce915d20df',
         "auth_user_id": 2,
     }
     assert_got_data_from_post(client, '/api/device/authorize', data)
@@ -608,7 +608,7 @@ def test_api_authorize_user(client, app_and_ctx, access_token, access_token_two)
 
     data = {
         "access_token": access_token,
-        "device_id": 23,
+        "device_name_bi": 'a36758aa531feb3ef0ce632b7a5b993af3d8d59b8f2f8df8de854dce915d20df',
         "auth_user_id": 2,  # already authorized
     }
     assert_got_error_from_post(client, '/api/device/authorize', data, 400, AUTH_USER_ALREADY_AUTHORIZED_ERROR_MSG)
@@ -618,38 +618,38 @@ def test_api_revoke_user(client, app_and_ctx, access_token, access_token_two):
     data = {
         "access_token": access_token,
     }
-    assert_got_error_from_post(client, '/api/device/revoke', data, 400, DEVICE_ID_MISSING_ERROR_MSG)
+    assert_got_error_from_post(client, '/api/device/revoke', data, 400, DEVICE_NAME_BI_MISSING_ERROR_MSG)
 
     data = {
         "access_token": access_token,
-        "device_id": "something",
+        "device_name_bi": "something",
     }
     assert_got_error_from_post(client, '/api/device/revoke', data, 400, REVOKE_USER_ID_MISSING_ERROR_MSG)
 
     data = {
         "access_token": access_token,
-        "device_id": "something",
+        "device_name_bi": "something",
         "revoke_user_id": "invalid",
     }
     assert_got_error_from_post(client, '/api/device/revoke', data, 400, REVOKE_USER_ID_INVALID_ERROR_MSG)
 
     data = {
         "access_token": access_token,
-        "device_id": "something",
+        "device_name_bi": "something",
         "revoke_user_id": 1,  # Can't revoke self
     }
     assert_got_error_from_post(client, '/api/device/revoke', data, 400, REVOKE_USER_ID_INVALID_ERROR_MSG)
 
     data = {
         "access_token": access_token,
-        "device_id": 45,  # Belongs to other user
+        "device_name_bi": '6c0d409f3d4d630303ca1fea9d1d0b2aa9aef33e0480266e23eb24c6b26a3fde',  # Belongs to other user
         "revoke_user_id": 2,
     }
     assert_got_error_from_post(client, '/api/device/revoke', data, 400, UNAUTHORIZED_USER_ERROR_MSG)
 
     data = {
         "access_token": access_token,
-        "device_id": 23,
+        "device_name_bi": 'a36758aa531feb3ef0ce632b7a5b993af3d8d59b8f2f8df8de854dce915d20df',
         "revoke_user_id": 2,
     }
     assert_got_data_from_post(client, '/api/device/revoke', data)
@@ -666,7 +666,7 @@ def test_api_revoke_user(client, app_and_ctx, access_token, access_token_two):
 
     data = {
         "access_token": access_token_two,
-        "device_id": 45,
+        "device_name_bi": '6c0d409f3d4d630303ca1fea9d1d0b2aa9aef33e0480266e23eb24c6b26a3fde',
         "revoke_user_id": 1,  # not authorized
     }
     assert_got_error_from_post(client, '/api/device/revoke', data, 400, REVOKE_USER_NOT_AUTHORIZED_ERROR_MSG)

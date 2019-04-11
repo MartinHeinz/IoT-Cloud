@@ -433,22 +433,21 @@ def trigger_scene():
 @api.route('/device/authorize', methods=['POST'])
 @require_api_token()
 def authorize_user():
-    device_id = request.form.get("device_id", None)
+    device_name_bi = request.form.get("device_name_bi", None)
     auth_user_id = request.form.get("auth_user_id", None)  # ID of user to be authorized
     user = User.get_using_jwt_token(request.headers.get("Authorization", ""))
     auth_user = User.get_by_id(auth_user_id)
 
     arg_check = check_missing_request_argument(
-        (device_id, DEVICE_ID_MISSING_ERROR_MSG),
+        (device_name_bi, DEVICE_NAME_BI_MISSING_ERROR_MSG),
         (auth_user_id, AUTH_USER_ID_MISSING_ERROR_MSG),
         (None if auth_user is None or auth_user.id == user.id else auth_user, AUTH_USER_ID_INVALID_ERROR_MSG))
     if arg_check is not True:
         return arg_check
 
-    if not User.can_use_device(user, device_id):
+    device = Device.get_by_name_bi(device_name_bi)
+    if device is None or not User.can_use_device(user, device.id):
         return http_json_response(False, 400, **{"error": UNAUTHORIZED_USER_ERROR_MSG})
-
-    device = Device.get_by_id(device_id)
 
     if not auth_user.is_registered_with_broker:
         return http_json_response(False, 400, **{"error": NOT_REGISTERED_WITH_BROKER_ERROR_MSG})
@@ -460,7 +459,7 @@ def authorize_user():
     ud.device = device
     ud.user = auth_user
     db.session.add(ud)
-    auth_user.add_acls_for_device(device_id)
+    auth_user.add_acls_for_device(device.id)
     device.add_acls_for_user(auth_user_id)
 
     db.session.add(auth_user)
@@ -473,31 +472,32 @@ def authorize_user():
 @api.route('/device/revoke', methods=['POST'])
 @require_api_token()
 def revoke_user():
-    device_id = request.form.get("device_id", None)
+    device_name_bi = request.form.get("device_name_bi", None)
     revoke_user_id = request.form.get("revoke_user_id", None)  # ID of user to be revoked
     user = User.get_using_jwt_token(request.headers.get("Authorization", ""))
     user_to_revoke = User.get_by_id(revoke_user_id)
 
     arg_check = check_missing_request_argument(
-        (device_id, DEVICE_ID_MISSING_ERROR_MSG),
+        (device_name_bi, DEVICE_NAME_BI_MISSING_ERROR_MSG),
         (revoke_user_id, REVOKE_USER_ID_MISSING_ERROR_MSG),
         (None if user_to_revoke is None or user_to_revoke.id == user.id else user_to_revoke, REVOKE_USER_ID_INVALID_ERROR_MSG))
     if arg_check is not True:
         return arg_check
 
-    if not User.can_use_device(user, device_id):
+    device = Device.get_by_name_bi(device_name_bi)
+    if device is None or not User.can_use_device(user, device.id):
         return http_json_response(False, 400, **{"error": UNAUTHORIZED_USER_ERROR_MSG})
 
-    device = Device.get_by_id(device_id)
+    device = Device.get_by_id(device.id)
 
     if next((ud for ud in device.users if ud.user_id == user_to_revoke.id), None) is None:
         return http_json_response(False, 400, **{"error": REVOKE_USER_NOT_AUTHORIZED_ERROR_MSG})
 
-    ud_to_remove = UserDevice.get_by_ids(int(device_id), user_to_revoke.id)
+    ud_to_remove = UserDevice.get_by_ids(int(device.id), user_to_revoke.id)
 
     device.users.remove(ud_to_remove)
     db.session.add(device)
-    user_to_revoke.remove_acls_for_device(device_id)
+    user_to_revoke.remove_acls_for_device(device.id)
     device.remove_acls_for_user(revoke_user_id)
     db.session.add(device)
     db.session.add(user_to_revoke)

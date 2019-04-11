@@ -8,7 +8,7 @@ from charm.toolbox.pairinggroup import PairingGroup
 from app.app_setup import db
 from app.consts import INVALID_ATTR_LIST_ERROR_MSG, MESSAGE_MISSING_ERROR_MSG, POLICY_STRING_MISSING_ERROR_MSG, \
     CIPHERTEXT_MISSING_ERROR_MSG, COULD_NOT_DECRYPT_ERROR_MSG, INVALID_OWNER_API_USERNAME_ERROR_MSG, OWNER_API_USERNAME_MISSING_ERROR_MSG, \
-    API_USERNAME_MISSING_ERROR_MSG, ATTR_LIST_MISSING_ERROR_MSG, DEVICE_ID_MISSING_ERROR_MSG, INCORRECT_API_USERNAME_ERROR_MSG
+    API_USERNAME_MISSING_ERROR_MSG, ATTR_LIST_MISSING_ERROR_MSG, DEVICE_ID_MISSING_ERROR_MSG, INCORRECT_API_USERNAME_ERROR_MSG, API_USERNAME_ALREADY_PRESENT_MSG
 from app.attribute_authority.utils import create_pairing_group, create_cp_abe, serialize_charm_object, deserialize_charm_object, already_has_key_from_owner, \
     create_attributes, \
     replace_existing_key, parse_attr_list, get_private_key_based_on_owner, is_valid, create_private_key
@@ -71,6 +71,11 @@ def test_require_attr_auth_access_token_missing(client):
 def test_set_username_missing_api_username(client, attr_auth_access_token_one):
     data = {"access_token": attr_auth_access_token_one}
     assert_got_error_from_post(client, '/attr_auth/set_username', data, 400, API_USERNAME_MISSING_ERROR_MSG)
+
+
+def test_set_username_already_present(client, attr_auth_access_token_one):
+    data = {"access_token": attr_auth_access_token_one, "api_username": "TestUser"}
+    assert_got_error_from_post(client, '/attr_auth/set_username', data, 400, API_USERNAME_ALREADY_PRESENT_MSG)
 
 
 def test_set_username(client, app_and_ctx, attr_auth_access_token_one):

@@ -346,11 +346,12 @@ def trigger_scene(name, token, real):
 
 @user.command()
 @click.argument('device_id')
+@click.argument('device_name')
 @click.argument('auth_user_id')
 @click.option('--token', envvar='ACCESS_TOKEN')
-def authorize_user(device_id, auth_user_id, token):  # TODO Use Blind Index instead of Device ID
+def authorize_user(device_id, device_name, auth_user_id, token):
     data = {
-        "device_id": device_id,
+        "device_name_bi": blind_index(get_device_bi_key(device_id), device_name),
         "auth_user_id": auth_user_id
     }
     r = requests.post(URL_AUTHORIZE_USER, headers={"Authorization": token}, data=data, verify=VERIFY_CERTS)
@@ -359,11 +360,12 @@ def authorize_user(device_id, auth_user_id, token):  # TODO Use Blind Index inst
 
 @user.command()
 @click.argument('device_id')
+@click.argument('device_name')
 @click.argument('revoke_user_id')
 @click.option('--token', envvar='ACCESS_TOKEN')
-def revoke_user(device_id, revoke_user_id, token):
+def revoke_user(device_id, device_name, revoke_user_id, token):
     data = {
-        "device_id": device_id,
+        "device_name_bi": blind_index(get_device_bi_key(device_id), device_name),
         "revoke_user_id": revoke_user_id
     }
     r = requests.post(URL_REVOKE_USER, headers={"Authorization": token}, data=data, verify=VERIFY_CERTS)
@@ -942,7 +944,7 @@ def _setup_client(user_id):
 @user.command()
 @click.argument('username')
 @click.option('--token', envvar='AA_ACCESS_TOKEN')
-def attr_auth_set_api_username(username, token):  # TODO this causes error when there is user with Username already present in DB (api_username)=(username) already exists
+def attr_auth_set_api_username(username, token):
     data = {"api_username": username}
     r = requests.post(AA_URL_SET_USERNAME, headers={"Authorization": token}, data=data, verify=VERIFY_CERTS)
     click.echo(r.content.decode('unicode-escape'))

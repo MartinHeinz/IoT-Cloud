@@ -79,7 +79,6 @@ def test_populate(runner):
         tf.flush()
         ip = subprocess.Popen("hostname -I | cut -d' ' -f1", shell=True, stdout=subprocess.PIPE).stdout.read().strip().decode()
         result = runner.invoke(populate, ["--path", tf.name, "--db", "testing", "--host", ip], input="postgres")
-        print(f'RESULT OF FAILING TEST: {result.output}', flush=True)
     assert result.exit_code == 0
 
 
@@ -841,17 +840,31 @@ def test_trigger_scene(runner, access_token_two, col_keys, bi_key, reset_tiny_db
     assert "\"success\": true" in result.output
 
 
-def test_authorize_user(runner, access_token_two):
+@pytest.mark.parametrize('reset_tiny_db', [cmd.path], indirect=True)
+def test_authorize_user(runner, access_token_two, reset_tiny_db):
     device_id = "45"
     auth_user_id = "1"
-    result = runner.invoke(cmd.authorize_user, [device_id, auth_user_id, '--token', access_token_two])
+    device_name = "my_raspberry"
+    data = {
+            "device_id": device_id,
+            "bi_key": "fe65ae5d8665d9b68d8e20dec8fca3da23a881e5df60a132a92882a8c666149a"
+    }
+    insert_into_tinydb(cmd.path, 'device_keys', data)
+    result = runner.invoke(cmd.authorize_user, [device_id, device_name, auth_user_id, '--token', access_token_two])
     assert "\"success\": true" in result.output
 
 
-def test_revoke_user(runner, access_token_two):  # NOTE: this is dependant on previous test
+@pytest.mark.parametrize('reset_tiny_db', [cmd.path], indirect=True)
+def test_revoke_user(runner, access_token_two, reset_tiny_db):  # NOTE: this is dependant on previous test
     device_id = "45"
     revoke_user_id = "1"
-    result = runner.invoke(cmd.revoke_user, [device_id, revoke_user_id, '--token', access_token_two])
+    device_name = "my_raspberry"
+    data = {
+        "device_id": device_id,
+        "bi_key": "fe65ae5d8665d9b68d8e20dec8fca3da23a881e5df60a132a92882a8c666149a"
+    }
+    insert_into_tinydb(cmd.path, 'device_keys', data)
+    result = runner.invoke(cmd.revoke_user, [device_id, device_name, revoke_user_id, '--token', access_token_two])
     assert "\"success\": true" in result.output
 
 
@@ -1023,8 +1036,9 @@ def test_aa_decrypt(runner, client, attr_auth_access_token_one, attr_auth_access
 
 
 def test_aa_set_api_username(runner, attr_auth_access_token_one):
-    result = runner.invoke(cmd.attr_auth_set_api_username, ["MartinHeinz", '--token', attr_auth_access_token_one])
+    result = runner.invoke(cmd.attr_auth_set_api_username, ["Changed", '--token', attr_auth_access_token_one])
     assert "\"success\": true" in result.output
+    runner.invoke(cmd.attr_auth_set_api_username, ["MartinHeinz", '--token', attr_auth_access_token_one])  # To restore normal state
 
 
 @pytest.mark.parametrize('reset_tiny_db', [cmd.path], indirect=True)
