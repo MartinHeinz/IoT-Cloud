@@ -65,7 +65,8 @@ def change_to_dev_db():
     yield app, ctx
     app.config["SQLALCHEMY_DATABASE_URI"] = re.sub(r"postgres$", 'testing', app.config["SQLALCHEMY_DATABASE_URI"])
 
-@pytest.mark.skipif(os.system("service postgres status") > 0,
+
+@pytest.mark.skipif(os.system("service postgresql status") > 0,
                     reason="PostgreSQL service is not running")
 def test_populate(runner):
     with tempfile.NamedTemporaryFile(mode="w+", suffix=".sql") as tf:
