@@ -3,13 +3,22 @@
 This is directory that contains flow and settings used to create _node-RED_ device.
 
 ### Prerequisites
+* _Docker_
+
+For running on host:
+
 * _npm_
 * _node-RED_ (to install follow steps at <https://nodered.org/docs/getting-started/installation>)
 - _Python 3.x_
 - _PBC_ (Please see [_Running tests section_ in main README](../README.md))
 - _Charm-Crypto_ (Please see [_Running tests section_ in main README](../README.md))
 
-### Running
+
+### Running using Docker (recommended)
+* `docker pull martinheinz/iot_cloud_node_red:latest`
+* `docker run -it --network host martinheinz/iot_cloud_node_red`
+
+### Running on host
 To start _node-RED_ with prepared `settings.js` file
 * if you installed _PBC_ just now (or have not logged out since) please log out and log back in, to export `LD_LIBRARY_PATH`
 globally (exporting it in one terminal session is not enough for _node-RED_)

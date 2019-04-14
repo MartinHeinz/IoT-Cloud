@@ -3,10 +3,19 @@
 This is directory that contains source code responsible for CLI for user to interact with server, broker and devices.
 
 ### Prerequisites
+* _Docker_
+
+For running on host:
 * _Python 3.6_
 * _Charm Crypto_ ([See _Running tests_ section for instructions](../README.md))
 
+### Running using Docker (recommended)
+* `docker pull martinheinz/iot_cloud_cli:latest`
+* `docker run -it --network host martinheinz/iot_cloud_cli`
+
 ### Install
+_Note: this is only needed when running on host (not using Docker)_
+
 To install CLI
 * Create Python venv (_Python 3.x_ required; from `IoT-Cloud` directory):<br>
     `python3 -m venv venv`
