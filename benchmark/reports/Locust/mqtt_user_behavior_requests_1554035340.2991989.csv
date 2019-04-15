@@ -1,4 +1,0 @@
-"Method","Name","# requests","# failures","Median response time","Average response time","Min response time","Max response time","Average Content Size","Requests/s"
-"GET","/api/device/action",5102,0,500,505,62,1177,22,27.06
-"GET","/api/scene/trigger",5095,0,550,551,62,1421,22,27.02
-"None","Total",10197,0,530,528,62,1421,22,54.08

@@ -1,4 +1,0 @@
-"Method","Name","# requests","# failures","Median response time","Average response time","Min response time","Max response time","Average Content Size","Requests/s"
-"GET","/attr_auth/setup",499,0,18000,16817,322,21243,1060,2.10
-"POST","/attr_auth/user/keygen",530,0,20000,19012,785,23936,22,2.23
-"None","Total",1029,0,19000,17947,322,23936,525,4.34

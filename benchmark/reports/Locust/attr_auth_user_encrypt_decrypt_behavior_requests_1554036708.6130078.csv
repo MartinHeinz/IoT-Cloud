@@ -1,4 +1,0 @@
-"Method","Name","# requests","# failures","Median response time","Average response time","Min response time","Max response time","Average Content Size","Requests/s"
-"GET","/attr_auth/decrypt",507,0,18000,17118,978,20942,50,2.27
-"GET","/attr_auth/encrypt",545,0,17000,15181,219,19895,1297,2.44
-"None","Total",1052,0,17000,16115,219,20942,696,4.71
