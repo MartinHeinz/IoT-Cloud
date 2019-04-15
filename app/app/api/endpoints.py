@@ -26,14 +26,6 @@ from app.mqtt.utils import Payload
 from app.utils import http_json_response, check_missing_request_argument, is_valid_uuid, format_topic, validate_broker_password, is_number, create_payload
 
 
-@api.route('/publish', methods=['POST'])
-def publish_message():
-    message = request.args.get("ciphertext") + " " + request.args.get("tag")
-    topic = request.args.get("topic")
-    client.publish(topic, str(message))
-    return http_json_response()
-
-
 @api.route('/user/broker_register', methods=['POST'])
 @require_api_token()
 def register_to_broker():

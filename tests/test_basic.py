@@ -37,7 +37,7 @@ def test_mqtt_client(app_and_ctx):
 
 def test_index(client):
     response = client.get('/')
-    assert "Hi from app!" in str(response.data)
+    assert "This is IoT Cloud Framework" in str(response.data)
 
 
 def test_error_handler(client):
@@ -45,38 +45,6 @@ def test_error_handler(client):
     assert response.status_code == 404
     json_data = json.loads(response.data.decode("utf-8"))
     assert (json_data["error"]) == SOMETHING_WENT_WRONG_MSG
-
-
-def test_publish(client):
-    response = client.get('/publish')
-    assert response.status_code == 200
-
-    response = client.post('/publish', data=dict(
-        topic="",
-        message=""
-    ), follow_redirects=False)
-    assert response.status_code == 200
-
-    response = client.post('/publish', data=dict(
-        topic="flask_test",
-        message="message"
-    ), follow_redirects=False)
-    assert response.status_code == 302
-
-
-def test_api_publish(client):
-    iv, ciphertext, tag = encrypt(
-        b'f\x9c\xeb Lj\x13n\x84B\xf5S\xb5\xdfnl53d\x10\x12\x92\x82\xe1\xe3~\xc8*\x16\x9f\xd69',
-        b"{\"data\": \"secret\"}",
-        b"authenticated but not encrypted payload"
-    )
-    response = client.post('/api/publish', query_string=dict(
-        ciphertext=str(base64.b64encode(ciphertext), 'utf-8'),
-        tag=str(base64.b64encode(tag), 'utf-8'),
-        topic="flask_test"
-    ), follow_redirects=True)
-
-    assert response.status_code == 200
 
 
 def test_api_user_register_broker(client, app_and_ctx, access_token_three):

@@ -1,7 +1,13 @@
 {% extends "base.html" %}
 
 {% block content %}
-    <h1>Hi from app!</h1>
+    <h1>This is IoT Cloud Framework</h1>
+    <p> This application doesn't have web interface and it uses browser only for registration: </p>
+        <ul>
+          <li><a href="https://{{ request.base_url.split(',')[1] }}login">https://{{ request.base_url.split(",")[1] }}login</a></li>
+          <li><a href="https://{{ request.base_url.split(',')[1] }}attr_auth/login">https://{{ request.base_url.split(",")[1] }}attr_auth/login</a></li>
+        </ul>
+    <p>For all other functions of application and more information, please take a look at <a href="https://github.com/MartinHeinz/IoT-Cloud">GitHub repository of the project</a></p>
 {% if error %}
         <p class=error><strong>Error: </strong> {{ error }}
     {% endif %}
