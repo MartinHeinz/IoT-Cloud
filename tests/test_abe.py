@@ -28,7 +28,7 @@ def test_charm_crypto():
     (pk, msk) = hyb_abe.setup()  # Public Key and Master SECRET Key
 
     # generate a key
-    attr_list = ['1-GUEST']
+    attr_list = ['U-11890454', 'D-46', 'D-46-GUEST']
     key = hyb_abe.keygen(pk, msk, attr_list)
 
     serialized_pk = serialize_charm_object(pk, pairing_group)
@@ -41,10 +41,10 @@ def test_charm_crypto():
     msg = "Hello World"
 
     # generate a ciphertext
-    policy_str = '(1-GUEST)'
+    policy_str = '(u-11890454 OR d-46 OR d-46-GUEST)'  # evaluates to "((U-11890454 or D-46) or D-46-GUEST)" - see upper chars
     ctxt = hyb_abe.encrypt(pk, msg, policy_str)
 
-    policy_str = '(TOMORROW)'  # Re-encrypted data with new policy
+    policy_str = '(u-1 AND d-46 AND d-46-GUEST)'  # Re-encrypted data with new policy
     ctxt2 = hyb_abe.encrypt(pk, msg, policy_str)
 
     # decryption
