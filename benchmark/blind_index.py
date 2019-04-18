@@ -105,5 +105,3 @@ print(f'Search over {rows_num} rows took {end - start}')
 
 cursor.close()
 connection.close()
-
-# TODO run directly with raw SQL inside PGadmin or psql console

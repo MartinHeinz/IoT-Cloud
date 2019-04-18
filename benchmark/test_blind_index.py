@@ -121,5 +121,3 @@ def test_blind_index_cursor(benchmark):
 def query_cursor(cursor, name):
     cursor.execute(f"SELECT * FROM {BlindIndex.__tablename__} WHERE name_bi = '{blind_index(key, name)}'")
     return cursor.fetchone()
-
-# TODO run directly with raw SQL inside PGadmin or psql console

@@ -3,6 +3,9 @@ IoT Cloud
 
 Privacy friendly framework for IoT Cloud.
 
+In this repository you can find server application (`app` directory) and client for both user (`client/user`)
+and device (`client/device` and `node-red`) for the framework. For more information, please see my [Diploma Paper](http://davinci.fmph.uniba.sk/~heinz4/diplomova_praca/diploma_heinz.pdf).
+
 ## Prerequisites
 For server:
 - _Docker_
