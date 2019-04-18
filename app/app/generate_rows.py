@@ -163,7 +163,7 @@ for uid, user in enumerate(users):
         dd_num_data_cipher = instantiate_ope_cipher(dd_num_data_key)
         abe_keypair = create_abe_key_pair()
         keypairs.append(abe_keypair)
-        policy_string = f"({user.id}-{dv.id} OR {user.id}-GUEST OR {user.id})"
+        policy_string = f"(U-{user.id}-D-{dv.id} OR U-{user.id}-GUEST OR U-{user.id})"
         dd_tid_key = os.urandom(32)
         dd_tid_cipher = Fernet(base64.urlsafe_b64encode(dd_tid_key))
 
@@ -256,9 +256,9 @@ for i, user in enumerate(users):
     db.session.add(keypair)
     db.session.flush()
 
-    attr_list = [f"{user.id}",
-                 f"{user.id}-{user.owned_devices[0].id}",
-                 f"{user.id}-GUEST"]
+    attr_list = [f"U-{user.id}",
+                 f"U-{user.id}-D-{user.owned_devices[0].id}",
+                 f"U-{user.id}-GUEST"]
     private_key = create_private_key(keypairs[i][1], keypairs[i][0], attr_list)
     private_key_obj = PrivateKey(data=private_key,
                                  challenger_id=aa_user.id,

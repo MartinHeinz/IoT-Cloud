@@ -81,6 +81,12 @@ class DockerConfig(Config):
         'attr_auth': os.getenv('DOCKER_DATABASE_ATTR_AUTH_URL', 'postgres+psycopg2://postgres:postgres@<local-ip>:5430/attr_auth')
     }
 
+    __BASE_PATH = Config.POPULATE_PATH
+    __ATTR_AUTH_BASE_PATH = Config.ATTR_AUTH_POPULATE_PATH
+
+    POPULATE_PATH = os.path.join(os.path.dirname(__file__), "..", "populate_full.sql") if os.path.isfile(os.path.join(os.path.dirname(__file__), "..", "populate_full.sql")) else __BASE_PATH
+    ATTR_AUTH_POPULATE_PATH = os.path.join(os.path.dirname(__file__), "..", "attr_auth_populate_full.sql") if os.path.isfile(os.path.join(os.path.dirname(__file__), "..", "attr_auth_populate_full.sql")) else __ATTR_AUTH_BASE_PATH
+
 
 class DBSetupConfig(Config):
     ASSETS_DEBUG = True

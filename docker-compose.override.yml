@@ -32,7 +32,7 @@ services:
       - PYTHONDONTWRITEBYTECODE=False
       - FLASK_ENV=docker
       - FLASK_DEBUG=1
-      - FLASK_APP=app.app_setup:create_app('development')
+      - FLASK_APP=app.app_setup:create_app('${ENV_TYPE}')
     command: bash -c "while ping -c1 web_test &>/dev/null; do sleep 1; done && flask run --host=0.0.0.0 --port=443 --no-reload"
     depends_on:
       - web_test

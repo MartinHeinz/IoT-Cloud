@@ -74,6 +74,8 @@ For more information about each module, please see _READMEs_ in other modules:
     sudo ldconfig
     ```
     * install requirements - `pip install -r requirements.txt`
+    * use `export ENV_TYPE=development` or use `CURRENT_UID=$(id -u):$(id -g) ENV_TYPE=development docker-compose up`
+    to override env type used when running normally
     * Next, follow steps in previous section (_Running using Docker_)
 - Set environment variable `TESTING_ENV` to `host_testing`(, `export TESTING_ENV=host_testing`, defaults to `testing`), so the application uses `config.env` variables needed for running tests on host. If not set, tests will run as if they were inside docker container ( = with different URLs).
 - To run (from `./tests` directory) use <br> `pytest . --junitxml=./reports/test_report.xml --html=./reports/test_report.html --self-contained-html --cov=../ --cov-config=../.coveragerc --cov-report term`
