@@ -103,10 +103,10 @@ node_modules/
 .config.json.backup
 package-lock.json
 
-config.env
+# config.env  This is here to allow user to run the application without setting anything up
 
 # certs
 *.srl
 *.csr
-*.key
+# *.key # We are storing some keys in this branch to make it possible to run without setting certs up
 *.pem

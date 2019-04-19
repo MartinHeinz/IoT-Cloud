@@ -3,7 +3,7 @@ services:
   db_test:
     image: martinheinz/iot_cloud_db:latest
   web:
-    image: martinheinz/iot_cloud_web:latest
+    image: martinheinz/iot_cloud_web:try-it-out
     build: ./
   mqtt:
     image: martinheinz/iot_cloud_mqtt:latest
@@ -13,7 +13,7 @@ services:
   nginx:
     image: nginx:latest
   web_test:
-    image: martinheinz/iot_cloud_web_test:latest
+    image: martinheinz/iot_cloud_web_test:try-it-out
     build:
       context: .
       dockerfile: ./tests/Dockerfile
