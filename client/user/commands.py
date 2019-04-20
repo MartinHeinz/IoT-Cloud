@@ -629,7 +629,7 @@ def attr_auth_retrieve_private_keys(token):
 @click.argument('device_id')
 @click.argument('abe_pk', type=click.Path(exists=True))
 @click.argument('bi_key')
-@click.option('--token', envvar='ACCESS_TOKEN')
+@click.option('--token', envvar='AA_ACCESS_TOKEN')
 def setup_authorized_device(device_id, abe_pk, bi_key, token):
     r = requests.post(AA_URL_SK_RETRIEVE, headers={"Authorization": token}, verify=VERIFY_CERTS)
     content = json.loads(r.content.decode('unicode-escape'))

@@ -158,7 +158,7 @@ def instantiate_ope_cipher(key):
 
 
 def int_to_bytes(x):
-    return x.to_bytes((x.bit_length() + 7) // 8, 'big', signed=True)
+    return x.to_bytes(64, 'big', signed=True)
 
 
 def int_from_bytes(xbytes):

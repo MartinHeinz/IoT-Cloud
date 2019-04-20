@@ -19,7 +19,8 @@ services:
       POSTGRES_DB: postgres
       PGPORT: 5430
     networks:
-      - iot-cloud_shared_net
+      iot-cloud_shared_net:
+        ipv4_address: 172.26.0.9
 
 volumes:
   data: {}

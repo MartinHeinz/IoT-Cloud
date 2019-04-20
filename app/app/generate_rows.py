@@ -51,7 +51,22 @@ def create_abe_key_pair():
     return serialized_public_key, serialized_master_key
 
 
-create_app(DB_SETUP_CONFIG_NAME).app_context().push()
+app = create_app(DB_SETUP_CONFIG_NAME)
+app.app_context().push()
+
+attr_auth_engine = db.get_engine(app, 'attr_auth')
+
+seqs = db.engine.execute("SELECT sequence_name FROM information_schema.sequences").fetchall()
+seq_names = [row[0] for row in seqs]
+
+for s in seq_names:
+    db.engine.execute(f"ALTER SEQUENCE {s} RESTART WITH 100;")
+
+seqs = attr_auth_engine.execute("SELECT sequence_name FROM information_schema.sequences").fetchall()
+seq_names = [row[0] for row in seqs]
+
+for s in seq_names:
+    attr_auth_engine.execute(f"ALTER SEQUENCE {s} RESTART WITH 100;")
 
 d1 = datetime.strptime('01/01/2000', '%m/%d/%Y')
 d2 = datetime.strptime('01/01/2019', '%m/%d/%Y')
@@ -68,7 +83,7 @@ keypairs = []
 
 keys = {"users": {}}
 
-for i in range(user_no):
+for i in range(100, user_no + 100):
     username = random_string()
     access_token = secrets.token_hex(40)
     token_hash = bcrypt.using(rounds=13).hash(access_token)
@@ -94,7 +109,7 @@ db.session.flush()
 
 
 keys["dt_desc_keys"] = {}
-for i in range(device_no):
+for i in range(100, device_no + 100):
     dt_desc_key = os.urandom(32)
     cipher = Fernet(base64.urlsafe_b64encode(dt_desc_key))
     dt_description = cipher.encrypt(int_to_bytes(device_no))
@@ -108,14 +123,14 @@ for i in range(device_no):
 
     keys["dt_desc_keys"][i] = key_to_hex(dt_desc_key)
 
-for uid, user in enumerate(users):
+for user in users:
     user.create_mqtt_creds_for_user(user.mqtt_creds.password_hash, db.session)
 
-    keys["users"][uid]["devices"] = {}
-    keys["users"][uid]["actions"] = {}
-    keys["users"][uid]["aa_secret_keys"] = {}
+    keys["users"][user.id]["devices"] = {}
+    keys["users"][user.id]["actions"] = {}
+    keys["users"][user.id]["aa_secret_keys"] = {}
 
-    for i in range(device_no):  # 3 devices per user
+    for i in range(100, device_no + 100):  # 3 devices per user
         dv_bi_key = os.urandom(32)
         dv_name_key = os.urandom(32)
         cipher = Fernet(base64.urlsafe_b64encode(dv_name_key))
@@ -140,10 +155,10 @@ for uid, user in enumerate(users):
         db.session.add(dv)
         db.session.flush()
 
-        keys["users"][uid]["devices"][dv.id] = {}
-        keys["users"][uid]["devices"][dv.id]["dv_bi_key"] = key_to_hex(dv_bi_key)
-        keys["users"][uid]["devices"][dv.id]["dv_name_key"] = key_to_hex(dv_name_key)
-        keys["users"][uid]["devices"][dv.id]["dv_status_key"] = key_to_hex(dv_status_key)
+        keys["users"][user.id]["devices"][dv.id] = {}
+        keys["users"][user.id]["devices"][dv.id]["dv_bi_key"] = key_to_hex(dv_bi_key)
+        keys["users"][user.id]["devices"][dv.id]["dv_name_key"] = key_to_hex(dv_name_key)
+        keys["users"][user.id]["devices"][dv.id]["dv_status_key"] = key_to_hex(dv_status_key)
 
         dv.create_mqtt_creds_for_device(pbkdf2_hash(str(i)), db.session)
         user.add_acls_for_device(dv.id)
@@ -151,8 +166,8 @@ for uid, user in enumerate(users):
         action_name_key = os.urandom(32)
         action_name_cipher = Fernet(base64.urlsafe_b64encode(action_name_key))
 
-        keys["users"][uid]["actions"][dv.id] = {}
-        keys["users"][uid]["actions"][dv.id]["action_name_key"] = key_to_hex(action_name_key)
+        keys["users"][user.id]["actions"][dv.id] = {}
+        keys["users"][user.id]["actions"][dv.id]["action_name_key"] = key_to_hex(action_name_key)
 
         dv.add_action(action_name_cipher.encrypt(b"On"), blind_index(dv_bi_key, "On"), correctness_hash("On"))
         dv.add_action(action_name_cipher.encrypt(b"Off"), blind_index(dv_bi_key, "Off"), correctness_hash("Off"))
@@ -167,16 +182,16 @@ for uid, user in enumerate(users):
         dd_tid_key = os.urandom(32)
         dd_tid_cipher = Fernet(base64.urlsafe_b64encode(dd_tid_key))
 
-        keys["users"][uid]["devices"][dv.id]["dd_added_key"] = key_to_hex(dd_added_key)
-        keys["users"][uid]["devices"][dv.id]["dd_num_data_key"] = key_to_hex(dd_num_data_key)
-        keys["users"][uid]["devices"][dv.id]["dd_tid_key"] = key_to_hex(dd_tid_key)
-        keys["users"][uid]["devices"][dv.id]["abe_keypair"] = {
+        keys["users"][user.id]["devices"][dv.id]["dd_added_key"] = key_to_hex(dd_added_key)
+        keys["users"][user.id]["devices"][dv.id]["dd_num_data_key"] = key_to_hex(dd_num_data_key)
+        keys["users"][user.id]["devices"][dv.id]["dd_tid_key"] = key_to_hex(dd_tid_key)
+        keys["users"][user.id]["devices"][dv.id]["abe_keypair"] = {
             "public_key": abe_keypair[0].decode("utf-8"),
             "master_key": abe_keypair[1].decode("utf-8"),
             "policy": policy_string
         }
 
-        for j in range(device_data_no):
+        for j in range(100, device_data_no + 100):
             dd_added = dd_added_cipher.encrypt(int(time.mktime(random_date(d1, d2).timetuple())))
             dd_num_data = dd_num_data_cipher.encrypt(j)
             dd_value = pad_payload_attr(f"{j}")
@@ -201,26 +216,26 @@ for uid, user in enumerate(users):
 for i, user in enumerate(users):
     user_bi_key = os.urandom(32)
 
-    keys["users"][i]["global"] = {}
-    keys["users"][i]["global"]["user_bi_key"] = key_to_hex(user_bi_key)
+    keys["users"][user.id]["global"] = {}
+    keys["users"][user.id]["global"]["user_bi_key"] = key_to_hex(user_bi_key)
 
     sc_name_key = os.urandom(32)
     sc_name_cipher = Fernet(base64.urlsafe_b64encode(sc_name_key))
-    sc_name = sc_name_cipher.encrypt(int_to_bytes(i))
+    sc_name = sc_name_cipher.encrypt(int_to_bytes(user.id))
 
-    keys["users"][i]["scenes"] = {}
-    keys["users"][i]["scenes"]["sc_name_key"] = key_to_hex(sc_name_key)
+    keys["users"][user.id]["scenes"] = {}
+    keys["users"][user.id]["scenes"]["sc_name_key"] = key_to_hex(sc_name_key)
 
     sc_desc_key = os.urandom(32)
     sc_desc_cipher = Fernet(base64.urlsafe_b64encode(sc_desc_key))
-    sc_description = sc_desc_cipher.encrypt(int_to_bytes(i))
+    sc_description = sc_desc_cipher.encrypt(int_to_bytes(user.id))
 
-    keys["users"][i]["scenes"]["sc_desc_key"] = key_to_hex(sc_desc_key)
+    keys["users"][user.id]["scenes"]["sc_desc_key"] = key_to_hex(sc_desc_key)
 
     sc = Scene(name=sc_name,
                description=sc_description,
-               correctness_hash=correctness_hash(str(i), str(i)),
-               name_bi=blind_index(user_bi_key, str(i)))
+               correctness_hash=correctness_hash(str(user.id), str(user.id)),
+               name_bi=blind_index(user_bi_key, str(user.id)))
 
     uds = random.sample(user.devices, 2)
     for ud in uds:
@@ -242,7 +257,7 @@ for i, user in enumerate(users):
     token_hash = bcrypt.using(rounds=13).hash(access_token)
     # noinspection PyArgumentList
     aa_user = AttrAuthUser(name=user.name,
-                           id=i,
+                           id=user.id,
                            access_token=token_hash,
                            access_token_update=random_date(d1, d2),
                            api_username=user.name)
@@ -250,7 +265,7 @@ for i, user in enumerate(users):
                             data_master=keypairs[i][1],
                             attr_auth_user=aa_user)
 
-    keys["users"][i]["aa_access_token"] = generate_auth_token(i, access_token).decode()
+    keys["users"][user.id]["aa_access_token"] = generate_auth_token(user.id, access_token).decode()
 
     db.session.add(aa_user)
     db.session.add(keypair)
@@ -262,13 +277,13 @@ for i, user in enumerate(users):
     private_key = create_private_key(keypairs[i][1], keypairs[i][0], attr_list)
     private_key_obj = PrivateKey(data=private_key,
                                  challenger_id=aa_user.id,
-                                 user_id=i+1 if i+1 < len(users) else 0,
+                                 user_id=user.id+1 if user.id+1 < len(users) else 100,
                                  device_id=user.owned_devices[0].id,
                                  attributes=[Attribute(value=attr) for attr in attr_list])
 
     db.session.add(private_key_obj)
 
-    keys["users"][i]["aa_secret_keys"][i] = private_key.decode("utf-8")
+    keys["users"][user.id]["aa_secret_keys"][user.id] = private_key.decode("utf-8")
     aa_users.append(aa_user)
 
 mqtt_admin_user = MQTTUser(username='admin',
