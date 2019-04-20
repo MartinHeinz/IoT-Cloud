@@ -1,0 +1,60 @@
+{
+    "_default": {},
+    "device": {
+        "1": {
+            "id": "47",
+            "password": "Bad-Pass-Again",
+            "owner_id": "5",
+            "actions": [
+                "On",
+                "Off"
+            ]
+        }
+    },
+    "users": {
+        "1": {
+            "integrity": {
+                "device_data": {
+                    "added": {
+                        "seed": 7095353269136273308,
+                        "lower_bound": 0,
+                        "upper_bound": 0,
+                        "type": "OPE"
+                    },
+                    "num_data": {
+                        "seed": 7210292380729723736,
+                        "lower_bound": 0,
+                        "upper_bound": 0,
+                        "type": "OPE"
+                    },
+                    "data": {
+                        "seed": -8138017609437078065,
+                        "lower_bound": 0,
+                        "upper_bound": 0,
+                        "type": "ABE"
+                    },
+                    "tid": {
+                        "lower_bound": 0,
+                        "upper_bound": 0,
+                        "type": "Fernet"
+                    }
+                }
+            },
+            "id": 5,
+            "shared_key": "c36d164f0648f07ff8b6d926b9963b95b21e29b687bb985e855ff7adccbd60e3",
+            "tid": -1,
+            "action:name": "5a5515f5709a07f3b79a7c8d1e1e427d92739b1818edcbdb9dfe7f28c3ecb458",
+            "device_data:added": "90d49df7f981325e3a112a26f2a72d3c5709bfaba80d77f034f7c9255f3f1e3e",
+            "device_data:num_data": "7b715a75ac68965761d6eae4b2395b30fc3d6b36888fddb32f93b82e3e145495",
+            "device_data:tid": "596876b1c40ab7b4deb18f59289b37c1bc0558cd0c19e4bc34d8706e12ed6e75",
+            "device_data:data": {
+                "public_key": "eJyVVkFuGzEM/MrCZx8krShR/UoRGG7hOgcfCrgtUAT+ezXkUHFvycGOl5KoIWc4m7fD9fBlezucTt9v5/v9dJpPh29/f13uh+M2o3/Ot98Xi36t47iJHjetxy2nHV99fpVy3FqbP/KMNzluY+6p89MHgvgxV0XwkObpPAPz8JirtTPYsDVlP98LonNLnwFVP2LZc5rLdfeMmhC1vXNd5pPYw/As9skvj1nFtXy0RMsCxHXlVharK5QAaWaXib6zvJwKgafhHRjJdyE4FlSsoi8oSZqfN/yGW2rcgxZGT2zJe52aJ895PrX50cJNQog62Cb/wlEgsGYhBS43OEjVxZlSZmvqMTU6o9coIgqwlbRgZlIPDZg8CglFA10U6uyOzgxiqRpP+00BrimZtz5ZCFhNKrsnRJ7eyQIWu7ADXmL17a4floW/DjyTsc5GFUoOdLS8BPP62ZHo0TCpvNspFxcw2oc+Syb7hdpH33yc0LiSCKkvtlg9JsGWTS8mwBQTkEl8YV/RelRrzSxUoUn4aSR+fHronzVjNWXix309kFcNPnMQbhKQHKFEzQnVZIUY5Sn6gFE3aqMp0tbp6gicY2HJyOHj8n+Vl9P1ejrffr6eP2wAmeWuQc/ErIFBQ+N2W1+SxZdymKwXrOh9woM/I4VGitJlZ+qnOmMu3Ps4RDiAOpXOURfS+uSURgpNFamlLBhhktbG3WmRGGAXWAvgqEc4Qe6qHD8zySALvq40tLovmwuK7DVhqtydT3f6mBK62nAUY9HY+cIAIvidFZyWL1D7Zq8anld9KxJ5Q8OczD6t592XbELEJ6QF/rCmFAwRW31mowcB4rlt3MG1Qchxm6szrFsDuFC8yBBZ7N5GjwzP4AQtWXRWYv4VCUi3JahOHAqCr6wmm1NmApX6hKyF/ZgX7u/+5NK1u0u8rvnSEroVsCz9yhJXI0+7d1pZpTt/JnyfJVkjUtxJZG0yFxkUUq9h8IO9aBpKiNegb67cpPyfwdfTUqQPbHp5PP4BN9C4Vw==",
+                "policy": "(U-5 OR D-47 OR D-47-GUEST)"
+            },
+            "device:name": "089a544ed15eb5228d4488f42d93c0a07c1a9d4aae739bb7f6cb96916c05158f",
+            "device:status": "446347c5c9e64b845533e9520b14287b3a7fd6f785e674b6274163d6a6822e00",
+            "bi_key": "06993a572455ae61aad907f4ab270caa7a839e8b3c4fe6bb78438a183d0859df",
+            "scene_key": "9c33072fd80b276c3f9915fec3c6bc5de11168baf4feccfcc8db5a0f78fb0fee"
+        }
+    }
+}

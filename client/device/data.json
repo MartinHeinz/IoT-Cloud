@@ -1,0 +1,61 @@
+{
+    "_default": {},
+    "device": {
+        "1": {
+            "id": "46",
+            "password": "RaspberryPiPass",
+            "owner_id": "5",
+            "actions": [
+                "On",
+                "Off",
+                "Stat"
+            ]
+        }
+    },
+    "users": {
+        "1": {
+            "integrity": {
+                "device_data": {
+                    "added": {
+                        "seed": 7028720748127673386,
+                        "lower_bound": 2,
+                        "upper_bound": 3,
+                        "type": "OPE"
+                    },
+                    "num_data": {
+                        "seed": 483533240272948987,
+                        "lower_bound": 2,
+                        "upper_bound": 3,
+                        "type": "OPE"
+                    },
+                    "data": {
+                        "seed": 198272234579833788,
+                        "lower_bound": 2,
+                        "upper_bound": 3,
+                        "type": "ABE"
+                    },
+                    "tid": {
+                        "lower_bound": 2,
+                        "upper_bound": 3,
+                        "type": "Fernet"
+                    }
+                }
+            },
+            "id": 5,
+            "shared_key": "e35bd2c6ba61f5ce1c7184b9651373a14efa1fa7d3087c4f73ba9e6c86fe7316",
+            "tid": -3,
+            "action:name": "0746f2431225484450e61734c42969e6affd0327acfaca20b0070e4f8c7e7ea2",
+            "device_data:added": "b73505b72ad1961b83f2cd61c8bc708f2766b7b38a074f839b38cb9f7ca5e403",
+            "device_data:num_data": "cbc95cb179ad76dc84d2bf84bf60d3c92d1e588bd1e0c7c99f56aa21d537c9cc",
+            "device_data:tid": "feb789cf842b6b4ac82883d5d50e9e0573e8425650bb779f3f9f579b005e22f0",
+            "device_data:data": {
+                "public_key": "eJyVVkFuGzEM/MrCZx8krShR/UoRGG7hOgcfCrgtUAT+ezXkUHFvycGOl5KoIWc4m7fD9fBlezucTt9v5/v9dJpPh29/f13uh+M2o3/Ot98Xi36t47iJHjetxy2nHV99fpVy3FqbP/KMNzluY+6p89MHgvgxV0XwkObpPAPz8JirtTPYsDVlP98LonNLnwFVP2LZc5rLdfeMmhC1vXNd5pPYw/As9skvj1nFtXy0RMsCxHXlVharK5QAaWaXib6zvJwKgafhHRjJdyE4FlSsoi8oSZqfN/yGW2rcgxZGT2zJe52aJ895PrX50cJNQog62Cb/wlEgsGYhBS43OEjVxZlSZmvqMTU6o9coIgqwlbRgZlIPDZg8CglFA10U6uyOzgxiqRpP+00BrimZtz5ZCFhNKrsnRJ7eyQIWu7ADXmL17a4floW/DjyTsc5GFUoOdLS8BPP62ZHo0TCpvNspFxcw2oc+Syb7hdpH33yc0LiSCKkvtlg9JsGWTS8mwBQTkEl8YV/RelRrzSxUoUn4aSR+fHronzVjNWXix309kFcNPnMQbhKQHKFEzQnVZIUY5Sn6gFE3aqMp0tbp6gicY2HJyOHj8n+Vl9P1ejrffr6eP2wAmeWuQc/ErIFBQ+N2W1+SxZdymKwXrOh9woM/I4VGitJlZ+qnOmMu3Ps4RDiAOpXOURfS+uSURgpNFamlLBhhktbG3WmRGGAXWAvgqEc4Qe6qHD8zySALvq40tLovmwuK7DVhqtydT3f6mBK62nAUY9HY+cIAIvidFZyWL1D7Zq8anld9KxJ5Q8OczD6t592XbELEJ6QF/rCmFAwRW31mowcB4rlt3MG1Qchxm6szrFsDuFC8yBBZ7N5GjwzP4AQtWXRWYv4VCUi3JahOHAqCr6wmm1NmApX6hKyF/ZgX7u/+5NK1u0u8rvnSEroVsCz9yhJXI0+7d1pZpTt/JnyfJVkjUtxJZG0yFxkUUq9h8IO9aBpKiNegb67cpPyfwdfTUqQPbHp5PP4BN9C4Vw==",
+                "policy": "(U-5 OR D-46 OR D-46-GUEST)"
+            },
+            "device:name": "54a0a8ca11035913bc0a44b233b1f10e5f183cea39a131f0a1140df05d3b9d30",
+            "device:status": "26760717a80316ed739ef1bcc11c1a92ed1410734a15ce725cb4fcf2d671bb3b",
+            "bi_key": "dfce7a606ed393da4993ccabcf0dd7d99df7f93a7c2bde00d38a5e16fe343af5",
+            "scene_key": "9c33072fd80b276c3f9915fec3c6bc5de11168baf4feccfcc8db5a0f78fb0fee"
+        }
+    }
+}
