@@ -72,6 +72,8 @@ and export their access tokens
 ### Sample commands:
 Before using these commands export tokens for user `JohnSmith`
 
+To see output of messages and actions see _Debug Tab_ in _node-RED_ UI (Click on the Bug Icon in top right corner or press "`ctrl+g d`")
+
 More information about specific commands [client/README.md](client/README.md)
 
 * Trigger action: `iot-cloud-cli user trigger-action 46 RaspberryPi Stat`

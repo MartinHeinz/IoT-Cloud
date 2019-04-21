@@ -6,7 +6,7 @@ Privacy friendly framework for IoT Cloud.
 In this repository you can find server application (`app` directory) and client for both user (`client/user`)
 and device (`client/device` and `node-red`) for the framework. For more information, please see my [Diploma Paper](http://davinci.fmph.uniba.sk/~heinz4/diplomova_praca/diploma_heinz.pdf).
 
-For _"Quick Start"_ of the application please see `try-it-out` branch
+_NOTE: This branch (`try-it-out`) is only for demonstration purposes and many things in this branch should not be present in GitHub repository, such as config files or private keys, therefore it's in no way secure and it's just for users convenience._
 
 ## Prerequisites
 For server:
