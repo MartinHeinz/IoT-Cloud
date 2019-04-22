@@ -18,6 +18,7 @@
 * Double click on any of the mqtt nodes (pink ones)
 * Click pencil Icon to the right of Local MQTT Broker
 * Go to Security tab and set credentials to - username: `d:46`, password: `RaspberryPiPass`
+* Click _Deploy_ in upper right corner
 
 ### To start user CLI:
 * `docker pull martinheinz/iot_cloud_cli:try-it-out`

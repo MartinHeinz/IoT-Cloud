@@ -18,25 +18,25 @@
                 "device_data": {
                     "added": {
                         "seed": 7028720748127673386,
-                        "lower_bound": 2,
-                        "upper_bound": 3,
+                        "lower_bound": 1,
+                        "upper_bound": 2,
                         "type": "OPE"
                     },
                     "num_data": {
                         "seed": 483533240272948987,
-                        "lower_bound": 2,
-                        "upper_bound": 3,
+                        "lower_bound": 1,
+                        "upper_bound": 2,
                         "type": "OPE"
                     },
                     "data": {
                         "seed": 198272234579833788,
-                        "lower_bound": 2,
-                        "upper_bound": 3,
+                        "lower_bound": 1,
+                        "upper_bound": 2,
                         "type": "ABE"
                     },
                     "tid": {
-                        "lower_bound": 2,
-                        "upper_bound": 3,
+                        "lower_bound": 1,
+                        "upper_bound": 2,
                         "type": "Fernet"
                     }
                 }
