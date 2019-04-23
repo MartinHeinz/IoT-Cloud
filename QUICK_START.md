@@ -90,7 +90,7 @@ You can add more rows to DB by downloading these files:
 * for [`populate_full.sql` (link)](http://davinci.fmph.uniba.sk/~heinz4/diplomova_praca/populate_data.sql)
 * for [`attr_auth_populate_full.sql` (link)](http://davinci.fmph.uniba.sk/~heinz4/diplomova_praca/attr_auth_populate_data.sql)
 
-And appending them to existing files (e.g. `<downloaded file> >> populate_full.sql`)
+And appending them to existing files (e.g. `cat <downloaded file> >> populate_full.sql`)
 
 This is just so you can see performance when DB contains much more data (extra ~7500 rows)
 
