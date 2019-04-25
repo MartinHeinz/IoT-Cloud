@@ -40,6 +40,6 @@ globally (exporting it in one terminal session is not enough for _node-RED_)
 
 * At this point you should see message like this in console from which you ran _node-RED_: <br/> `24 Mar 12:58:23 - [info] [mqtt-broker:Local MQTT Broker] Connected to broker: mqtts://172.26.0.8:8883`
 * To see all debugging messages you can view console
-* To see triggered actions in browser click on Bug Icon up top right corner to display debug tab.
+* To see triggered actions in browser click on Bug Icon in top right corner to display debug tab.
 * You can send data to server by clicking _send_save_data_ Inject node
 * You can send/remove data to/from server by clicking _send_add_fake_tuple_ Inject node and _send_remove_fake_tuple_ respectively.

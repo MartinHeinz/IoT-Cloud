@@ -6,7 +6,7 @@ This is directory that contains necessary files for building and running standal
 
 * Create external network that this container will connect to (network belongs to `iot_cloud` service):
     * Check if it's already created: `docker network ls | grep iot-cloud_shared_net`
-      If there is out such as: <code>e7add65e3e97&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;iot-cloud_shared_net&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;bridge&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;local</code>
+      If there is output such as: <code>e7add65e3e97&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;iot-cloud_shared_net&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;bridge&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;local</code>
       Then you can skip to next step.
     * Create network: `docker network create -d bridge --subnet=172.26.0.0/16 iot-cloud_shared_net`
 * Build and Run: `docker-compose up`. 
