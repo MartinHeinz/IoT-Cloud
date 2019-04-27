@@ -71,7 +71,8 @@ and export their access tokens
     
     
 ### Sample commands:
-Before using these commands export tokens for user `JohnSmith`
+_Important:_ Before using these commands export tokens for user `JohnSmith` from previous section. If you want to use other user,
+export their access tokens and switch `keystore.json` as described in previous section.
 
 To see output of messages and actions see _Debug Tab_ in _node-RED_ UI (Click on the Bug Icon in top right corner or press "`ctrl+g d`")
 
@@ -87,8 +88,8 @@ More information about specific commands [client/README.md](client/README.md)
 
 ### Extending DB data set:
 You can add more rows to DB by downloading these files:
-* for [`populate_full.sql` (link)](http://davinci.fmph.uniba.sk/~heinz4/diplomova_praca/populate_data.sql)
-* for [`attr_auth_populate_full.sql` (link)](http://davinci.fmph.uniba.sk/~heinz4/diplomova_praca/attr_auth_populate_data.sql)
+* [`populate_data.sql` (link)](http://davinci.fmph.uniba.sk/~heinz4/diplomova_praca/populate_data.sql) for `IoT-Cloud/app/populate_full.sql`
+* [`attr_auth_populate_data.sql` (link)](http://davinci.fmph.uniba.sk/~heinz4/diplomova_praca/attr_auth_populate_data.sql) for `IoT-Cloud/app/attr_auth_populate_full.sql`
 
 And appending them to existing files (e.g. `cat <downloaded file> >> populate_full.sql`)
 
