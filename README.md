@@ -8,6 +8,8 @@ and device (`client/device` and `node-red`) for the framework. For more informat
 
 To run the application please see [Quick Start.](QUICK_START.md)
 
+Repository URL: <https://github.com/MartinHeinz/IoT-Cloud>
+
 _NOTE: This branch (`try-it-out`) is only for demonstration purposes and many things in this branch should not be present in GitHub repository, such as config files or private keys, therefore it's in no way secure and it's just for users convenience._
 
 ## Prerequisites
