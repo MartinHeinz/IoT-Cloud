@@ -35,7 +35,6 @@ For more information about each module, please see _READMEs_ in other modules:
 - To generate self-signed certificate:
     - change directory to _./webserver/ssl_
     - run `sudo openssl req -x509 -nodes -days 365 -newkey rsa:2048 -keyout ./private/webserver.key -out ./certs/webserver.crt`
-    - copy `webserver.crt` to `./app/resources/` and rename to `server.crt`
     - copy `webserver.crt` to `./mosquitto/certs/server/` and rename to `server.crt`
     - copy `webserver.key` to `./mosquitto/certs/server/` and rename to `server-nopass.key`
     - copy `webserver.key` to `./client/user/certs/` and rename to `server.key`
