@@ -4,7 +4,7 @@ IoT Cloud
 Privacy friendly framework for IoT Cloud.
 
 In this repository you can find server application (`app` directory) and client for both user (`client/user`)
-and device (`client/device` and `node-red`) for the framework. For more information, please see my [Diploma Paper](http://davinci.fmph.uniba.sk/~heinz4/diplomova_praca/diploma_heinz.pdf).
+and device (`client/device` and `node-red`) for the framework. For more information, please see my [Diploma Paper](https://res.cloudinary.com/martinheinz/image/upload/v1567588040/blog/diploma_heinz.pdf).
 
 For _"Quick Start"_ of the application please see `try-it-out` branch
 
