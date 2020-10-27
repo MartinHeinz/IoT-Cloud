@@ -14,7 +14,7 @@ Charm-Crypto==0.50
 Click==7.0
 colorama==0.4.1
 coverage==4.5.3
-cryptography==2.6.1
+cryptography==3.2
 cycler==0.10.0
 defusedxml==0.5.0
 Flask==1.0.2
