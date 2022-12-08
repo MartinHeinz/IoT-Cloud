@@ -7,7 +7,7 @@ attrs==19.1.0
 Authlib==0.10
 bcrypt==3.1.6
 beautifulsoup4==4.7.1
-certifi==2019.3.9
+certifi==2022.12.7
 cffi==1.12.2
 chardet==3.0.4
 Charm-Crypto==0.50
